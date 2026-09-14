@@ -90,7 +90,7 @@ class ApiService {
   }
 
   // 3. Fetch Products with Local Storage Cache & Delta ETag Sync
-  static Future<List<Map<String, dynamic>>> fetchProducts({int? categoryId, int storeId = 1}) async {
+  static Future<List<Map<String, dynamic>>> fetchProducts({int? categoryId, int storeId = 1, bool forceRefresh = false}) async {
     final String cacheKey = "$_kProductsCacheKey${storeId}_${categoryId ?? 'all'}";
     final String etagKey = "$_kProductsEtagKey${storeId}_${categoryId ?? 'all'}";
 
@@ -100,11 +100,13 @@ class ApiService {
 
     try {
       prefs = await SharedPreferences.getInstance();
-      final String? jsonStr = prefs.getString(cacheKey);
-      etag = prefs.getString(etagKey);
-      if (jsonStr != null) {
-        final List list = jsonDecode(jsonStr);
-        cachedProducts = List<Map<String, dynamic>>.from(list);
+      if (!forceRefresh) {
+        final String? jsonStr = prefs.getString(cacheKey);
+        etag = prefs.getString(etagKey);
+        if (jsonStr != null) {
+          final List list = jsonDecode(jsonStr);
+          cachedProducts = List<Map<String, dynamic>>.from(list);
+        }
       }
     } catch (e) {
       debugPrint("Error reading products cache: $e");
@@ -118,13 +120,13 @@ class ApiService {
       final Uri uri = Uri.parse(ApiConstants.products).replace(queryParameters: queryParams);
 
       final Map<String, String> headers = {};
-      if (etag != null && etag.isNotEmpty) {
+      if (!forceRefresh && etag != null && etag.isNotEmpty) {
         headers['If-None-Match'] = etag;
       }
 
       final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
 
-      if (response.statusCode == 304) {
+      if (response.statusCode == 304 && cachedProducts.isNotEmpty) {
         // Data not changed on server; return local cache instantly
         return cachedProducts;
       }

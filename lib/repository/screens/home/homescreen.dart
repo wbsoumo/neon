@@ -45,10 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _fetchLiveBackendData() async {
+  Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
     setState(() => _isLoadingLiveProducts = true);
     final store = await ApiService.fetchSelectedStore();
-    final prods = await ApiService.fetchProducts(storeId: store?['id'] ?? 1);
+    final prods = await ApiService.fetchProducts(storeId: store?['id'] ?? 1, forceRefresh: forceRefresh);
     if (mounted) {
       setState(() {
         _selectedStoreData = store;
@@ -66,7 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
               "text": p['name'].toString(),
               "price": price,
             };
-            if (p['is_featured'] == 1 || p['is_featured'] == true) {
+            final isFeatured = p['is_featured'] == 1 || p['is_featured'] == '1' || p['is_featured'] == true || p['is_featured'] == 'true';
+            if (isFeatured) {
               featuredItems.add(mapItem);
             }
             groceryKitchenItems.add(mapItem);
@@ -163,10 +164,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0XFFF5F6F8),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: () => _fetchLiveBackendData(forceRefresh: true),
+        color: const Color(0XFF0C831F),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Fresh Green Header (Matching App Theme)
             Container(
@@ -839,6 +843,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }
