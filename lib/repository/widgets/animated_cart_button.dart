@@ -7,6 +7,7 @@ class AnimatedCartButton extends StatefulWidget {
   final String img;
   final double price;
   final String unit;
+  final int? categoryId;
   final double width;
   final double height;
 
@@ -17,6 +18,7 @@ class AnimatedCartButton extends StatefulWidget {
     required this.img,
     required this.price,
     this.unit = "1 unit",
+    this.categoryId,
     this.width = 72,
     this.height = 32,
   });
@@ -74,17 +76,50 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
           return ScaleTransition(scale: animation, child: child);
         },
         child: qty == 0
-            ? InkWell(
-                key: const ValueKey("add_btn"),
-                onTap: () {
-                  _cart.addItem(
-                    id: widget.id,
-                    name: widget.name,
-                    img: widget.img,
-                    price: widget.price,
-                    unit: widget.unit,
+            ? TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 180),
+                tween: Tween(begin: 1.0, end: 1.0),
+                key: ValueKey("add_btn_$qty"),
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    child: child,
                   );
                 },
+                child: InkWell(
+                  key: const ValueKey("add_btn"),
+                  onTap: () {
+                    _cart.addItem(
+                      id: widget.id,
+                      name: widget.name,
+                      img: widget.img,
+                      price: widget.price,
+                      unit: widget.unit,
+                      categoryId: widget.categoryId,
+                    );
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "${widget.name} added to cart",
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: const Color(0XFF0C831F),
+                        duration: const Duration(milliseconds: 1400),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        margin: const EdgeInsets.all(12),
+                      ),
+                    );
+                  },
                 borderRadius: BorderRadius.circular(8),
                 child: Center(
                   child: FittedBox(
@@ -114,6 +149,7 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ),
               )
@@ -151,6 +187,7 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                         img: widget.img,
                         price: widget.price,
                         unit: widget.unit,
+                        categoryId: widget.categoryId,
                       );
                     },
                     behavior: HitTestBehavior.opaque,

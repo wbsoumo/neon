@@ -164,7 +164,7 @@ class LoginScreen extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: const [
                                       Text(
-                                        "Sujal",
+                                        "Soumojit Saha",
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -173,7 +173,7 @@ class LoginScreen extends StatelessWidget {
                                       ),
                                       SizedBox(height: 2),
                                       Text(
-                                        "78277XXXXX",
+                                        "8016222991",
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Color(0XFF757575),

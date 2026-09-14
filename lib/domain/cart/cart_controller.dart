@@ -6,6 +6,7 @@ class CartItem {
   final String img;
   final double price;
   final String unit;
+  final int? categoryId;
   int quantity;
 
   CartItem({
@@ -14,6 +15,7 @@ class CartItem {
     required this.img,
     required this.price,
     this.unit = "1 unit",
+    this.categoryId,
     this.quantity = 1,
   });
 }
@@ -56,6 +58,7 @@ class CartController extends ChangeNotifier {
     required String img,
     required double price,
     String unit = "1 unit",
+    int? categoryId,
   }) {
     if (_items.containsKey(id)) {
       _items[id]!.quantity += 1;
@@ -66,6 +69,7 @@ class CartController extends ChangeNotifier {
         img: img,
         price: price,
         unit: unit,
+        categoryId: categoryId,
         quantity: 1,
       );
     }

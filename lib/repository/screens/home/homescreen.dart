@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
+import 'package:blinkit_series/repository/widgets/product_detail_dialog.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
+import 'package:blinkit_series/repository/widgets/skeleton_loader.dart';
+import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     "gifts"
   ];
 
-  Map<String, dynamic>? _selectedStoreData;
+  Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
   List<Map<String, dynamic>> _liveProducts = [];
   bool _isLoadingLiveProducts = false;
 
@@ -46,38 +50,133 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
-    setState(() => _isLoadingLiveProducts = true);
-    final store = await ApiService.fetchSelectedStore();
-    final prods = await ApiService.fetchProducts(storeId: store?['id'] ?? 1, forceRefresh: forceRefresh);
-    if (mounted) {
+    // 1. Immediately read cached store synchronously to prevent any header color flash
+    final cachedStore = await ApiService.fetchSelectedStore(forceRefresh: false);
+    if (cachedStore != null && mounted) {
       setState(() {
-        _selectedStoreData = store;
-        if (prods.isNotEmpty) {
-          _liveProducts = prods;
-          // Dynamically map API products with database images into featured and grocery sections
-          featuredItems.clear();
-          groceryKitchenItems.clear();
-          for (var p in prods) {
-            final double price = double.tryParse(p['effective_price']?.toString() ?? p['price']?.toString() ?? '0') ?? 0.0;
-            final String img = p['image'] ?? 'http://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80';
-            final mapItem = {
-              "id": p['id'].toString(),
-              "img": img,
-              "text": p['name'].toString(),
-              "price": price,
-            };
-            final isFeatured = p['is_featured'] == 1 || p['is_featured'] == '1' || p['is_featured'] == true || p['is_featured'] == 'true';
-            if (isFeatured) {
-              featuredItems.add(mapItem);
-            }
-            groceryKitchenItems.add(mapItem);
-          }
-          if (featuredItems.isEmpty && groceryKitchenItems.isNotEmpty) {
-            featuredItems.addAll(groceryKitchenItems.take(3));
+        _selectedStoreData = cachedStore;
+        if (cachedStore['search_hint'] != null && cachedStore['search_hint'].toString().isNotEmpty) {
+          final List<String> customHints = cachedStore['search_hint'].toString().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+          if (customHints.isNotEmpty) {
+            _searchHints.clear();
+            _searchHints.addAll(customHints);
           }
         }
-        _isLoadingLiveProducts = false;
       });
+    }
+
+    final cachedCats = await ApiService.fetchCategories();
+    if (cachedCats.isNotEmpty && mounted) {
+      _populateCategoriesData(cachedCats);
+    }
+
+    final cachedProds = await ApiService.fetchProducts(storeId: cachedStore?['id'] ?? 1, forceRefresh: false);
+    if (cachedProds.isNotEmpty && mounted) {
+      _populateProductsData(cachedProds);
+    }
+
+    // 2. Perform remote API refresh if forceRefresh is true or background update is triggered
+    if (forceRefresh) {
+      final freshStore = await ApiService.fetchSelectedStore(forceRefresh: true);
+      final freshProds = await ApiService.fetchProducts(storeId: freshStore?['id'] ?? 1, forceRefresh: true);
+      if (mounted) {
+        if (freshStore != null) _selectedStoreData = freshStore;
+        if (freshProds.isNotEmpty) _populateProductsData(freshProds);
+      }
+    }
+  }
+
+  void _populateCategoriesData(List<Map<String, dynamic>> categories) {
+    setState(() {
+      final List<Map<String, dynamic>> updatedHeaderCats = [
+        {"name": "All", "icon": Icons.shopping_bag_outlined}
+      ];
+      for (var c in categories) {
+        final bool showHp = c['show_on_homepage'] == true || c['show_on_homepage'] == 1 || c['show_on_homepage'] == '1';
+        if (showHp) {
+          updatedHeaderCats.add({
+            "name": c['name'].toString(),
+            "icon": _getCategoryIconData(c['icon']?.toString()),
+          });
+        }
+      }
+      if (updatedHeaderCats.length > 1) {
+        _headerCategories.clear();
+        _headerCategories.addAll(updatedHeaderCats);
+      }
+    });
+  }
+
+  void _populateProductsData(List<Map<String, dynamic>> prods) {
+    setState(() {
+      _liveProducts = prods;
+      featuredItems.clear();
+      groceryKitchenItems.clear();
+      for (var p in prods) {
+        final double price = double.tryParse(p['effective_price']?.toString() ?? p['price']?.toString() ?? '0') ?? 0.0;
+        final double mrp = double.tryParse(p['effective_mrp']?.toString() ?? p['mrp']?.toString() ?? '0') ?? price;
+        final String img = p['image'] ?? 'http://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80';
+        final mapItem = {
+          "id": p['id'].toString(),
+          "img": img,
+          "text": p['name'].toString(),
+          "name": p['name'].toString(),
+          "unit": p['unit'] ?? '1 pc',
+          "price": price,
+          "mrp": mrp,
+        };
+        final isFeatured = p['is_featured'] == 1 || p['is_featured'] == '1' || p['is_featured'] == true || p['is_featured'] == 'true';
+        if (isFeatured) {
+          featuredItems.add(mapItem);
+        }
+        groceryKitchenItems.add(mapItem);
+
+        final catName = p['category']?['name']?.toString() ?? p['category_name']?.toString();
+        if (catName != null && catName.isNotEmpty) {
+          _categoryProducts.putIfAbsent(catName, () => []);
+          if (!_categoryProducts[catName]!.any((item) => item['id'] == mapItem['id'])) {
+            _categoryProducts[catName]!.add(mapItem);
+          }
+          for (var key in _categoryProducts.keys) {
+            if (catName.toLowerCase().contains(key.toLowerCase()) || key.toLowerCase().contains(catName.toLowerCase())) {
+              if (!_categoryProducts[key]!.any((item) => item['id'] == mapItem['id'])) {
+                _categoryProducts[key]!.add(mapItem);
+              }
+            }
+          }
+        }
+      }
+      if (featuredItems.isEmpty && groceryKitchenItems.isNotEmpty) {
+        featuredItems.addAll(groceryKitchenItems.take(5));
+      }
+    });
+  }
+
+  IconData _getCategoryIconData(String? iconName) {
+    switch (iconName?.toLowerCase()) {
+      case 'festival_outlined':
+        return Icons.festival_outlined;
+      case 'headphones_outlined':
+        return Icons.headphones_outlined;
+      case 'brush_outlined':
+        return Icons.brush_outlined;
+      case 'card_giftcard_outlined':
+        return Icons.card_giftcard_outlined;
+      case 'local_hospital_outlined':
+        return Icons.local_hospital_outlined;
+      case 'pets_outlined':
+        return Icons.pets_outlined;
+      case 'toys_outlined':
+        return Icons.toys_outlined;
+      case 'fastfood_outlined':
+        return Icons.fastfood_outlined;
+      case 'local_drink_outlined':
+        return Icons.local_drink_outlined;
+      case 'local_grocery_store_outlined':
+        return Icons.local_grocery_store_outlined;
+      case 'shopping_bag_outlined':
+      default:
+        return Icons.shopping_bag_outlined;
     }
   }
 
@@ -172,10 +271,16 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Fresh Green Header (Matching App Theme)
+            // 1. Fresh Customizable Header Banner
             Container(
-              decoration: const BoxDecoration(
-                color: Color(0XFF0C831F),
+              decoration: BoxDecoration(
+                color: () {
+                  final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                  if (hexStr != null && hexStr.length == 6) {
+                    return Color(int.parse("0xFF$hexStr"));
+                  }
+                  return const Color(0XFF0C831F);
+                }(),
               ),
               child: SafeArea(
                 bottom: false,
@@ -209,32 +314,39 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _selectedStoreData != null
                                       ? "${_selectedStoreData!['name'] ?? 'Dark Store'}"
                                       : "18 minutes",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                     height: 1.1,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        _selectedStoreData != null
-                                            ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
-                                            : "Krishnanagar, Hub 1...",
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
+                                InkWell(
+                                  onTap: () {
+                                    AddressSelectionBottomSheet.show(context);
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _selectedStoreData != null
+                                              ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
+                                              : "RATANR FLAT, 11E Krishnanagar Main Hub...",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
-                                  ],
+                                      const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -295,115 +407,160 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Search Bar with right vertical divider & mic icon & animated sliding hint text
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => SearchScreen(
+                                allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
+                                initialQuery: searchController.text,
+                              ),
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 12),
-                            const Icon(Icons.search, color: Colors.black87, size: 22),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Stack(
-                                alignment: Alignment.centerLeft,
-                                children: [
-                                  if (searchController.text.isEmpty)
-                                    IgnorePointer(
-                                      child: Row(
-                                        children: [
-                                          const Text(
-                                            'Search ',
-                                            style: TextStyle(
-                                              color: Color(0XFF5C6BC0),
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              const Icon(Icons.search, color: Colors.black87, size: 22),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Stack(
+                                  alignment: Alignment.centerLeft,
+                                  children: [
+                                    if (searchController.text.isEmpty)
+                                      IgnorePointer(
+                                        child: Row(
+                                          children: [
+                                            const Text(
+                                              'Search ',
+                                              style: TextStyle(
+                                                color: Color(0XFF5C6BC0),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                          ),
-                                          ClipRect(
-                                            child: AnimatedSwitcher(
-                                              duration: const Duration(milliseconds: 400),
-                                              transitionBuilder: (Widget child, Animation<double> animation) {
-                                                final inAnimation = Tween<Offset>(
-                                                  begin: const Offset(0, 1.0),
-                                                  end: Offset.zero,
-                                                ).animate(animation);
-                                                final outAnimation = Tween<Offset>(
-                                                  begin: const Offset(0, -1.0),
-                                                  end: Offset.zero,
-                                                ).animate(animation);
+                                            ClipRect(
+                                              child: AnimatedSwitcher(
+                                                duration: const Duration(milliseconds: 400),
+                                                transitionBuilder: (Widget child, Animation<double> animation) {
+                                                  final inAnimation = Tween<Offset>(
+                                                    begin: const Offset(0, 1.0),
+                                                    end: Offset.zero,
+                                                  ).animate(animation);
+                                                  final outAnimation = Tween<Offset>(
+                                                    begin: const Offset(0, -1.0),
+                                                    end: Offset.zero,
+                                                  ).animate(animation);
 
-                                                if (child.key == ValueKey<int>(_searchHintIndex)) {
-                                                  return SlideTransition(
-                                                    position: inAnimation,
-                                                    child: FadeTransition(opacity: animation, child: child),
-                                                  );
-                                                } else {
-                                                  return SlideTransition(
-                                                    position: outAnimation,
-                                                    child: FadeTransition(opacity: animation, child: child),
-                                                  );
-                                                }
-                                              },
-                                              child: Text(
-                                                '"${_searchHints[_searchHintIndex]}"',
-                                                key: ValueKey<int>(_searchHintIndex),
-                                                style: const TextStyle(
-                                                  color: Color(0XFF5C6BC0),
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w500,
+                                                  if (child.key == ValueKey<int>(_searchHintIndex)) {
+                                                    return SlideTransition(
+                                                      position: inAnimation,
+                                                      child: FadeTransition(opacity: animation, child: child),
+                                                    );
+                                                  } else {
+                                                    return SlideTransition(
+                                                      position: outAnimation,
+                                                      child: FadeTransition(opacity: animation, child: child),
+                                                    );
+                                                  }
+                                                },
+                                                child: Text(
+                                                  '"${_searchHints[_searchHintIndex]}"',
+                                                  key: ValueKey<int>(_searchHintIndex),
+                                                  style: const TextStyle(
+                                                    color: Color(0XFF5C6BC0),
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                                 ),
                                               ),
                                             ),
+                                          ],
+                                        ),
+                                      ),
+                                    TextField(
+                                      controller: searchController,
+                                      readOnly: false,
+                                      onChanged: (value) {
+                                        if (value.isNotEmpty) {
+                                          final typedValue = value;
+                                          searchController.clear();
+                                          final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                                          final Color activeTheme = (hexStr != null && hexStr.length == 6)
+                                              ? Color(int.parse("0xFF$hexStr"))
+                                              : const Color(0XFF0C831F);
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => SearchScreen(
+                                                allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
+                                                initialQuery: typedValue,
+                                                themeColor: activeTheme,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      onTap: () {
+                                        final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                                        final Color activeTheme = (hexStr != null && hexStr.length == 6)
+                                            ? Color(int.parse("0xFF$hexStr"))
+                                            : const Color(0XFF0C831F);
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => SearchScreen(
+                                              allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
+                                              initialQuery: searchController.text,
+                                              themeColor: activeTheme,
+                                            ),
                                           ),
-                                        ],
+                                        );
+                                      },
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      decoration: const InputDecoration(
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(vertical: 12),
                                       ),
                                     ),
-                                  TextField(
-                                    controller: searchController,
-                                    onChanged: (val) {
-                                      setState(() {});
-                                    },
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            IntrinsicHeight(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    indent: 10,
-                                    endIndent: 10,
-                                    color: Color(0XFFE0E0E0),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Icon(Icons.mic, color: Colors.black87, size: 22),
-                                  SizedBox(width: 12),
-                                ],
+                              const IntrinsicHeight(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      indent: 10,
+                                      endIndent: 10,
+                                      color: Color(0XFFE0E0E0),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.mic, color: Colors.black87, size: 22),
+                                    SizedBox(width: 12),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -472,11 +629,17 @@ class _HomeScreenState extends State<HomeScreen> {
             if (isAllSelected) ...[
               // ---------------- MAIN HOME VIEW WHEN "ALL" IS SELECTED ----------------
 
-              // Mega Diwali Sale Banner
+              // Mega Sale Custom Banner
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                color: const Color(0XFF0C831F),
+                color: () {
+                  final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                  if (hexStr != null && hexStr.length == 6) {
+                    return Color(int.parse("0xFF$hexStr"));
+                  }
+                  return const Color(0XFF0C831F);
+                }(),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -486,7 +649,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Icon(Icons.stars, color: Color(0XFFF7CB45), size: 20),
                         const SizedBox(width: 8),
                         UiHelper.CustomText(
-                            text: "Mega Diwali Sale",
+                            text: _selectedStoreData?['banner_title']?.toString().isNotEmpty == true
+                                ? _selectedStoreData!['banner_title'].toString()
+                                : "Mega Diwali Sale",
                             color: Colors.white,
                             fontweight: FontWeight.bold,
                             fontsize: 20,
@@ -548,57 +713,105 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 16),
 
-              // Featured Candles & Diwali Gifts Section with Animated Cart Buttons
-              SizedBox(
-                height: 255,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              // Featured Products Section
+              if (_isLoadingLiveProducts) ...[
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 12, bottom: 8),
+                  child: UiHelper.CustomText(
+                      text: "Featured Products",
+                      color: Colors.black,
+                      fontweight: FontWeight.bold,
+                      fontsize: 16,
+                      fontfamily: "bold"),
+                ),
+                SizedBox(
+                  height: 195,
                   child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 4,
+                    itemBuilder: (context, index) => SkeletonLoader.productCardSkeleton(),
+                  ),
+                ),
+              ] else if (featuredItems.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 12, bottom: 8),
+                  child: UiHelper.CustomText(
+                      text: "Featured Products",
+                      color: Colors.black,
+                      fontweight: FontWeight.bold,
+                      fontsize: 16,
+                      fontfamily: "bold"),
+                ),
+                SizedBox(
+                  height: 195,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: featuredItems.length,
                     itemBuilder: (context, index) {
                       final item = featuredItems[index];
                       final String title = item["text"].toString();
                       final double price = (item["price"] as num).toDouble();
                       final String img = item["img"].toString();
 
-                      return Container(
-                        width: 125,
-                        margin: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              clipBehavior: Clip.antiAlias,
-                              height: 100,
-                              width: 125,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
+                      return InkWell(
+                        onTap: () => ProductDetailDialog.show(context, item),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 125,
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                clipBehavior: Clip.antiAlias,
+                                height: 85,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                color: const Color(0XFFF9F9F9),
                               ),
                               child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Colors.black,
+                                color: Colors.black87,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                                fontSize: 11,
+                                height: 1.1,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const Spacer(),
                             Row(
                               children: [
-                                const Icon(Icons.timer_outlined, size: 12, color: Color(0XFF9C9C9C)),
+                                const Icon(Icons.timer_outlined, size: 11, color: Color(0XFF9C9C9C)),
                                 const SizedBox(width: 2),
                                 UiHelper.CustomText(
                                     text: "16 MINS",
                                     color: const Color(0XFF9C9C9C),
                                     fontweight: FontWeight.normal,
-                                    fontsize: 10)
+                                    fontsize: 9)
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -606,97 +819,137 @@ class _HomeScreenState extends State<HomeScreen> {
                                     text: "₹${price.toStringAsFixed(0)}",
                                     color: Colors.black,
                                     fontweight: FontWeight.bold,
-                                    fontsize: 13),
+                                    fontsize: 12),
                                 AnimatedCartButton(
                                   id: "feat_$index",
                                   name: title.replaceAll('\n', ' '),
                                   img: img,
                                   price: price,
-                                  width: 64,
-                                  height: 28,
+                                  width: 60,
+                                  height: 26,
                                 ),
                               ],
                             )
                           ],
                         ),
-                      );
+                      ),
+                    );
                     },
-                    itemCount: featuredItems.length,
-                    scrollDirection: Axis.horizontal,
                   ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 15),
 
-              // Grocery & Kitchen Header
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
-                child: UiHelper.CustomText(
-                    text: "Grocery & Kitchen",
-                    color: Colors.black,
-                    fontweight: FontWeight.bold,
-                    fontsize: 15,
-                    fontfamily: "bold"),
-              ),
-              const SizedBox(height: 10),
-
-              // Grocery & Kitchen Horizontal List
-              SizedBox(
-                height: 175,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 20),
-                  child: ListView.builder(
-                    itemBuilder: (context, index) {
-                      final item = groceryKitchenItems[index];
-                      final String title = item["text"].toString();
-                      final double price = (item["price"] as num).toDouble();
-                      final String img = item["img"].toString();
-
-                      return Container(
-                        width: 85,
-                        margin: const EdgeInsets.only(right: 12),
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 75,
-                              width: 75,
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: const Color(0XFFD9EBEB)),
-                              child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              title,
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 10,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            AnimatedCartButton(
-                              id: "groc_$index",
-                              name: title.replaceAll('\n', ' '),
-                              img: img,
-                              price: price,
-                              width: 70,
-                              height: 26,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    itemCount: groceryKitchenItems.length,
-                    scrollDirection: Axis.horizontal,
+              // Dynamic Category Sections (Grocery & Kitchen, Beauty, Electronics, etc.)
+              for (var entry in _categoryProducts.entries)
+                if (entry.value.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, bottom: 8),
+                    child: UiHelper.CustomText(
+                        text: entry.key,
+                        color: Colors.black,
+                        fontweight: FontWeight.bold,
+                        fontsize: 16,
+                        fontfamily: "bold"),
                   ),
-                ),
-              ),
+                  SizedBox(
+                    height: 195,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      physics: const BouncingScrollPhysics(),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: entry.value.length,
+                      itemBuilder: (context, index) {
+                        final item = entry.value[index];
+                        final String title = (item["name"] ?? item["text"]).toString();
+                        final double price = (item["price"] as num).toDouble();
+                        final String img = item["img"].toString();
+                        final String id = item["id"].toString();
+
+                        return InkWell(
+                          onTap: () => ProductDetailDialog.show(context, item),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 125,
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  clipBehavior: Clip.antiAlias,
+                                  height: 85,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: const Color(0XFFF9F9F9),
+                                  ),
+                                  child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    height: 1.1,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.timer_outlined, size: 11, color: Color(0XFF9C9C9C)),
+                                    const SizedBox(width: 2),
+                                    UiHelper.CustomText(
+                                        text: "16 MINS",
+                                        color: const Color(0XFF9C9C9C),
+                                        fontweight: FontWeight.normal,
+                                        fontsize: 9)
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    UiHelper.CustomText(
+                                        text: "₹${price.toStringAsFixed(0)}",
+                                        color: Colors.black,
+                                        fontweight: FontWeight.bold,
+                                        fontsize: 12),
+                                    AnimatedCartButton(
+                                      id: "${entry.key}_$id",
+                                      name: title.replaceAll('\n', ' '),
+                                      img: img,
+                                      price: price,
+                                      width: 60,
+                                      height: 26,
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
 
               const SizedBox(height: 30),
             ] else ...[

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:blinkit_series/domain/cart/cart_controller.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
+import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 
 class CartScreen extends StatefulWidget {
@@ -15,14 +16,19 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final CartController _cart = CartController.instance;
 
-  final List<Map<String, dynamic>> _youMightLike = [
+  List<Map<String, dynamic>> _recommendations = [];
+  bool _isLoadingRecs = false;
+
+  static const double _freeDeliveryThreshold = 199.0;
+
+  final List<Map<String, dynamic>> _defaultRecommendations = [
     {
       "id": "yml_1",
       "name": "Tejas Pure Ghee Diya",
       "unit": "30 pcs",
       "price": 86.0,
       "mrp": 95.0,
-      "discount": "9% OFF on MRP",
+      "discount": "9% OFF",
       "img": "image 50.png",
     },
     {
@@ -31,7 +37,7 @@ class _CartScreenState extends State<CartScreen> {
       "unit": "100 pcs",
       "price": 22.0,
       "mrp": 40.0,
-      "discount": "45% OFF on MRP",
+      "discount": "45% OFF",
       "img": "image 50.png",
     },
     {
@@ -40,8 +46,17 @@ class _CartScreenState extends State<CartScreen> {
       "unit": "100 g",
       "price": 35.0,
       "mrp": 44.0,
-      "discount": "20% OFF on MRP",
+      "discount": "20% OFF",
       "img": "image 41.png",
+    },
+    {
+      "id": "yml_4",
+      "name": "Amul Taaza T-Special Milk",
+      "unit": "500 ml",
+      "price": 27.0,
+      "mrp": 28.0,
+      "discount": "4% OFF",
+      "img": "image 44 (1).png",
     },
   ];
 
@@ -49,6 +64,7 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
     _cart.addListener(_update);
+    _loadCategoryRecommendations();
   }
 
   @override
@@ -58,13 +74,56 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _update() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      _loadCategoryRecommendations();
+    }
+  }
+
+  Future<void> _loadCategoryRecommendations() async {
+    if (_isLoadingRecs) return;
+    
+    // Find unique category IDs in cart
+    final cartCategoryIds = _cart.items.values
+        .map((e) => e.categoryId)
+        .where((id) => id != null)
+        .cast<int>()
+        .toSet();
+
+    List<Map<String, dynamic>> fetched = [];
+    if (cartCategoryIds.isNotEmpty) {
+      for (final catId in cartCategoryIds) {
+        final prods = await ApiService.fetchProducts(categoryId: catId);
+        fetched.addAll(prods);
+      }
+    } else {
+      // Fetch general top products
+      fetched = await ApiService.fetchProducts();
+    }
+
+    if (mounted) {
+      setState(() {
+        _recommendations = fetched;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final cartItems = _cart.items.values.toList();
     final int totalItemCount = _cart.totalItemCount;
+    final double subtotal = _cart.totalAmount;
+    final double amountNeededForFreeDelivery = (_freeDeliveryThreshold - subtotal).clamp(0.0, _freeDeliveryThreshold);
+    final double progressRatio = (subtotal / _freeDeliveryThreshold).clamp(0.0, 1.0);
+
+    // Filter recommendations: show products in categories in cart, EXCLUDE products already in cart
+    final cartItemIds = _cart.items.keys.toSet();
+    final List<Map<String, dynamic>> filteredRecs = _recommendations.where((item) {
+      final String idStr = item['id'].toString();
+      return !cartItemIds.contains(idStr);
+    }).toList();
+
+    final displayRecs = filteredRecs.isNotEmpty ? filteredRecs : _defaultRecommendations.where((item) => !cartItemIds.contains(item['id'].toString())).toList();
 
     return Scaffold(
       backgroundColor: const Color(0XFFF5F6F8),
@@ -97,9 +156,9 @@ class _CartScreenState extends State<CartScreen> {
               border: Border.all(color: const Color(0XFFE0E0E0)),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
-              children: const [
-                Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.black87),
+            child: const Row(
+              children: [
+                Icon(Icons.share_outlined, size: 16, color: Colors.black87),
                 SizedBox(width: 4),
                 Text(
                   "Share",
@@ -123,7 +182,7 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Special Deal For You Card
+                  // 1. FREE DELIVERY PROGRESS BAR BANNER
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -141,13 +200,121 @@ class _CartScreenState extends State<CartScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Special deal for you!",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: subtotal >= _freeDeliveryThreshold
+                                    ? const Color(0XFFE8F5E9)
+                                    : const Color(0XFFFFF8E1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                subtotal >= _freeDeliveryThreshold
+                                    ? Icons.celebration
+                                    : Icons.delivery_dining,
+                                color: subtotal >= _freeDeliveryThreshold
+                                    ? const Color(0XFF0C831F)
+                                    : const Color(0XFFF57F17),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          subtotal >= _freeDeliveryThreshold
+                                              ? "Yay! You unlocked FREE Delivery 🥳 🎉"
+                                              : "Add ₹${amountNeededForFreeDelivery.toStringAsFixed(0)} more for FREE Delivery",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: subtotal >= _freeDeliveryThreshold
+                                                ? const Color(0XFF0C831F)
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      if (subtotal >= _freeDeliveryThreshold)
+                                        const Text(
+                                          "🎉 🎊",
+                                          style: TextStyle(fontSize: 18),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    subtotal >= _freeDeliveryThreshold
+                                        ? "No extra delivery charge will be added to this order"
+                                        : "Shop for ₹${_freeDeliveryThreshold.toStringAsFixed(0)} or more to save delivery fees",
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Animated Linear Progress Indicator
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: progressRatio,
+                            minHeight: 8,
+                            backgroundColor: const Color(0XFFEEEEEE),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              subtotal >= _freeDeliveryThreshold
+                                  ? const Color(0XFF0C831F)
+                                  : const Color(0XFFF7CB45),
+                            ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // 2. SPECIAL DEAL FOR YOU SECTION
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.local_offer, color: Color(0XFF673AB7), size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              "Special deal for you!",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -171,12 +338,12 @@ class _CartScreenState extends State<CartScreen> {
                                     child: const Icon(Icons.sanitizer_outlined, color: Color(0XFF5C6BC0), size: 36),
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(
+                                  const Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          "Head & Shoulders Anti\nHairfall Special Offer",
+                                        Text(
+                                          "Head & Shoulders Anti Hairfall Offer",
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
@@ -184,9 +351,9 @@ class _CartScreenState extends State<CartScreen> {
                                             height: 1.2,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: 4),
                                         Row(
-                                          children: const [
+                                          children: [
                                             Text(
                                               "₹45 ",
                                               style: TextStyle(
@@ -225,8 +392,8 @@ class _CartScreenState extends State<CartScreen> {
                                   color: const Color(0XFFF0EBFF),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Row(
-                                  children: const [
+                                child: const Row(
+                                  children: [
                                     Icon(Icons.lock_open, size: 16, color: Color(0XFF673AB7)),
                                     SizedBox(width: 8),
                                     Expanded(
@@ -251,7 +418,7 @@ class _CartScreenState extends State<CartScreen> {
 
                   const SizedBox(height: 14),
 
-                  // 2. Delivery in 11 minutes Card with Item List
+                  // 3. CART ITEMS LIST (DELIVERY IN 11 MINS)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
@@ -289,7 +456,7 @@ class _CartScreenState extends State<CartScreen> {
                                   ),
                                 ),
                                 Text(
-                                  "Shipment of ${totalItemCount == 0 ? 1 : totalItemCount} ${totalItemCount == 1 ? 'item' : 'items'}",
+                                  "Shipment of ${totalItemCount == 0 ? 0 : totalItemCount} ${totalItemCount == 1 ? 'item' : 'items'}",
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.black45,
@@ -302,84 +469,24 @@ class _CartScreenState extends State<CartScreen> {
                         const SizedBox(height: 14),
 
                         if (cartItems.isEmpty) ...[
-                          // Default Sample Item matching reference screenshot
-                          Row(
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: const Color(0XFFF9F9F9),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.auto_awesome, color: Color(0XFFF7CB45), size: 36),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "Arti Brass Diya by Sohum",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      "1 pc",
-                                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      "Move to wishlist",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black45,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            child: Center(
+                              child: Column(
                                 children: [
-                                  AnimatedCartButton(
-                                    id: "default_item",
-                                    name: "Arti Brass Diya by Sohum",
-                                    img: "image 50.png",
-                                    price: 119.0,
-                                    width: 72,
-                                    height: 32,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: const [
-                                      Text(
-                                        "₹249 ",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.black38,
-                                          decoration: TextDecoration.lineThrough,
-                                        ),
-                                      ),
-                                      Text(
-                                        "₹119",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(Icons.shopping_basket_outlined, size: 48, color: Colors.grey.shade400),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Your cart is currently empty",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black54,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ] else ...[
                           Column(
@@ -389,13 +496,23 @@ class _CartScreenState extends State<CartScreen> {
                                 child: Row(
                                   children: [
                                     Container(
-                                      width: 60,
-                                      height: 60,
+                                      width: 56,
+                                      height: 56,
                                       decoration: BoxDecoration(
                                         color: const Color(0XFFF9F9F9),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: const Icon(Icons.shopping_bag, color: Color(0XFF0C831F), size: 30),
+                                      child: item.img.startsWith('http')
+                                          ? Image.network(
+                                              item.img,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: Color(0XFF0C831F), size: 28),
+                                            )
+                                          : Image.asset(
+                                              "assets/images/${item.img}",
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: Color(0XFF0C831F), size: 28),
+                                            ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -415,16 +532,6 @@ class _CartScreenState extends State<CartScreen> {
                                             item.unit,
                                             style: const TextStyle(fontSize: 11, color: Colors.black54),
                                           ),
-                                          const SizedBox(height: 4),
-                                          const Text(
-                                            "Move to wishlist",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black45,
-                                              decoration: TextDecoration.underline,
-                                            ),
-                                          ),
                                         ],
                                       ),
                                     ),
@@ -437,6 +544,7 @@ class _CartScreenState extends State<CartScreen> {
                                           img: item.img,
                                           price: item.price,
                                           unit: item.unit,
+                                          categoryId: item.categoryId,
                                           width: 72,
                                           height: 32,
                                         ),
@@ -461,119 +569,254 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
-                  // 3. "You might also like" Horizontal Recommendations
-                  const Text(
-                    "You might also like",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
+                  // 4. "YOU MIGHT ALSO LIKE" SECTION (ON CART CATEGORIES, FILTER OUT CART ITEMS)
+                  if (displayRecs.isNotEmpty) ...[
+                    const Text(
+                      "You might also like",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 220,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: displayRecs.length,
+                        itemBuilder: (context, index) {
+                          final item = displayRecs[index];
+                          final String idStr = item['id'].toString();
+                          final String name = (item['name'] ?? item['title'] ?? 'Product').toString();
+                          final String unit = (item['unit'] ?? '1 unit').toString();
+                          final double price = double.tryParse(item['price']?.toString() ?? '0') ?? 0.0;
+                          final double mrp = double.tryParse(item['mrp']?.toString() ?? (price * 1.2).toString()) ?? price;
+                          final String img = (item['img'] ?? item['image'] ?? '').toString();
+                          final int? catId = item['category_id'] is int ? item['category_id'] : int.tryParse(item['category_id']?.toString() ?? '');
 
-                  const SizedBox(height: 12),
-
-                  SizedBox(
-                    height: 240,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _youMightLike.length,
-                      itemBuilder: (context, index) {
-                        final item = _youMightLike[index];
-                        return Container(
-                          width: 120,
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Stack(
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: const Color(0XFFFDF6E3),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(Icons.local_florist, color: Color(0XFFF7CB45), size: 48),
-                                      ),
+                          return Container(
+                            width: 130,
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0XFFF9F9F9),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
-                                    const Positioned(
-                                      top: 6,
-                                      right: 6,
-                                      child: Icon(Icons.favorite_border, size: 16, color: Colors.black45),
+                                    child: img.startsWith('http')
+                                        ? Image.network(
+                                            img,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 36),
+                                          )
+                                        : Image.asset(
+                                            "assets/images/$img",
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 36),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  unit,
+                                  style: const TextStyle(fontSize: 10, color: Colors.black54),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "₹${price.toStringAsFixed(0)}",
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        if (mrp > price)
+                                          Text(
+                                            "₹${mrp.toStringAsFixed(0)}",
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.black38,
+                                              decoration: TextDecoration.lineThrough,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    AnimatedCartButton(
+                                      id: idStr,
+                                      name: name,
+                                      img: img,
+                                      price: price,
+                                      unit: unit,
+                                      categoryId: catId,
+                                      width: 56,
+                                      height: 28,
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    item["unit"],
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
-                                  ),
-                                  AnimatedCartButton(
-                                    id: item["id"],
-                                    name: item["name"],
-                                    img: item["img"],
-                                    price: item["price"],
-                                    unit: item["unit"],
-                                    width: 54,
-                                    height: 26,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Text(
-                                    "₹${(item["price"] as double).toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "₹${(item["mrp"] as double).toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black38,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                item["discount"],
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0XFF1E88E5),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 5. TOTAL BILLING BREAKDOWN CARD
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Bill details",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
                           ),
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.receipt_long_outlined, size: 16, color: Colors.black54),
+                                SizedBox(width: 6),
+                                Text("Items total", style: TextStyle(fontSize: 13, color: Colors.black87)),
+                              ],
+                            ),
+                            Text(
+                              "₹${subtotal.toStringAsFixed(0)}",
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.delivery_dining_outlined, size: 16, color: Colors.black54),
+                                SizedBox(width: 6),
+                                Text("Delivery charge", style: TextStyle(fontSize: 13, color: Colors.black87)),
+                              ],
+                            ),
+                            _cart.deliveryFee == 0
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0XFFE8F5E9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      "FREE",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0XFF0C831F),
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    "₹${_cart.deliveryFee.toStringAsFixed(0)}",
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
+                                  ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.cleaning_services_outlined, size: 16, color: Colors.black54),
+                                SizedBox(width: 6),
+                                Text("Handling fee", style: TextStyle(fontSize: 13, color: Colors.black87)),
+                              ],
+                            ),
+                            Text(
+                              "₹${_cart.handlingFee.toStringAsFixed(0)}",
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                          ],
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: Divider(height: 1, color: Color(0XFFE0E0E0)),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Grand Total",
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Text(
+                              "₹${_cart.grandTotal.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0XFF0C831F),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
 
@@ -583,7 +826,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
 
-          // 4. Sticky Bottom Address Banner & Payment Bar
+          // 6. STICKY BOTTOM ADDRESS BANNER & CASH ON DELIVERY PAYMENT BAR
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -599,69 +842,65 @@ class _CartScreenState extends State<CartScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Delivery Address Pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: const Color(0XFFFDFDFD),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 12,
-                            backgroundColor: Color(0XFFF7CB45),
-                            child: Icon(Icons.location_on, color: Colors.black87, size: 14),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  "Delivering to Ratanr Flat 11E",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                SizedBox(height: 1),
-                                Text(
-                                  "11E Krishnanagar, India",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
+                InkWell(
+                  onTap: () {
+                    AddressSelectionBottomSheet.show(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    color: const Color(0XFFFDFDFD),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12,
+                              backgroundColor: Color(0XFFF7CB45),
+                              child: Icon(Icons.location_on, color: Colors.black87, size: 14),
                             ),
-                          ),
-                          const Text(
-                            "Change",
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0XFF0C831F),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Delivering to Ratanr Flat 11E",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  SizedBox(height: 1),
+                                  Text(
+                                    "11E Krishnanagar, India",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Selected address is 37.90 km away from your current l...",
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Color(0XFFD84315),
-                          fontWeight: FontWeight.w500,
+                            const Text(
+                              "Change",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0XFF0C831F),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
                 const Divider(height: 1),
 
-                // Sticky Payment Bar (PAY USING PhonePe UPI & Green Place Order Button)
+                // Sticky Payment Bar - CASH ON DELIVERY ONLY FOR NOW
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   child: Row(
@@ -670,35 +909,31 @@ class _CartScreenState extends State<CartScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0XFFF5F6F8),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0XFFE8F5E9),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.account_balance_wallet, color: Color(0XFF673AB7), size: 16),
+                            child: const Icon(Icons.payments_outlined, color: Color(0XFF0C831F), size: 18),
                           ),
                           const SizedBox(width: 8),
-                          Column(
+                          const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Row(
-                                children: [
-                                  Text(
-                                    "PAY USING ",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black45,
-                                    ),
-                                  ),
-                                  Icon(Icons.arrow_drop_up, size: 14, color: Colors.black45),
-                                ],
+                            children: [
+                              Text(
+                                "PAY USING",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black45,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                               Text(
-                                "PhonePe UPI",
+                                "Cash on Delivery",
                                 style: TextStyle(
                                   fontSize: 13,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
                                   color: Colors.black,
                                 ),
                               ),
@@ -718,7 +953,7 @@ class _CartScreenState extends State<CartScreen> {
                           }
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Placing order and reserving stock with store...")),
+                            const SnackBar(content: Text("Placing Cash on Delivery order...")),
                           );
 
                           final itemsList = _cart.items.values.map((it) {
@@ -737,6 +972,7 @@ class _CartScreenState extends State<CartScreen> {
                             deliveryAddress: "11E Krishnanagar Main Road, Krishnanagar",
                             items: itemsList,
                             storeId: 1,
+                            paymentMethod: "Cash on Delivery",
                           );
 
                           if (mounted) {
@@ -754,7 +990,7 @@ class _CartScreenState extends State<CartScreen> {
                                     ],
                                   ),
                                   content: Text(
-                                    "Order #${response['order_number'] ?? 'SUCCESS'} has been successfully placed!\n\nStore Manager has reserved your inventory items.",
+                                    "Order #${response['order_number'] ?? 'SUCCESS'} (Cash on Delivery) has been placed successfully!\n\nPay cash when your delivery partner arrives.",
                                   ),
                                   actions: [
                                     TextButton(
@@ -788,7 +1024,7 @@ class _CartScreenState extends State<CartScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "₹${(_cart.grandTotal == 0 ? 154 : _cart.grandTotal).toStringAsFixed(0)}",
+                                    "₹${_cart.grandTotal.toStringAsFixed(0)}",
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
@@ -806,8 +1042,8 @@ class _CartScreenState extends State<CartScreen> {
                                 ],
                               ),
                               const SizedBox(width: 16),
-                              Row(
-                                children: const [
+                              const Row(
+                                children: [
                                   Text(
                                     "Place Order",
                                     style: TextStyle(

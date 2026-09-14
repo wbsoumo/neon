@@ -5,14 +5,76 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/domain/constants/api_constants.dart';
 
 class ApiService {
+  static const String _kStoreCacheKey = 'cache_store_data';
+  static const String _kStoreVersionKey = 'cache_store_version';
   static const String _kCategoriesCacheKey = 'cache_categories_data';
   static const String _kCategoriesEtagKey = 'cache_categories_etag';
+  static const String _kCategoriesVersionKey = 'cache_categories_version';
 
   static const String _kProductsCacheKey = 'cache_products_data_';
   static const String _kProductsEtagKey = 'cache_products_etag_';
+  static const String _kProductsVersionKey = 'cache_products_version_';
 
-  // 1. Fetch Store Selection & Operational Status
-  static Future<Map<String, dynamic>?> fetchSelectedStore({double? lat, double? lng}) async {
+  static Map<String, dynamic>? _memoryCachedStore;
+  static List<Map<String, dynamic>>? _memoryCachedCategories;
+
+  // Instant Sync Memory Cache Accessor
+  static Map<String, dynamic>? get memoryCachedStore => _memoryCachedStore;
+
+  // 0. Light-Weight Sync Status Checker
+  static Future<Map<String, dynamic>?> checkSyncStatus({int storeId = 1}) async {
+    try {
+      final Uri uri = Uri.parse(ApiConstants.syncCheck).replace(
+        queryParameters: {'store_id': storeId.toString()},
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return data;
+        }
+      }
+    } catch (e) {
+      debugPrint("Sync Check API Error: $e");
+    }
+    return null;
+  }
+
+  // 1. Fetch Store Selection & Operational Status with Local Storage Cache
+  static Future<Map<String, dynamic>?> fetchSelectedStore({double? lat, double? lng, bool forceRefresh = false}) async {
+    if (!forceRefresh && _memoryCachedStore != null) {
+      return _memoryCachedStore;
+    }
+
+    SharedPreferences? prefs;
+    Map<String, dynamic>? cachedStore;
+
+    try {
+      prefs = await SharedPreferences.getInstance();
+      final String? cachedJson = prefs.getString(_kStoreCacheKey);
+      if (cachedJson != null) {
+        cachedStore = Map<String, dynamic>.from(jsonDecode(cachedJson));
+        _memoryCachedStore = cachedStore;
+      }
+    } catch (e) {
+      debugPrint("Error reading cached store: $e");
+    }
+
+    if (!forceRefresh && cachedStore != null) {
+      // Check version asynchronously or return cache immediately
+      checkSyncStatus().then((syncData) {
+        if (syncData != null && syncData['versions'] != null) {
+          final serverVersion = syncData['versions']['store']?.toString();
+          final localVersion = prefs?.getString(_kStoreVersionKey);
+          if (serverVersion != null && serverVersion != localVersion) {
+            // Background update store cache
+            fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true);
+          }
+        }
+      });
+      return cachedStore;
+    }
+
     try {
       final Uri uri = Uri.parse(ApiConstants.selectStore).replace(
         queryParameters: {
@@ -20,17 +82,28 @@ class ApiService {
           if (lng != null) 'lng': lng.toString(),
         },
       );
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          return data['store'];
+        if (data['status'] == 'success' && data['store'] != null) {
+          final Map<String, dynamic> storeMap = Map<String, dynamic>.from(data['store']);
+          if (prefs != null) {
+            prefs.setString(_kStoreCacheKey, jsonEncode(storeMap));
+            final String version = md5Hash(jsonEncode(storeMap));
+            prefs.setString(_kStoreVersionKey, version);
+          }
+          return storeMap;
         }
       }
     } catch (e) {
       debugPrint("API Error fetching store: $e");
     }
-    return null;
+    return cachedStore;
+  }
+
+  static String md5Hash(String text) {
+    // Basic hash fallback helper
+    return text.hashCode.toString();
   }
 
   // 2. Fetch Categories with Local Storage Cache & Delta ETag
@@ -162,12 +235,16 @@ class ApiService {
     required List<Map<String, dynamic>> items,
     int storeId = 1,
     String paymentMethod = "PhonePe UPI",
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final body = jsonEncode({
         "user_name": userName,
         "user_phone": userPhone,
         "delivery_address": deliveryAddress,
+        "latitude": latitude ?? 23.4126,
+        "longitude": longitude ?? 88.4292,
         "store_id": storeId,
         "payment_method": paymentMethod,
         "items": items,
