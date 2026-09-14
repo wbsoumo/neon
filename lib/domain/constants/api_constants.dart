@@ -6,4 +6,6 @@ class ApiConstants {
   static const String categories = "$baseUrl/categories";
   static const String products = "$baseUrl/products";
   static const String createOrder = "$baseUrl/orders";
+  static const String userAddresses = "$baseUrl/user/addresses";
+  static const String storeUserAddress = "$baseUrl/user/addresses/store";
 }

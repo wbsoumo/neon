@@ -87,6 +87,7 @@ class ApiService {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success' && data['store'] != null) {
           final Map<String, dynamic> storeMap = Map<String, dynamic>.from(data['store']);
+          _memoryCachedStore = storeMap;
           if (prefs != null) {
             prefs.setString(_kStoreCacheKey, jsonEncode(storeMap));
             final String version = md5Hash(jsonEncode(storeMap));
@@ -263,6 +264,60 @@ class ApiService {
         "status": "error",
         "message": "Connection error: $e"
       };
+    }
+  }
+
+  // 5. Fetch User Saved Addresses from Database
+  static Future<List<Map<String, dynamic>>> getUserAddresses({String phone = "8016222991"}) async {
+    try {
+      final Uri uri = Uri.parse(ApiConstants.userAddresses).replace(queryParameters: {'phone': phone});
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching user addresses: $e");
+    }
+    return [];
+  }
+
+  // 6. Save User Address in Database
+  static Future<Map<String, dynamic>> saveUserAddress({
+    required String addressType, // Home, Work, Other
+    String? customTypeName,
+    required String addressDetails,
+    required String receiverName,
+    required String receiverPhone,
+    bool isForSomeoneElse = false,
+    double latitude = 23.4126,
+    double longitude = 88.4292,
+    String userPhone = "8016222991",
+  }) async {
+    try {
+      final body = jsonEncode({
+        "user_phone": userPhone,
+        "address_type": addressType,
+        "custom_type_name": customTypeName,
+        "address_details": addressDetails,
+        "receiver_name": receiverName,
+        "receiver_phone": receiverPhone,
+        "is_for_someone_else": isForSomeoneElse,
+        "latitude": latitude,
+        "longitude": longitude,
+      });
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.storeUserAddress),
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      ).timeout(const Duration(seconds: 8));
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {"status": "error", "message": "Save address failed: $e"};
     }
   }
 }

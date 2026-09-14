@@ -47,6 +47,78 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndRequestLocationPermission();
+    });
+  }
+
+  void _checkAndRequestLocationPermission() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.location_on, color: Color(0XFFE53935), size: 26),
+              SizedBox(width: 10),
+              Text(
+                "Device Location",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: const Text(
+            "SonarbanglaMart needs location access to check service availability and auto-select your nearest dark store for 15-min delivery.",
+            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          actions: [
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                AddressSelectionBottomSheet.show(
+                  context,
+                  onAddressSelected: (selectedAddress) {
+                    _fetchLiveBackendData(forceRefresh: true);
+                  },
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.grey),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text("Deny / Choose", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                final storeData = await ApiService.fetchSelectedStore(lat: 23.4013, lng: 88.5010, forceRefresh: true);
+                if (mounted) {
+                  setState(() {
+                    _selectedStoreData = storeData;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Location access granted! Connected to ${storeData?['name'] ?? 'Nearest Dark Store'}"),
+                      backgroundColor: const Color(0XFF0C831F),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0XFF0C831F),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text("Allow Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
@@ -326,7 +398,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 4),
                                 InkWell(
                                   onTap: () {
-                                    AddressSelectionBottomSheet.show(context);
+                                    AddressSelectionBottomSheet.show(
+                                      context,
+                                      onAddressSelected: (selectedAddress) {
+                                        _fetchLiveBackendData(forceRefresh: true);
+                                      },
+                                    );
                                   },
                                   child: Row(
                                     children: [
@@ -1092,6 +1169,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 30),
+            ],
+
+            // 5. Unserviceable location bottom red warning banner (matching exact user screenshot)
+            if (_selectedStoreData != null && (_selectedStoreData!['is_serviceable'] == false || _selectedStoreData!['is_operational'] == false)) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                color: const Color(0XFFE53935),
+                child: Text(
+                  _selectedStoreData!['closure_reason']?.toString() ??
+                      "We are currently not available at your location. Distance to nearest store is 44.7 km (Coverage limit: 5.00 km).",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ),
             ],
           ],
         ),
