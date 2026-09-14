@@ -1,8 +1,56 @@
 import 'package:flutter/material.dart';
 
 class UiHelper {
-  static CustomImage({required String img}) {
-    return Image.asset("assets/images/$img");
+  static CustomImage({required String img, double? width, double? height, BoxFit fit = BoxFit.contain}) {
+    String cleanUrl = img.trim();
+
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return Image.network(
+        cleanUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Icon(Icons.shopping_bag_outlined, color: Color(0XFF0C831F), size: 24),
+          ),
+        ),
+      );
+    }
+
+    // Strip out query parameters if any are attached to local image names
+    String localName = cleanUrl;
+    if (localName.contains('?')) {
+      localName = localName.split('?').first;
+    }
+
+    String cleanPath = localName.startsWith('assets/images/') ? localName : "assets/images/$localName";
+
+    return Image.asset(
+      cleanPath,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Icon(Icons.fastfood, color: Color(0XFF0C831F), size: 24),
+          ),
+        );
+      },
+    );
   }
 
   static CustomText(
@@ -35,8 +83,8 @@ class UiHelper {
         controller: controller,
         decoration: InputDecoration(
           hintText: "Search 'ice-cream'",
-          prefixIcon: Image.asset("assets/images/search.png"),
-          suffixIcon: Image.asset("assets/images/mic 1.png"),
+          prefixIcon: const Icon(Icons.search, color: Color(0XFF9C9C9C)),
+          suffixIcon: const Icon(Icons.mic, color: Color(0XFF9C9C9C)),
           border: InputBorder.none
         ),
       ),

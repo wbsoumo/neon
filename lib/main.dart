@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
         title: 'Blinkit',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+          colorScheme: ColorScheme.fromSeed(seedColor: Color(0XFF0C831F)),
           useMaterial3: false,
         ),
         home: SplashScreen());
