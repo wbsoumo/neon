@@ -42,16 +42,31 @@ class ApiService {
 
   // 1. Fetch Store Selection & Operational Status with Local Storage Cache
   static Future<Map<String, dynamic>?> fetchSelectedStore({double? lat, double? lng, bool forceRefresh = false}) async {
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {}
+
+    // Save requested lat/lng if provided so manual user selection persists on restart
+    if (lat != null && lng != null && prefs != null) {
+      prefs.setDouble('user_selected_lat', lat);
+      prefs.setDouble('user_selected_lng', lng);
+    }
+
+    // Read stored coordinates if not passed explicitly
+    if (lat == null && lng == null && prefs != null) {
+      lat = prefs.getDouble('user_selected_lat');
+      lng = prefs.getDouble('user_selected_lng');
+    }
+
     if (!forceRefresh && _memoryCachedStore != null) {
       return _memoryCachedStore;
     }
 
-    SharedPreferences? prefs;
     Map<String, dynamic>? cachedStore;
 
     try {
-      prefs = await SharedPreferences.getInstance();
-      final String? cachedJson = prefs.getString(_kStoreCacheKey);
+      final String? cachedJson = prefs?.getString(_kStoreCacheKey);
       if (cachedJson != null) {
         cachedStore = Map<String, dynamic>.from(jsonDecode(cachedJson));
         _memoryCachedStore = cachedStore;
@@ -61,17 +76,6 @@ class ApiService {
     }
 
     if (!forceRefresh && cachedStore != null) {
-      // Check version asynchronously or return cache immediately
-      checkSyncStatus().then((syncData) {
-        if (syncData != null && syncData['versions'] != null) {
-          final serverVersion = syncData['versions']['store']?.toString();
-          final localVersion = prefs?.getString(_kStoreVersionKey);
-          if (serverVersion != null && serverVersion != localVersion) {
-            // Background update store cache
-            fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true);
-          }
-        }
-      });
       return cachedStore;
     }
 
