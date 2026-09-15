@@ -163,8 +163,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Live Estimated Arrival Timer Banner
-                          if (statusLower != 'delivered' && statusLower != 'cancelled') ...[
+                          // Live Estimated Arrival Timer Banner - ONLY when Out for Delivery
+                          if (statusLower == 'out for delivery') ...[
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
@@ -183,12 +183,12 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: const [
                                         Text(
-                                          "ESTIMATED ARRIVAL",
+                                          "ESTIMATED ARRIVAL (5 KM DISTANCE)",
                                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F), letterSpacing: 0.5),
                                         ),
                                         SizedBox(height: 1),
                                         Text(
-                                          "Arriving in 8–12 mins",
+                                          "Arriving in 10–15 mins",
                                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
                                         ),
                                       ],
@@ -523,16 +523,18 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                   color: const Color(0XFFE8F5E9),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
-                                  "HOME",
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F)),
+                                child: Text(
+                                  (_order?['address_type']?.toString().toUpperCase() ?? 'HOME'),
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F)),
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  "Flat 4B, Sonarbangla Heights, Sector V, Salt Lake, Kolkata - 700091",
-                                  style: TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500, height: 1.3),
+                                  _order?['delivery_address']?.toString() ??
+                                  _order?['address']?.toString() ??
+                                  "Sonarbangla Mart, Sector V, Salt Lake, Kolkata - 700091",
+                                  style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500, height: 1.3),
                                 ),
                               ),
                             ],
@@ -736,12 +738,12 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0XFFE8F5E9),
+                                      color: const Color(0XFFFFF3E0),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: const Text(
-                                      "PAID VIA UPI",
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0XFF0C831F)),
+                                      "CASH ON DELIVERY (COD)",
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange),
                                     ),
                                   ),
                                 ],
