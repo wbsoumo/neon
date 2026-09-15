@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 
@@ -693,25 +694,54 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                         double? targetLat;
                         double? targetLng;
 
-                        // Multi-provider precise network geolocation lookup
+                        // 1. Native Hardware GPS Device Location Request for Android & iOS
                         try {
-                          final res1 = await http.get(Uri.parse('https://ipwho.is/')).timeout(const Duration(seconds: 3));
-                          if (res1.statusCode == 200) {
-                            final d1 = jsonDecode(res1.body);
-                            targetLat = double.tryParse(d1['latitude']?.toString() ?? '');
-                            targetLng = double.tryParse(d1['longitude']?.toString() ?? '');
-                          }
-                        } catch (_) {}
+                          bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                          if (!serviceEnabled) {
+                            debugPrint("Location services disabled on device.");
+                          } else {
+                            LocationPermission permission = await Geolocator.checkPermission();
+                            if (permission == LocationPermission.denied) {
+                              permission = await Geolocator.requestPermission();
+                            }
 
+                            if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+                              Position position = await Geolocator.getCurrentPosition(
+                                locationSettings: const LocationSettings(
+                                  accuracy: LocationAccuracy.high,
+                                  timeLimit: Duration(seconds: 7),
+                                ),
+                              );
+                              targetLat = position.latitude;
+                              targetLng = position.longitude;
+                              debugPrint("Native Hardware GPS LatLng obtained: $targetLat, $targetLng");
+                            }
+                          }
+                        } catch (e) {
+                          debugPrint("Geolocator native GPS error: $e");
+                        }
+
+                        // 2. Multi-provider network IP fallback if GPS is denied or unavailable
                         if (targetLat == null || targetLng == null) {
                           try {
-                            final res2 = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 3));
-                            if (res2.statusCode == 200) {
-                              final d2 = jsonDecode(res2.body);
-                              targetLat = double.tryParse(d2['latitude']?.toString() ?? '');
-                              targetLng = double.tryParse(d2['longitude']?.toString() ?? '');
+                            final res1 = await http.get(Uri.parse('https://ipwho.is/')).timeout(const Duration(seconds: 3));
+                            if (res1.statusCode == 200) {
+                              final d1 = jsonDecode(res1.body);
+                              targetLat = double.tryParse(d1['latitude']?.toString() ?? '');
+                              targetLng = double.tryParse(d1['longitude']?.toString() ?? '');
                             }
                           } catch (_) {}
+
+                          if (targetLat == null || targetLng == null) {
+                            try {
+                              final res2 = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 3));
+                              if (res2.statusCode == 200) {
+                                final d2 = jsonDecode(res2.body);
+                                targetLat = double.tryParse(d2['latitude']?.toString() ?? '');
+                                targetLng = double.tryParse(d2['longitude']?.toString() ?? '');
+                              }
+                            } catch (_) {}
+                          }
                         }
 
                         // 3. Final default fallback if everything failed
