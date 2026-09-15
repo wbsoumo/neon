@@ -89,12 +89,29 @@ class _CartScreenState extends State<CartScreen> {
     },
   ];
 
+  List<Map<String, dynamic>> _savedAddresses = [];
+  String _selectedDeliveryAddress = "RATANR FLAT, 11E Krishnanagar, India";
+  String _selectedDeliveryTag = "Home";
+
   @override
   void initState() {
     super.initState();
     _cart.addListener(_update);
     _loadCategoryRecommendations();
     _autoSelectAvailablePickupSlot();
+    _fetchUserAddresses();
+  }
+
+  Future<void> _fetchUserAddresses() async {
+    final addresses = await ApiService.getUserAddresses();
+    if (addresses.isNotEmpty && mounted) {
+      setState(() {
+        _savedAddresses = addresses;
+        final first = addresses.first;
+        _selectedDeliveryAddress = first['address_details'] ?? _selectedDeliveryAddress;
+        _selectedDeliveryTag = first['address_type'] ?? first['custom_type_name'] ?? 'Home';
+      });
+    }
   }
 
   // Dynamic Time-Slot Filtering Engine for Pickup Mode
@@ -1302,7 +1319,12 @@ class _CartScreenState extends State<CartScreen> {
                 if (!_isPickupSelected)
                   InkWell(
                     onTap: () {
-                      AddressSelectionBottomSheet.show(context);
+                      AddressSelectionBottomSheet.show(
+                        context,
+                        onAddressSelected: (newAddr) {
+                          setState(() {});
+                        },
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1318,22 +1340,24 @@ class _CartScreenState extends State<CartScreen> {
                                 child: Icon(Icons.location_on, color: Colors.black87, size: 14),
                               ),
                               const SizedBox(width: 8),
-                              const Expanded(
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Delivering to Ratanr Flat 11E",
-                                      style: TextStyle(
+                                      "Delivering to $_selectedDeliveryTag",
+                                      style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.black,
                                       ),
                                     ),
-                                    SizedBox(height: 1),
+                                    const SizedBox(height: 1),
                                     Text(
-                                      "11E Krishnanagar, India",
-                                      style: TextStyle(
+                                      _selectedDeliveryAddress,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
                                         fontSize: 11,
                                         color: Colors.black54,
                                       ),
