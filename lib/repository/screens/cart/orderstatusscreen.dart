@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:lottie/lottie.dart' hide Marker;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
@@ -163,6 +163,54 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Live Estimated Arrival Timer Banner
+                          if (statusLower != 'delivered' && statusLower != 'cancelled') ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0XFFE8F5E9), Color(0XFFF3F9F5)],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0XFFC8E6C9)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.timer_outlined, color: Color(0XFF0C831F), size: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text(
+                                          "ESTIMATED ARRIVAL",
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F), letterSpacing: 0.5),
+                                        ),
+                                        SizedBox(height: 1),
+                                        Text(
+                                          "Arriving in 8–12 mins",
+                                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0XFF0C831F),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      "ON TIME",
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +485,84 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
 
                     const SizedBox(height: 14),
 
-                    // 3. Order Items Card
+                    // 3. Delivery Address & Instructions Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.location_on, color: Color(0XFF0C831F), size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                "Delivery Address",
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0XFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  "HOME",
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F)),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  "Flat 4B, Sonarbangla Heights, Sector V, Salt Lake, Kolkata - 700091",
+                                  style: TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500, height: 1.3),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0XFFF8F9FA),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.black.withOpacity(0.05)),
+                            ),
+                            child: Row(
+                              children: const [
+                                Icon(Icons.notifications_active_outlined, size: 16, color: Colors.black54),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Instructions: Ring the doorbell & leave package at door.",
+                                  style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 4. Order Items & Detailed Bill Card
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(18),
@@ -548,24 +673,75 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                               },
                             ),
 
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
                           const Divider(height: 1),
                           const SizedBox(height: 14),
 
-                          // Grand Total Row
+                          // Detailed Bill Breakdown
+                          const Text(
+                            "Bill Details",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: const [
-                                  Icon(Icons.credit_card, color: Color(0XFF0C831F), size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "Grand Total",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black,
+                              const Text("Item Total", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text("₹${grandTotal.toStringAsFixed(0)}", style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              Text("Delivery Fee", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text("FREE", style: TextStyle(fontSize: 12, color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              Text("Handling & Taxes", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text("₹0", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+
+                          // Grand Total Row with Payment Badge
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: const [
+                                      Icon(Icons.credit_card, color: Color(0XFF0C831F), size: 18),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        "Grand Total",
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0XFFE8F5E9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      "PAID VIA UPI",
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0XFF0C831F)),
                                     ),
                                   ),
                                 ],
@@ -581,6 +757,38 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                             ],
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 5. Need Help & Customer Support Button
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.black.withOpacity(0.06)),
+                      ),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0XFFE8F5E9),
+                          child: Icon(Icons.headset_mic_outlined, color: Color(0XFF0C831F), size: 20),
+                        ),
+                        title: const Text(
+                          "Need help with your order?",
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.black),
+                        ),
+                        subtitle: const Text(
+                          "Chat with support or report an issue",
+                          style: TextStyle(fontSize: 11, color: Colors.black45),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black54),
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Connecting to Customer Support...")),
+                          );
+                        },
                       ),
                     ),
 
