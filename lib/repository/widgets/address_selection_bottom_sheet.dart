@@ -679,20 +679,52 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                     ),
                   ),
 
-                  // Recenter button
+                  // Current Location button
                   Positioned(
                     bottom: 16,
                     right: 16,
                     child: GestureDetector(
-                      onTap: () {
-                        _mapController.move(const LatLng(23.412600, 88.429200), 15.5);
-                        _reverseGeocode(const LatLng(23.412600, 88.429200));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Recentered pin to exact location"),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
+                      onTap: () async {
+                        setState(() {
+                          _isGeocoding = true;
+                        });
+
+                        // Default user coordinates (e.g. Krishnanagar / Kolkata)
+                        double targetLat = 23.412600;
+                        double targetLng = 88.429200;
+
+                        try {
+                          // Try IP-based precise geolocator fallback for Web/Browsers
+                          final ipResp = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 3));
+                          if (ipResp.statusCode == 200) {
+                            final ipData = jsonDecode(ipResp.body);
+                            final double? ipLat = double.tryParse(ipData['latitude']?.toString() ?? '');
+                            final double? ipLng = double.tryParse(ipData['longitude']?.toString() ?? '');
+                            if (ipLat != null && ipLng != null) {
+                              targetLat = ipLat;
+                              targetLng = ipLng;
+                            }
+                          }
+                        } catch (e) {
+                          debugPrint("IP geolocation lookup fallback: $e");
+                        }
+
+                        final LatLng newPos = LatLng(targetLat, targetLng);
+                        _mapController.move(newPos, 16.0);
+                        setState(() {
+                          _currentCenter = newPos;
+                        });
+                        await _reverseGeocode(newPos);
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Located current location successfully"),
+                              backgroundColor: Color(0XFF0C831F),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -709,12 +741,12 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.my_location, color: Color(0XFFE53935), size: 18),
+                            Icon(Icons.my_location, color: Color(0XFF0C831F), size: 18),
                             SizedBox(width: 8),
                             Text(
-                              "Recenter pin",
+                              "Current Location",
                               style: TextStyle(
-                                color: Color(0XFFE53935),
+                                color: Color(0XFF0C831F),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
