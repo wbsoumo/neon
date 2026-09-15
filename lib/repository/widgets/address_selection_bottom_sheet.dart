@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+// Ignore html import on non-web platforms gracefully
+import 'dart:html' as html;
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 
@@ -689,28 +692,47 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                           _isGeocoding = true;
                         });
 
-                        // Default user coordinates (e.g. Krishnanagar / Kolkata)
-                        double targetLat = 23.412600;
-                        double targetLng = 88.429200;
+                        double? targetLat;
+                        double? targetLng;
 
-                        try {
-                          // Try IP-based precise geolocator fallback for Web/Browsers
-                          final ipResp = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 3));
-                          if (ipResp.statusCode == 200) {
-                            final ipData = jsonDecode(ipResp.body);
-                            final double? ipLat = double.tryParse(ipData['latitude']?.toString() ?? '');
-                            final double? ipLng = double.tryParse(ipData['longitude']?.toString() ?? '');
-                            if (ipLat != null && ipLng != null) {
-                              targetLat = ipLat;
-                              targetLng = ipLng;
+                        // 1. Try Browser / Device HTML5 High-Accuracy GPS Geolocation first
+                        if (kIsWeb) {
+                          try {
+                            final pos = await html.window.navigator.geolocation.getCurrentPosition(
+                              enableHighAccuracy: true,
+                              timeout: const Duration(seconds: 8),
+                            );
+                            final coords = pos.coords;
+                            if (coords != null && coords.latitude != null && coords.longitude != null) {
+                              targetLat = coords.latitude!.toDouble();
+                              targetLng = coords.longitude!.toDouble();
+                              debugPrint("HTML5 GPS exact location obtained: $targetLat, $targetLng");
                             }
+                          } catch (e) {
+                            debugPrint("Browser HTML5 Geolocation permission/error: $e");
                           }
-                        } catch (e) {
-                          debugPrint("IP geolocation lookup fallback: $e");
                         }
 
+                        // 2. Fallback to precise IP lookup if browser GPS was denied or unavailable
+                        if (targetLat == null || targetLng == null) {
+                          try {
+                            final ipResp = await http.get(Uri.parse('https://ipwho.is/')).timeout(const Duration(seconds: 4));
+                            if (ipResp.statusCode == 200) {
+                              final ipData = jsonDecode(ipResp.body);
+                              targetLat = double.tryParse(ipData['latitude']?.toString() ?? '');
+                              targetLng = double.tryParse(ipData['longitude']?.toString() ?? '');
+                            }
+                          } catch (e) {
+                            debugPrint("IP fallback error: $e");
+                          }
+                        }
+
+                        // 3. Final default fallback if everything failed
+                        targetLat ??= 23.412600;
+                        targetLng ??= 88.429200;
+
                         final LatLng newPos = LatLng(targetLat, targetLng);
-                        _mapController.move(newPos, 16.0);
+                        _mapController.move(newPos, 16.5);
                         setState(() {
                           _currentCenter = newPos;
                         });
@@ -719,7 +741,7 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Located current location successfully"),
+                              content: Text("Located exact current location successfully"),
                               backgroundColor: Color(0XFF0C831F),
                               duration: Duration(seconds: 2),
                             ),
