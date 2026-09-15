@@ -958,12 +958,39 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
   }
 
   void _openLiveMapTrackingBottomSheet(BuildContext context, String riderName, String riderPhone) {
-    // 1. Store Location (e.g., Sonarbangla Store)
-    const LatLng storeLocation = LatLng(22.5726, 88.3639);
-    // 2. Customer Delivery Location
-    const LatLng deliveryLocation = LatLng(22.5850, 88.3780);
-    // 3. Current Bike Rider Position (Midway on the arc)
-    const LatLng riderLocation = LatLng(22.5810, 88.3715);
+    // 1. Dynamic User Delivery Location (from order / address record or fallback)
+    final double userLat = double.tryParse(_order?['latitude']?.toString() ??
+        _order?['delivery_latitude']?.toString() ??
+        _order?['user_address']?['latitude']?.toString() ??
+        '22.5850') ?? 22.5850;
+
+    final double userLng = double.tryParse(_order?['longitude']?.toString() ??
+        _order?['delivery_longitude']?.toString() ??
+        _order?['user_address']?['longitude']?.toString() ??
+        '88.3780') ?? 88.3780;
+
+    // 2. Store Location (from order store payload or default store coordinate)
+    final double storeLat = double.tryParse(_order?['store_latitude']?.toString() ??
+        _order?['store']?['latitude']?.toString() ??
+        '22.5726') ?? 22.5726;
+
+    final double storeLng = double.tryParse(_order?['store_longitude']?.toString() ??
+        _order?['store']?['longitude']?.toString() ??
+        '88.3639') ?? 88.3639;
+
+    final LatLng storeLocation = LatLng(storeLat, storeLng);
+    final LatLng deliveryLocation = LatLng(userLat, userLng);
+
+    // 3. Current Bike Rider Position (midway point on the arc)
+    final LatLng riderLocation = LatLng(
+      (storeLat + userLat) / 2 + 0.0030,
+      (storeLng + userLng) / 2 - 0.0020,
+    );
+
+    final LatLng centerLocation = LatLng(
+      (storeLat + userLat) / 2,
+      (storeLng + userLng) / 2,
+    );
 
     final List<LatLng> arcPoints = _generateArcPoints(storeLocation, deliveryLocation, numPoints: 40);
 
@@ -1026,9 +1053,9 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                 child: Stack(
                   children: [
                     FlutterMap(
-                      options: const MapOptions(
-                        initialCenter: LatLng(22.5788, 88.3710),
-                        initialZoom: 14.2,
+                      options: MapOptions(
+                        initialCenter: centerLocation,
+                        initialZoom: 14.0,
                       ),
                       children: [
                         // OpenStreetMap Tile Layer
