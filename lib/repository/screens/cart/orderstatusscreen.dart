@@ -84,13 +84,28 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
     final String status = _order?['status']?.toString() ?? 'Pending';
     final String statusLower = status.toLowerCase();
     final String orderType = _order?['order_type']?.toString() ?? 'delivery';
-    final double grandTotal = double.tryParse(_order?['grand_total']?.toString() ?? '0') ?? 0.0;
+    final double grandTotal = double.tryParse(_order?['grand_total']?.toString() ?? _order?['total']?.toString() ?? '0') ?? 0.0;
+    final double subtotal = double.tryParse(_order?['subtotal']?.toString() ?? '0') ?? 0.0;
+    final double deliveryFee = double.tryParse(_order?['delivery_fee']?.toString() ?? _order?['delivery_charge']?.toString() ?? '0') ?? 0.0;
+    final double handlingFee = double.tryParse(_order?['handling_fee']?.toString() ?? _order?['tax']?.toString() ?? '0') ?? 0.0;
+    final double discount = double.tryParse(_order?['discount']?.toString() ?? _order?['coupon_discount']?.toString() ?? '0') ?? 0.0;
+    final String paymentMethod = _order?['payment_method']?.toString().toUpperCase() ?? 'CASH ON DELIVERY (COD)';
+
     final String createdAt = _order?['created_at']?.toString() ?? '';
     final String timeFormatted = createdAt.contains(',')
         ? createdAt.split(',').last.trim()
         : (createdAt.length > 10 ? createdAt.substring(11, 16) : 'Recently');
 
     final List items = _order?['items'] as List? ?? [];
+
+    // Calculate item total sum if subtotal column is 0
+    double computedItemTotal = 0.0;
+    for (var item in items) {
+      final double price = double.tryParse(item['price']?.toString() ?? '0') ?? 0.0;
+      final int qty = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
+      computedItemTotal += (price * qty);
+    }
+    final double itemTotalDisplay = subtotal > 0 ? subtotal : (computedItemTotal > 0 ? computedItemTotal : grandTotal);
     final Map<String, dynamic>? delDetails = _order?['delivery_details'] as Map<String, dynamic>?;
 
     final String riderName = delDetails?['rider_name']?.toString() ?? '';
@@ -689,25 +704,44 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text("Item Total", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                              Text("₹${grandTotal.toStringAsFixed(0)}", style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                              Text("₹${itemTotalDisplay.toStringAsFixed(0)}", style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: const [
-                              Text("Delivery Fee", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                              Text("FREE", style: TextStyle(fontSize: 12, color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+                            children: [
+                              const Text("Delivery Fee", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text(
+                                deliveryFee > 0 ? "₹${deliveryFee.toStringAsFixed(0)}" : "FREE",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: deliveryFee > 0 ? Colors.black87 : const Color(0XFF0C831F),
+                                  fontWeight: deliveryFee > 0 ? FontWeight.w600 : FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: const [
-                              Text("Handling & Taxes", style: TextStyle(fontSize: 12, color: Colors.black54)),
-                              Text("₹0", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
+                          if (handlingFee > 0) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Handling & Taxes", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                                Text("₹${handlingFee.toStringAsFixed(0)}", style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ],
+                          if (discount > 0) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Discount / Coupon", style: TextStyle(fontSize: 12, color: Color(0XFF0C831F))),
+                                Text("-₹${discount.toStringAsFixed(0)}", style: const TextStyle(fontSize: 12, color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
 
                           const SizedBox(height: 12),
                           const Divider(height: 1),
@@ -741,9 +775,9 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                       color: const Color(0XFFFFF3E0),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text(
-                                      "CASH ON DELIVERY (COD)",
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange),
+                                    child: Text(
+                                      paymentMethod.contains('COD') || paymentMethod.contains('CASH') ? "CASH ON DELIVERY (COD)" : paymentMethod,
+                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange),
                                     ),
                                   ),
                                 ],
