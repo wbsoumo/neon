@@ -3,6 +3,8 @@ import 'package:blinkit_series/domain/cart/cart_controller.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:blinkit_series/repository/screens/cart/couponsscreen.dart';
+import 'package:blinkit_series/repository/screens/cart/orderstatusscreen.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -18,6 +20,33 @@ class _CartScreenState extends State<CartScreen> {
 
   List<Map<String, dynamic>> _recommendations = [];
   bool _isLoadingRecs = false;
+
+  // Coupon State
+  Map<String, dynamic>? _appliedCoupon;
+  double _couponDiscountAmount = 0.0;
+
+  // Delivery vs Store Pickup Mode State
+  bool _isPickupSelected = false; // false = Delivery, true = Store Pickup
+  DateTime _selectedPickupDate = DateTime.now();
+  String _selectedPickupTimeSlot = "10:00 AM - 11:00 AM";
+
+  // Operating Store Hours
+  final String _storeOpeningTime = "06:00 AM";
+  final String _storeClosingTime = "11:00 PM";
+
+  final List<String> _allPickupSlots = [
+    "07:00 AM - 08:00 AM",
+    "08:00 AM - 09:00 AM",
+    "09:00 AM - 10:00 AM",
+    "10:00 AM - 11:00 AM",
+    "11:00 AM - 12:00 PM",
+    "12:00 PM - 01:00 PM",
+    "02:00 PM - 03:00 PM",
+    "04:00 PM - 05:00 PM",
+    "06:00 PM - 07:00 PM",
+    "08:00 PM - 09:00 PM",
+    "09:00 PM - 10:00 PM",
+  ];
 
   static const double _freeDeliveryThreshold = 199.0;
 
@@ -65,6 +94,46 @@ class _CartScreenState extends State<CartScreen> {
     super.initState();
     _cart.addListener(_update);
     _loadCategoryRecommendations();
+    _autoSelectAvailablePickupSlot();
+  }
+
+  // Dynamic Time-Slot Filtering Engine for Pickup Mode
+  List<String> _getAvailablePickupSlots() {
+    final now = DateTime.now();
+    final bool isToday = _selectedPickupDate.year == now.year &&
+        _selectedPickupDate.month == now.month &&
+        _selectedPickupDate.day == now.day;
+
+    if (!isToday) {
+      return _allPickupSlots;
+    }
+
+    // Filter out past hours for today
+    final currentHour = now.hour;
+    final available = _allPickupSlots.where((slot) {
+      final startHourStr = slot.split(" ")[0]; // "07:00"
+      final parts = startHourStr.split(":");
+      int hour = int.parse(parts[0]);
+      final isPM = slot.contains("PM") && !slot.startsWith("12");
+      if (isPM && hour < 12) hour += 12;
+      if (slot.startsWith("12:00 PM")) hour = 12;
+      if (slot.startsWith("12:00 AM")) hour = 0;
+
+      return hour > currentHour;
+    }).toList();
+
+    return available.isNotEmpty ? available : _allPickupSlots;
+  }
+
+  void _autoSelectAvailablePickupSlot() {
+    final available = _getAvailablePickupSlots();
+    if (available.isNotEmpty) {
+      _selectedPickupTimeSlot = available.first;
+    } else {
+      // No more slots today! Auto-switch to Tomorrow
+      _selectedPickupDate = DateTime.now().add(const Duration(days: 1));
+      _selectedPickupTimeSlot = _allPickupSlots.first;
+    }
   }
 
   @override
@@ -182,8 +251,222 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. FREE DELIVERY PROGRESS BAR BANNER
+                  // 0. DELIVERY VS STORE PICKUP TOGGLE SELECTOR
                   Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isPickupSelected = false;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: !_isPickupSelected ? const Color(0XFF0C831F) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.electric_moped,
+                                    size: 18,
+                                    color: !_isPickupSelected ? Colors.white : Colors.black87,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Home Delivery",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: !_isPickupSelected ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isPickupSelected = true;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _isPickupSelected ? const Color(0XFF0C831F) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.storefront_outlined,
+                                    size: 18,
+                                    color: _isPickupSelected ? Colors.white : Colors.black87,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Store Pickup",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: _isPickupSelected ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // STORE PICKUP DATE & TIME SELECTOR BANNER
+                  if (_isPickupSelected)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0XFFFFF8E1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0XFFFFE082)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.store, color: Color(0XFFF57F17), size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                "Store Pickup Schedule & Hours",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Store Operating Hours: $_storeOpeningTime - $_storeClosingTime",
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600),
+                          ),
+                          const Divider(height: 16),
+
+                          // Pickup Date Picker Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Pickup Date:", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              InkWell(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: _selectedPickupDate,
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime.now().add(const Duration(days: 7)),
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _selectedPickupDate = picked;
+                                      final available = _getAvailablePickupSlots();
+                                      if (available.isNotEmpty) {
+                                        _selectedPickupTimeSlot = available.first;
+                                      } else {
+                                        // No slots left for selected date, push to next day
+                                        _selectedPickupDate = picked.add(const Duration(days: 1));
+                                        _selectedPickupTimeSlot = _allPickupSlots.first;
+                                      }
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today, size: 14, color: Color(0XFF0C831F)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "${_selectedPickupDate.day}/${_selectedPickupDate.month}/${_selectedPickupDate.year}",
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Pickup Time Slot Selector Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Pickup Slot:", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              Builder(
+                                builder: (context) {
+                                  final availableSlots = _getAvailablePickupSlots();
+                                  final currentSlotValid = availableSlots.contains(_selectedPickupTimeSlot)
+                                      ? _selectedPickupTimeSlot
+                                      : (availableSlots.isNotEmpty ? availableSlots.first : _allPickupSlots.first);
+
+                                  return DropdownButton<String>(
+                                    value: currentSlotValid,
+                                    dropdownColor: Colors.white,
+                                    underline: const SizedBox(),
+                                    items: availableSlots.map((slot) {
+                                      return DropdownMenuItem<String>(
+                                        value: slot,
+                                        child: Text(slot, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _selectedPickupTimeSlot = val;
+                                        });
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // 1. FREE DELIVERY PROGRESS BAR BANNER (Only when Delivery Mode)
+                  if (!_isPickupSelected)
+                    Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -698,6 +981,159 @@ class _CartScreenState extends State<CartScreen> {
                     const SizedBox(height: 16),
                   ],
 
+                  // 1. FREE DELIVERY UNLOCKING CARD (Only for Home Delivery)
+                  if (!_isPickupSelected) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.local_shipping_outlined, color: Color(0XFF0C831F), size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _cart.deliveryFee == 0
+                                      ? "Free Delivery Unlocked!"
+                                      : "Add items for FREE Delivery",
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: _cart.deliveryFee == 0 ? 1.0 : (subtotal / 199).clamp(0.0, 1.0),
+                              backgroundColor: const Color(0XFFE0E0E0),
+                              valueColor: const AlwaysStoppedAnimation<Color>(Color(0XFF0C831F)),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 1.5. APPLY COUPON / SEE ALL COUPONS WIDGET BOX (Just Above Billing Card)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        if (_appliedCoupon != null) ...[
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0XFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.verified, color: Color(0XFF0C831F), size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Coupon '${_appliedCoupon!['code']}' Applied!",
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0XFF0C831F),
+                                      ),
+                                    ),
+                                    Text(
+                                      "You saved ₹${_couponDiscountAmount.toStringAsFixed(0)} on this order",
+                                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _appliedCoupon = null;
+                                    _couponDiscountAmount = 0.0;
+                                  });
+                                },
+                                child: const Text("Remove", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                              )
+                            ],
+                          ),
+                        ] else ...[
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => CouponsScreen(
+                                    currentSubtotal: subtotal,
+                                    orderType: _isPickupSelected ? "pickup" : "delivery",
+                                    onCouponApplied: (data) {
+                                      setState(() {
+                                        _appliedCoupon = data;
+                                        _couponDiscountAmount = double.tryParse(data['discount_amount']?.toString() ?? '0') ?? 0.0;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "See all coupons",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(width: 6),
+                                Icon(Icons.arrow_forward_ios, size: 12, color: Colors.black87),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
                   // 5. TOTAL BILLING BREAKDOWN CARD
                   Container(
                     width: double.infinity,
@@ -741,39 +1177,41 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.delivery_dining_outlined, size: 16, color: Colors.black54),
-                                SizedBox(width: 6),
-                                Text("Delivery charge", style: TextStyle(fontSize: 13, color: Colors.black87)),
-                              ],
-                            ),
-                            _cart.deliveryFee == 0
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0XFFE8F5E9),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      "FREE",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0XFF0C831F),
+                        if (!_isPickupSelected) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.delivery_dining_outlined, size: 16, color: Colors.black54),
+                                  SizedBox(width: 6),
+                                  Text("Delivery charge", style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                ],
+                              ),
+                              _cart.deliveryFee == 0
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0XFFE8F5E9),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
+                                      child: const Text(
+                                        "FREE",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0XFF0C831F),
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      "₹${_cart.deliveryFee.toStringAsFixed(0)}",
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
                                     ),
-                                  )
-                                : Text(
-                                    "₹${_cart.deliveryFee.toStringAsFixed(0)}",
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
-                                  ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -791,6 +1229,25 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ],
                         ),
+                        if (_couponDiscountAmount > 0) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.local_offer_outlined, size: 16, color: Color(0XFF0C831F)),
+                                  const SizedBox(width: 6),
+                                  Text("Coupon Discount (${_appliedCoupon?['code'] ?? ''})", style: const TextStyle(fontSize: 13, color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              Text(
+                                "-₹${_couponDiscountAmount.toStringAsFixed(0)}",
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0XFF0C831F)),
+                              ),
+                            ],
+                          ),
+                        ],
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 10),
                           child: Divider(height: 1, color: Color(0XFFE0E0E0)),
@@ -807,7 +1264,7 @@ class _CartScreenState extends State<CartScreen> {
                               ),
                             ),
                             Text(
-                              "₹${_cart.grandTotal.toStringAsFixed(0)}",
+                              "₹${((_isPickupSelected ? (subtotal + _cart.handlingFee) : _cart.grandTotal) - _couponDiscountAmount).clamp(0.0, 999999.0).toStringAsFixed(0)}",
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -841,62 +1298,63 @@ class _CartScreenState extends State<CartScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Delivery Address Pill
-                InkWell(
-                  onTap: () {
-                    AddressSelectionBottomSheet.show(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    color: const Color(0XFFFDFDFD),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 12,
-                              backgroundColor: Color(0XFFF7CB45),
-                              child: Icon(Icons.location_on, color: Colors.black87, size: 14),
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Delivering to Ratanr Flat 11E",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(height: 1),
-                                  Text(
-                                    "11E Krishnanagar, India",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
+                // Delivery Address Pill (Only shown when Home Delivery Mode is active)
+                if (!_isPickupSelected)
+                  InkWell(
+                    onTap: () {
+                      AddressSelectionBottomSheet.show(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      color: const Color(0XFFFDFDFD),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Color(0XFFF7CB45),
+                                child: Icon(Icons.location_on, color: Colors.black87, size: 14),
                               ),
-                            ),
-                            const Text(
-                              "Change",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0XFF0C831F),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Delivering to Ratanr Flat 11E",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 1),
+                                    Text(
+                                      "11E Krishnanagar, India",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const Text(
+                                "Change",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0XFF0C831F),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
                 const Divider(height: 1),
 
@@ -953,7 +1411,7 @@ class _CartScreenState extends State<CartScreen> {
                           }
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Placing Cash on Delivery order...")),
+                            SnackBar(content: Text(_isPickupSelected ? "Scheduling Store Pickup order..." : "Placing Cash on Delivery order...")),
                           );
 
                           final itemsList = _cart.items.values.map((it) {
@@ -966,13 +1424,20 @@ class _CartScreenState extends State<CartScreen> {
                             };
                           }).toList();
 
+                          final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
+
                           final response = await ApiService.createOrder(
                             userName: "Demo Customer",
-                            userPhone: "9876543210",
-                            deliveryAddress: "11E Krishnanagar Main Road, Krishnanagar",
+                            userPhone: "8016222991",
+                            deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : "11E Krishnanagar Main Road, Krishnanagar",
+                            latitude: 23.4013,
+                            longitude: 88.5010,
                             items: itemsList,
                             storeId: 1,
                             paymentMethod: "Cash on Delivery",
+                            orderType: _isPickupSelected ? "pickup" : "delivery",
+                            pickupDate: formattedDate,
+                            pickupTime: _selectedPickupTimeSlot,
                           );
 
                           if (mounted) {
@@ -995,10 +1460,16 @@ class _CartScreenState extends State<CartScreen> {
                                   actions: [
                                     TextButton(
                                       onPressed: () {
+                                        final String ordNum = response['order_number'] ?? 'SUCCESS';
                                         Navigator.of(ctx).pop();
                                         widget.onBackTap?.call();
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => OrderStatusScreen(orderNumber: ordNum),
+                                          ),
+                                        );
                                       },
-                                      child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
+                                      child: const Text("Track Order", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0XFF0C831F))),
                                     )
                                   ],
                                 ),
@@ -1024,7 +1495,7 @@ class _CartScreenState extends State<CartScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "₹${_cart.grandTotal.toStringAsFixed(0)}",
+                                    "₹${((_isPickupSelected ? (subtotal + _cart.handlingFee) : _cart.grandTotal) - _couponDiscountAmount).clamp(0.0, 999999.0).toStringAsFixed(0)}",
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,

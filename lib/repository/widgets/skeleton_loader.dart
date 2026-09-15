@@ -86,6 +86,83 @@ class SkeletonLoader extends StatefulWidget {
     );
   }
 
+  static Widget homePageFullSkeleton() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner skeleton
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0XFF0C831F).withOpacity(0.85),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 30),
+                const SkeletonLoader(width: 140, height: 16, borderRadius: 4),
+                const SizedBox(height: 8),
+                const SkeletonLoader(width: 220, height: 22, borderRadius: 6),
+                const SizedBox(height: 16),
+                const SkeletonLoader(width: double.infinity, height: 46, borderRadius: 12),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Category tabs skeleton
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(
+                4,
+                (i) => Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    child: const SkeletonLoader(width: double.infinity, height: 36, borderRadius: 18),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Promo Grid Cards Skeleton
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: List.generate(
+                4,
+                (index) => const SkeletonLoader(width: double.infinity, height: 110, borderRadius: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Featured Section Header Skeleton
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SkeletonLoader(width: 180, height: 20, borderRadius: 6),
+          ),
+          const SizedBox(height: 12),
+          // Horizontal product cards skeleton
+          SizedBox(
+            height: 175,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 4,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              itemBuilder: (context, index) => productCardSkeleton(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   State<SkeletonLoader> createState() => _SkeletonLoaderState();
 }

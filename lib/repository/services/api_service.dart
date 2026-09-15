@@ -236,6 +236,12 @@ class ApiService {
     required List<Map<String, dynamic>> items,
     int storeId = 1,
     String paymentMethod = "PhonePe UPI",
+    String orderType = "delivery",
+    String? pickupDate,
+    String? pickupTime,
+    String? receiverName,
+    String? receiverPhone,
+    bool isForSomeoneElse = false,
     double? latitude,
     double? longitude,
   }) async {
@@ -248,6 +254,12 @@ class ApiService {
         "longitude": longitude ?? 88.4292,
         "store_id": storeId,
         "payment_method": paymentMethod,
+        "order_type": orderType,
+        "pickup_date": pickupDate,
+        "pickup_time": pickupTime,
+        "receiver_name": receiverName,
+        "receiver_phone": receiverPhone,
+        "is_for_someone_else": isForSomeoneElse,
         "items": items,
       });
 
@@ -319,5 +331,99 @@ class ApiService {
     } catch (e) {
       return {"status": "error", "message": "Save address failed: $e"};
     }
+  }
+
+  // 7. Fetch Real-time User Orders & Status Tracking History
+  static Future<List<Map<String, dynamic>>> getUserOrders({String phone = "8016222991"}) async {
+    try {
+      final Uri uri = Uri.parse("${ApiConstants.baseUrl}/user/orders").replace(queryParameters: {'phone': phone});
+      final response = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching user orders: $e");
+    }
+    return [];
+  }
+
+  // 8. Fetch Active Promotional & Bank Coupons List
+  static Future<List<Map<String, dynamic>>> getCoupons() async {
+    try {
+      final response = await http.get(Uri.parse(ApiConstants.coupons)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching coupons: $e");
+    }
+    return [];
+  }
+
+  // 9. Validate Coupon Code against Subtotal, Security Rules & Devices
+  static Future<Map<String, dynamic>> validateCoupon({
+    required String code,
+    required double subtotal,
+    String phone = "8016222991",
+    String deviceId = "device_mac_browser_01",
+    String orderType = "delivery",
+    int storeId = 1,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.validateCoupon),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "code": code,
+          "subtotal": subtotal,
+          "user_phone": phone,
+          "device_id": deviceId,
+          "order_type": orderType,
+          "store_id": storeId,
+        }),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        try {
+          return jsonDecode(response.body);
+        } catch (_) {
+          return {"status": "error", "message": "Invalid response format from server."};
+        }
+      } else {
+        try {
+          final errJson = jsonDecode(response.body);
+          return {"status": "error", "message": errJson['message'] ?? "Server error (${response.statusCode})"};
+        } catch (_) {
+          return {"status": "error", "message": "Server error (${response.statusCode}). Please try again."};
+        }
+      }
+    } catch (e) {
+      return {"status": "error", "message": "Failed to validate coupon: $e"};
+    }
+  }
+
+  // 10. Fetch Customer Wallet Balance
+  static Future<double> fetchUserWallet({String phone = "8016222991"}) async {
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConstants.userWallet}?phone=$phone"),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return double.tryParse(data['wallet_balance']?.toString() ?? '0') ?? 0.0;
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching wallet balance: $e");
+    }
+    return 0.0;
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:blinkit_series/repository/screens/profile/profile_detail_screen.dart';
+import 'package:blinkit_series/repository/screens/profile/order_history_screen.dart';
+import 'package:blinkit_series/repository/services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -110,7 +112,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _buildTopQuickCard(
                       icon: Icons.shopping_basket_outlined,
                       label: "Your orders",
-                      onTap: () => _navigateToDetail(context, "Your orders", _buildOrdersContent()),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const OrderHistoryScreen()),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -364,58 +371,154 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ------------ MOCK DETAIL CONTENTS FOR EACH RELEVANT OPTION ------------
 
   Widget _buildOrdersContent() {
-    final List<Map<String, dynamic>> orders = [
-      {
-        "id": "#ORD-994821",
-        "date": "Today, 2:45 PM",
-        "status": "Delivered in 12 mins",
-        "items": "Golden Glass Candle, Bikano Gulab Jamun",
-        "amount": "₹228",
-      },
-      {
-        "id": "#ORD-881204",
-        "date": "Yesterday, 6:10 PM",
-        "status": "Delivered in 15 mins",
-        "items": "Vegetables & Fruits Pack, Milk 1L",
-        "amount": "₹149",
-      },
-    ];
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: ApiService.getUserOrders(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: Color(0XFF0C831F)),
+            ),
+          );
+        }
 
-    return Column(
-      children: orders.map((ord) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(ord["id"]!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(ord["amount"]!, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0XFF0C831F))),
+        final orders = snapshot.data ?? [];
+        if (orders.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 48, color: Colors.grey),
+                SizedBox(height: 12),
+                Text("No orders placed yet", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                SizedBox(height: 4),
+                Text("Your past and active orders will appear here.", style: TextStyle(fontSize: 12, color: Colors.black54)),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: orders.map((ord) {
+            final String status = ord['status']?.toString() ?? 'Pending';
+            final String orderType = ord['order_type']?.toString() ?? 'delivery';
+            final bool isPickup = orderType == 'pickup';
+            final itemsList = ord['items'] as List? ?? [];
+            final String itemsSummary = itemsList.map((e) => "${e['product_name']} x${e['quantity']}").join(", ");
+
+            Color statusColor = const Color(0XFF0C831F); // Green default
+            if (status == 'Pending') statusColor = Colors.orange;
+            if (status == 'Out for Delivery' || status == 'Packing') statusColor = Colors.blue;
+            if (status == 'Ready for Pickup') statusColor = Colors.purple;
+            if (status == 'Cancelled') statusColor = Colors.red;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(ord["date"]!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-              const SizedBox(height: 8),
-              Text(ord["items"]!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 8),
-              Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle, color: Color(0XFF0C831F), size: 16),
-                  const SizedBox(width: 6),
-                  Text(ord["status"]!, style: const TextStyle(color: Color(0XFF0C831F), fontSize: 12, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isPickup ? Icons.storefront : Icons.local_shipping,
+                            size: 18,
+                            color: isPickup ? Colors.purple : const Color(0XFF0C831F),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "#${ord['order_number']}",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "₹${ord['grand_total']}",
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0XFF0C831F)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Placed on: ${ord['created_at'] ?? 'Recently'}",
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                  
+                  if (ord['receiver_name'] != null && ord['receiver_name'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0XFFFFF8E1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        "Receiver: ${ord['receiver_name']} (${ord['receiver_phone']})",
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+
+                  if (isPickup) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0XFFF3E5F5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        "Store Pickup: ${ord['pickup_date'] ?? ''} (${ord['pickup_time'] ?? ''})",
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple),
+                      ),
+                    ),
+                  ],
+
+                  const Divider(height: 16),
+                  Text(
+                    itemsSummary.isNotEmpty ? itemsSummary : "Order items details",
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        status == 'Delivered' ? Icons.check_circle : Icons.timeline,
+                        color: statusColor,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Status: $status",
+                        style: TextStyle(color: statusColor, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 

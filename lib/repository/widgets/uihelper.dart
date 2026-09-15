@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:blinkit_series/repository/widgets/skeleton_loader.dart';
 
 class UiHelper {
   static Widget CustomImage({required String img, double? width, double? height, BoxFit fit = BoxFit.contain}) {
@@ -49,13 +51,17 @@ class UiHelper {
     }
 
     if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-      return Image.network(
-        cleanUrl,
+      return CachedNetworkImage(
+        imageUrl: cleanUrl,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          // Fallback to local asset if network fails on mobile device
+        placeholder: (context, url) => SkeletonLoader(
+          width: width ?? double.infinity,
+          height: height ?? double.infinity,
+          borderRadius: 8,
+        ),
+        errorWidget: (context, url, error) {
           String fallbackAsset = "assets/images/image 41.png";
           return Image.asset(
             fallbackAsset,

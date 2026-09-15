@@ -8,4 +8,7 @@ class ApiConstants {
   static const String createOrder = "$baseUrl/orders";
   static const String userAddresses = "$baseUrl/user/addresses";
   static const String storeUserAddress = "$baseUrl/user/addresses/store";
+  static const String coupons = "$baseUrl/coupons";
+  static const String validateCoupon = "$baseUrl/coupons/validate";
+  static const String userWallet = "$baseUrl/user/wallet";
 }

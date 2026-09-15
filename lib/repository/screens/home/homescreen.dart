@@ -7,6 +7,7 @@ import 'package:blinkit_series/repository/widgets/skeleton_loader.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
 import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,7 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
   List<Map<String, dynamic>> _liveProducts = [];
-  bool _isLoadingLiveProducts = false;
+  bool _isLoadingLiveProducts = true;
+  double _userWalletBalance = 0.0;
 
   @override
   void initState() {
@@ -53,7 +55,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _checkAndRequestLocationPermission() {
+  void _checkAndRequestLocationPermission() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool? isGranted = prefs.getBool('location_permission_granted');
+    
+    // If permission has already been explicitly handled (granted or denied/saved), do not show dialog again
+    if (isGranted != null) {
+      return;
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -77,14 +89,18 @@ class _HomeScreenState extends State<HomeScreen> {
           actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           actions: [
             OutlinedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                AddressSelectionBottomSheet.show(
-                  context,
-                  onAddressSelected: (selectedAddress) {
-                    _fetchLiveBackendData(forceRefresh: true);
-                  },
-                );
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('location_permission_granted', false);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                  AddressSelectionBottomSheet.show(
+                    context,
+                    onAddressSelected: (selectedAddress) {
+                      _fetchLiveBackendData(forceRefresh: true);
+                    },
+                  );
+                }
               },
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.grey),
@@ -94,19 +110,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.pop(dialogContext);
-                final storeData = await ApiService.fetchSelectedStore(lat: 23.4013, lng: 88.5010, forceRefresh: true);
-                if (mounted) {
-                  setState(() {
-                    _selectedStoreData = storeData;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Location access granted! Connected to ${storeData?['name'] ?? 'Nearest Dark Store'}"),
-                      backgroundColor: const Color(0XFF0C831F),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('location_permission_granted', true);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                  final storeData = await ApiService.fetchSelectedStore(lat: 23.4013, lng: 88.5010, forceRefresh: true);
+                  if (mounted) {
+                    setState(() {
+                      _selectedStoreData = storeData;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Location access granted! Connected to ${storeData?['name'] ?? 'Nearest Dark Store'}"),
+                        backgroundColor: const Color(0XFF0C831F),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -122,38 +142,88 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
-    // 1. Immediately read cached store synchronously to prevent any header color flash
+    // 1. Immediately fetch user wallet balance so top pill updates instantly
+    ApiService.fetchUserWallet().then((wallet) {
+      if (mounted) {
+        setState(() {
+          _userWalletBalance = wallet;
+        });
+      }
+    });
+
+    // 2. Read cached store, categories, and products from local storage
     final cachedStore = await ApiService.fetchSelectedStore(forceRefresh: false);
+    final cachedCats = await ApiService.fetchCategories();
+    final cachedProds = await ApiService.fetchProducts(storeId: cachedStore?['id'] ?? 1, forceRefresh: false);
+
+    bool hasAnyData = false;
     if (cachedStore != null && mounted) {
-      setState(() {
-        _selectedStoreData = cachedStore;
-        if (cachedStore['search_hint'] != null && cachedStore['search_hint'].toString().isNotEmpty) {
-          final List<String> customHints = cachedStore['search_hint'].toString().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-          if (customHints.isNotEmpty) {
-            _searchHints.clear();
-            _searchHints.addAll(customHints);
-          }
+      _selectedStoreData = cachedStore;
+      hasAnyData = true;
+      if (cachedStore['search_hint'] != null && cachedStore['search_hint'].toString().isNotEmpty) {
+        final List<String> customHints = cachedStore['search_hint'].toString().split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        if (customHints.isNotEmpty) {
+          _searchHints.clear();
+          _searchHints.addAll(customHints);
         }
+      }
+    }
+
+    if (cachedCats.isNotEmpty && mounted) {
+      _populateCategoriesData(cachedCats);
+      hasAnyData = true;
+    }
+
+    if (cachedProds.isNotEmpty && mounted) {
+      _populateProductsData(cachedProds);
+      hasAnyData = true;
+    }
+
+    // If local cached data exists, dismiss skeleton loader instantly (0s wait!)
+    if (mounted) {
+      setState(() {
+        _isLoadingLiveProducts = !hasAnyData;
       });
     }
 
-    final cachedCats = await ApiService.fetchCategories();
-    if (cachedCats.isNotEmpty && mounted) {
-      _populateCategoriesData(cachedCats);
-    }
+    // Precache all product network images in background so subsequent renders are instant
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheImages();
+    });
 
-    final cachedProds = await ApiService.fetchProducts(storeId: cachedStore?['id'] ?? 1, forceRefresh: false);
-    if (cachedProds.isNotEmpty && mounted) {
-      _populateProductsData(cachedProds);
-    }
+    // 3. Perform silent background version check via /api/v1/sync-check
+    _performSmartVersionSync(cachedStore?['id'] ?? 1, forceRefresh);
+  }
 
-    // 2. Perform remote API refresh if forceRefresh is true or background update is triggered
-    if (forceRefresh) {
-      final freshStore = await ApiService.fetchSelectedStore(forceRefresh: true);
-      final freshProds = await ApiService.fetchProducts(storeId: freshStore?['id'] ?? 1, forceRefresh: true);
-      if (mounted) {
-        if (freshStore != null) _selectedStoreData = freshStore;
-        if (freshProds.isNotEmpty) _populateProductsData(freshProds);
+  Future<void> _performSmartVersionSync(int storeId, bool forceRefresh) async {
+    final syncData = await ApiService.checkSyncStatus(storeId: storeId);
+    if (syncData != null && syncData['versions'] != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedProdVer = prefs.getString('cache_products_version_v1');
+      final String serverProdVer = syncData['versions']['products']?.toString() ?? '';
+
+      // Only perform background fetch if version changed or force refresh is true
+      if (forceRefresh || cachedProdVer == null || cachedProdVer != serverProdVer) {
+        final freshStore = await ApiService.fetchSelectedStore(forceRefresh: true);
+        final freshProds = await ApiService.fetchProducts(storeId: storeId, forceRefresh: true);
+        if (mounted) {
+          setState(() {
+            if (freshStore != null) _selectedStoreData = freshStore;
+            if (freshProds.isNotEmpty) _populateProductsData(freshProds);
+            _isLoadingLiveProducts = false;
+          });
+          prefs.setString('cache_products_version_v1', serverProdVer);
+        }
+      }
+    }
+  }
+
+  void _precacheImages() {
+    if (!mounted) return;
+    for (var p in _liveProducts) {
+      final img = p['image']?.toString();
+      if (img != null && (img.startsWith('http://') || img.startsWith('https://'))) {
+        precacheImage(NetworkImage(img), context).catchError((_) {});
       }
     }
   }
@@ -335,14 +405,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0XFFF5F6F8),
-      body: RefreshIndicator(
-        onRefresh: () => _fetchLiveBackendData(forceRefresh: true),
-        color: const Color(0XFF0C831F),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: _isLoadingLiveProducts
+          ? SkeletonLoader.homePageFullSkeleton()
+          : RefreshIndicator(
+              onRefresh: () => _fetchLiveBackendData(forceRefresh: true),
+              color: const Color(0XFF0C831F),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
             // 1. Fresh Customizable Header Banner
             Container(
               decoration: BoxDecoration(
@@ -453,9 +525,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         color: const Color(0XFF212121),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Text(
-                                        "₹0",
-                                        style: TextStyle(
+                                      child: Text(
+                                        "₹${_userWalletBalance % 1 == 0 ? _userWalletBalance.toInt() : _userWalletBalance.toStringAsFixed(1)}",
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
@@ -744,42 +816,81 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
                         child: ListView.builder(
                           itemBuilder: (context, index) {
+                            final card = _selectedStoreData?['promo_cards'] != null && (_selectedStoreData!['promo_cards'] as List).length > index
+                                ? (_selectedStoreData!['promo_cards'] as List)[index]
+                                : megaSaleData[index];
+
+                            final String title = card["text"] ?? card["title"] ?? "";
+                            final String img = card["img"] ?? "image 50.png";
+                            final String targetType = card["target_type"] ?? "category";
+                            final String targetId = card["target_id"]?.toString() ?? "";
+
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              child: Container(
-                                width: 100,
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                    color: const Color(0XFFEAD3D3),
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: UiHelper.CustomImage(
-                                            img: megaSaleData[index]["img"].toString(),
-                                            width: 88,
-                                            height: 70,
-                                            fit: BoxFit.cover),
+                              child: InkWell(
+                                onTap: () {
+                                  if (targetType == "product") {
+                                    final cleanId = targetId.replaceAll('prod_', '');
+                                    final matchProd = _liveProducts.firstWhere(
+                                      (p) => p['id'] == cleanId,
+                                      orElse: () => {
+                                        "id": cleanId,
+                                        "name": title,
+                                        "unit": "1 pc",
+                                        "price": 149.0,
+                                        "mrp": 199.0,
+                                        "img": img,
+                                      },
+                                    );
+                                    ProductDetailDialog.show(context, matchProd);
+                                  } else {
+                                    final cleanId = targetId.replaceAll('cat_', '');
+                                    setState(() {
+                                      final foundIndex = _headerCategories.indexWhere((c) => c['name'].toString().toLowerCase().contains(title.toLowerCase()));
+                                      if (foundIndex != -1) {
+                                        _selectedCategoryIndex = foundIndex;
+                                      } else {
+                                        _selectedCategoryIndex = (index + 1) % _headerCategories.length;
+                                      }
+                                    });
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: 100,
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                      color: const Color(0XFFEAD3D3),
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: UiHelper.CustomImage(
+                                              img: img,
+                                              width: 88,
+                                              height: 70,
+                                              fit: BoxFit.cover),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      megaSaleData[index]["text"].toString(),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        title,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
                           },
-                          itemCount: megaSaleData.length,
+                          itemCount: (_selectedStoreData?['promo_cards'] as List?)?.length ?? megaSaleData.length,
                           scrollDirection: Axis.horizontal,
                         ),
                       ),
