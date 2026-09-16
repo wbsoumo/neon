@@ -10,7 +10,9 @@ import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onProfileTap;
+
+  const HomeScreen({super.key, this.onProfileTap});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -506,44 +508,118 @@ class _HomeScreenState extends State<HomeScreen> {
                           // Wallet Pill & Profile Avatar
                           Row(
                             children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                padding: const EdgeInsets.all(2),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 14,
-                                      backgroundColor: const Color(0XFFF7CB45),
-                                      child: const Icon(Icons.account_balance_wallet, color: Color(0XFF0C831F), size: 16),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0XFF212121),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        "₹${_userWalletBalance % 1 == 0 ? _userWalletBalance.toInt() : _userWalletBalance.toStringAsFixed(1)}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                              // Interactive Clickable Wallet Pill with Ripple Effect
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            const Icon(Icons.account_balance_wallet, color: Color(0XFFF7CB45)),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                "Wallet Balance: ₹${_userWalletBalance % 1 == 0 ? _userWalletBalance.toInt() : _userWalletBalance.toStringAsFixed(1)} (Cashback Ready)",
+                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                        backgroundColor: const Color(0XFF212121),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        duration: const Duration(seconds: 2),
                                       ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(22),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(22),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.12),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0XFFF7CB45),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.account_balance_wallet, color: Color(0XFF0C831F), size: 16),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0XFF212121),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Text(
+                                            "₹${_userWalletBalance % 1 == 0 ? _userWalletBalance.toInt() : _userWalletBalance.toStringAsFixed(1)}",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
 
                               const SizedBox(width: 10),
 
-                              const CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Color(0XFF421503),
-                                child: Icon(Icons.person, color: Colors.white, size: 20),
+                              // Interactive Clickable Profile Avatar Button
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (widget.onProfileTap != null) {
+                                      widget.onProfileTap!();
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Opening Profile & Account Details..."),
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0XFF3E1B00),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.person, color: Colors.white, size: 20),
+                                  ),
+                                ),
                               ),
                             ],
                           ),

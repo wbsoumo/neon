@@ -232,7 +232,8 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                   ),
                                 );
                               }
-                              widget.onAddressSelected?.call("RATANR FLAT, 11E Krishnanagar Main Hub, Krishnanagar");
+                              final String dynAddress = "${storeData?['address'] ?? '11E Krishnanagar Main Hub'}${storeData?['city'] != null ? ', ${storeData!['city']}' : ''}";
+                              widget.onAddressSelected?.call(dynAddress);
                               Navigator.pop(context);
                             }
                           },

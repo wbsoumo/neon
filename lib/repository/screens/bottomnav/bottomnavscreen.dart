@@ -25,10 +25,18 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
     }
   }
 
+  void _navigateToProfile() {
+    if (currentIndex != 3) {
+      setState(() {
+        currentIndex = 3;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomeScreen(),
+      HomeScreen(onProfileTap: _navigateToProfile),
       CartScreen(onBackTap: _navigateToHome),
       CategoryScreen(),
       ProfileScreen(onBackTap: _navigateToHome),

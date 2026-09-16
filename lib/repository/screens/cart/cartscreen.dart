@@ -103,6 +103,18 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _fetchUserAddresses() async {
+    // 1. Fetch lastly selected store location first
+    final store = await ApiService.fetchSelectedStore();
+    if (store != null && mounted) {
+      setState(() {
+        final storeAddr = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}";
+        if (storeAddr.trim().isNotEmpty) {
+          _selectedDeliveryAddress = storeAddr;
+          _selectedDeliveryTag = store['name'] ?? 'Selected Location';
+        }
+      });
+    }
+
     final addresses = await ApiService.getUserAddresses();
     if (addresses.isNotEmpty && mounted) {
       setState(() {
@@ -111,6 +123,53 @@ class _CartScreenState extends State<CartScreen> {
         _selectedDeliveryAddress = first['address_details'] ?? _selectedDeliveryAddress;
         _selectedDeliveryTag = first['address_type'] ?? first['custom_type_name'] ?? 'Home';
       });
+    }
+  }
+
+  // Verify stock availability of all items currently in cart when store changes
+  Future<void> _checkStockAvailabilityForStore(int storeId) async {
+    if (_cart.items.isEmpty) return;
+
+    final storeProducts = await ApiService.fetchProducts(storeId: storeId, forceRefresh: true);
+    final storeProdMap = {for (var p in storeProducts) p['id'].toString(): p};
+
+    List<String> outOfStockItems = [];
+    _cart.items.forEach((key, item) {
+      final p = storeProdMap[key];
+      if (p == null) {
+        outOfStockItems.add(item.name);
+      } else {
+        final int availStock = int.tryParse(p['available_stock']?.toString() ?? '0') ?? 0;
+        final bool isAvailable = p['is_available'] == true || p['is_available'] == 1 || p['is_available'] == '1';
+        if (!isAvailable || availStock < item.quantity) {
+          outOfStockItems.add(item.name);
+        }
+      }
+    });
+
+    if (outOfStockItems.isNotEmpty && mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              SizedBox(width: 8),
+              Text("Stock Alert"),
+            ],
+          ),
+          content: Text(
+            "The following item(s) in your cart are out of stock or unavailable at the newly selected store location:\n\n• ${outOfStockItems.join('\n• ')}\n\nPlease review or remove these items before placing your order.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK", style: TextStyle(color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -1321,8 +1380,21 @@ class _CartScreenState extends State<CartScreen> {
                     onTap: () {
                       AddressSelectionBottomSheet.show(
                         context,
-                        onAddressSelected: (newAddr) {
-                          setState(() {});
+                        onAddressSelected: (newAddr) async {
+                          final store = await ApiService.fetchSelectedStore();
+                          if (mounted) {
+                            setState(() {
+                              if (newAddr.isNotEmpty) {
+                                _selectedDeliveryAddress = newAddr;
+                              } else if (store != null) {
+                                _selectedDeliveryAddress = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}";
+                                _selectedDeliveryTag = store['name'] ?? 'Selected Location';
+                              }
+                            });
+                            if (store != null) {
+                              _checkStockAvailabilityForStore(store['id'] ?? 1);
+                            }
+                          }
                         },
                       );
                     },
@@ -1434,13 +1506,40 @@ class _CartScreenState extends State<CartScreen> {
                             return;
                           }
 
+                          final activeStore = ApiService.memoryCachedStore;
+                          final int currentStoreId = activeStore?['id'] ?? 1;
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(_isPickupSelected ? "Scheduling Store Pickup order..." : "Placing Cash on Delivery order...")),
                           );
 
                           final itemsList = _cart.items.values.map((it) {
+                            int prodId = int.tryParse(it.id) ?? 1;
+                            
+                            // Dynamic string ID to backend database ID resolution by product name matching
+                            final nameLower = it.name.toLowerCase();
+                            if (nameLower.contains('panch phal') || nameLower.contains('fruits for pooja')) {
+                              prodId = 3;
+                            } else if (nameLower.contains('tomato')) {
+                              prodId = 3;
+                            } else if (nameLower.contains('atta') || nameLower.contains('potato')) {
+                              prodId = 4;
+                            } else if (nameLower.contains('oil') || nameLower.contains('mustard')) {
+                              prodId = 5;
+                            } else if (nameLower.contains('milk')) {
+                              prodId = 6;
+                            } else if (nameLower.contains('headphone')) {
+                              prodId = 7;
+                            } else if (nameLower.contains('lipstick')) {
+                              prodId = 8;
+                            } else if (nameLower.contains('gulab jamun') || nameLower.contains('bikano')) {
+                              prodId = 2;
+                            } else if (nameLower.contains('candle')) {
+                              prodId = 1;
+                            }
+
                             return {
-                              "product_id": int.tryParse(it.id) ?? 1,
+                              "product_id": prodId,
                               "name": it.name,
                               "price": it.price,
                               "quantity": it.quantity,
@@ -1453,11 +1552,11 @@ class _CartScreenState extends State<CartScreen> {
                           final response = await ApiService.createOrder(
                             userName: "Demo Customer",
                             userPhone: "8016222991",
-                            deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : "11E Krishnanagar Main Road, Krishnanagar",
-                            latitude: 23.4013,
-                            longitude: 88.5010,
+                            deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
+                            latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                            longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
                             items: itemsList,
-                            storeId: 1,
+                            storeId: currentStoreId,
                             paymentMethod: "Cash on Delivery",
                             orderType: _isPickupSelected ? "pickup" : "delivery",
                             pickupDate: formattedDate,
