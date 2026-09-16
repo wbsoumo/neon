@@ -40,17 +40,36 @@ class ApiService {
     return null;
   }
 
-  // 1. Fetch Store Selection & Operational Status with Local Storage Cache
-  static Future<Map<String, dynamic>?> fetchSelectedStore({double? lat, double? lng, bool forceRefresh = false}) async {
+  static int _storeRequestSequence = 0;
+
+  // 1. Fetch Store Selection & Operational Status with Local Storage Cache & Session Persistence
+  static Future<Map<String, dynamic>?> fetchSelectedStore({
+    double? lat,
+    double? lng,
+    bool forceRefresh = false,
+    bool isManual = false,
+  }) async {
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance();
     } catch (_) {}
 
-    // Save requested lat/lng if provided so manual user selection persists on restart
+    final bool isCurrentlyManual = prefs?.getBool('is_manual_location_selected') ?? false;
+
+    // Background GPS updates cannot overwrite an active manual user selection during session
+    if (!isManual && isCurrentlyManual && lat != null && lng != null) {
+      debugPrint("Skipping background GPS store update because active manual selection exists.");
+      lat = null;
+      lng = null;
+    }
+
+    // Save requested lat/lng if provided
     if (lat != null && lng != null && prefs != null) {
       prefs.setDouble('user_selected_lat', lat);
       prefs.setDouble('user_selected_lng', lng);
+      if (isManual) {
+        prefs.setBool('is_manual_location_selected', true);
+      }
     }
 
     // Read stored coordinates if not passed explicitly
@@ -79,6 +98,8 @@ class ApiService {
       return cachedStore;
     }
 
+    final currentSeq = ++_storeRequestSequence;
+
     try {
       final Uri uri = Uri.parse(ApiConstants.selectStore).replace(
         queryParameters: {
@@ -87,6 +108,13 @@ class ApiService {
         },
       );
       final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      
+      // Ensure stale out-of-order API responses do not overwrite newer selections
+      if (currentSeq != _storeRequestSequence) {
+        debugPrint("Discarding stale store API response sequence #$currentSeq");
+        return _memoryCachedStore ?? cachedStore;
+      }
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success' && data['store'] != null) {

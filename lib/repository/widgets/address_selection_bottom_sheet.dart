@@ -331,7 +331,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                             ),
                           );
 
-                          final storeData = await ApiService.fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true);
+                          final storeData = await ApiService.fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true, isManual: true);
                           final bool isServiceable = storeData?['is_serviceable'] ?? true;
 
                           if (context.mounted) {
