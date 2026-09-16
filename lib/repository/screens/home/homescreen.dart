@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
+  String? _userSelectedAddress;
   List<Map<String, dynamic>> _liveProducts = [];
   bool _isLoadingLiveProducts = true;
   double _userWalletBalance = 0.0;
@@ -153,12 +154,16 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    // 2. Read cached store, categories, and products from local storage
-    final cachedStore = await ApiService.fetchSelectedStore(forceRefresh: false);
+    // 2. Read cached store, user address, categories, and products from local storage
+    final cachedStore = await ApiService.fetchSelectedStore(forceRefresh: forceRefresh);
+    final savedAddress = await ApiService.getUserSelectedAddress();
     final cachedCats = await ApiService.fetchCategories();
     final cachedProds = await ApiService.fetchProducts(storeId: cachedStore?['id'] ?? 1, forceRefresh: false);
 
     bool hasAnyData = false;
+    if (savedAddress != null && mounted) {
+      _userSelectedAddress = savedAddress;
+    }
     if (cachedStore != null && mounted) {
       _selectedStoreData = cachedStore;
       hasAnyData = true;
@@ -446,19 +451,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                 Text(
                                   _selectedStoreData != null
-                                      ? "Delivery in ${_selectedStoreData!['delivery_time_mins'] ?? '10-15'} mins"
+                                      ? ((_selectedStoreData!['is_serviceable'] ?? true)
+                                          ? "Delivery in ${_selectedStoreData!['delivery_time_mins'] ?? '15'} mins"
+                                          : "🚫 Location Unserviceable")
                                       : "Blinkit in 18 minutes",
-                                  style: const TextStyle(
-                                    color: Colors.white70,
+                                  style: TextStyle(
+                                    color: (_selectedStoreData?['is_serviceable'] ?? true) ? Colors.white70 : const Color(0XFFFFEB3B),
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
                                   _selectedStoreData != null
-                                      ? "${_selectedStoreData!['name'] ?? 'Dark Store'}"
+                                      ? ((_selectedStoreData!['is_serviceable'] ?? true)
+                                          ? "${_selectedStoreData!['name'] ?? 'Dark Store'}"
+                                          : "No Store Delivers Here")
                                       : "18 minutes",
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -475,6 +484,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     AddressSelectionBottomSheet.show(
                                       context,
                                       onAddressSelected: (selectedAddress) {
+                                        if (mounted) {
+                                          setState(() {
+                                            _userSelectedAddress = selectedAddress;
+                                          });
+                                        }
                                         _fetchLiveBackendData(forceRefresh: true);
                                       },
                                     );
@@ -483,9 +497,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          _selectedStoreData != null
-                                              ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
-                                              : "RATANR FLAT, 11E Krishnanagar Main Hub...",
+                                          _userSelectedAddress != null && _userSelectedAddress!.isNotEmpty
+                                              ? _userSelectedAddress!
+                                              : (_selectedStoreData != null
+                                                  ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
+                                                  : "RATANR FLAT, 11E Krishnanagar Main Hub..."),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -789,6 +805,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
+                    if (_selectedStoreData != null && _selectedStoreData!['is_serviceable'] == false) ...[
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0XFFE53935), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_off, color: Color(0XFFE53935), size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _selectedStoreData!['closure_reason'] ?? "We currently do not deliver to this location.",
+                                  style: const TextStyle(
+                                    color: Color(0XFFD32F2F),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 14),
 

@@ -21,6 +21,15 @@ class ApiService {
   // Instant Sync Memory Cache Accessor
   static Map<String, dynamic>? get memoryCachedStore => _memoryCachedStore;
 
+  static Future<String?> getUserSelectedAddress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('user_selected_address');
+    } catch (_) {
+      return null;
+    }
+  }
+
   // 0. Light-Weight Sync Status Checker
   static Future<Map<String, dynamic>?> checkSyncStatus({int storeId = 1}) async {
     try {
@@ -46,6 +55,7 @@ class ApiService {
   static Future<Map<String, dynamic>?> fetchSelectedStore({
     double? lat,
     double? lng,
+    String? address,
     bool forceRefresh = false,
     bool isManual = false,
   }) async {
@@ -55,6 +65,11 @@ class ApiService {
     } catch (_) {}
 
     final bool isCurrentlyManual = prefs?.getBool('is_manual_location_selected') ?? false;
+
+    // Save user selected address if passed explicitly
+    if (address != null && address.isNotEmpty && prefs != null) {
+      prefs.setString('user_selected_address', address);
+    }
 
     // Background GPS updates cannot overwrite an active manual user selection during session
     if (!isManual && isCurrentlyManual && lat != null && lng != null) {

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddressSelectionBottomSheet extends StatefulWidget {
   final String currentAddress;
@@ -40,7 +41,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
 
   final List<Map<String, dynamic>> _savedAddresses = [
     {
-      "type": "Nearest Hub (Default)",
+      "type": "Krishnanagar Hub",
       "distance": "0.8 km",
       "address": "11E Krishnanagar Main Hub, Krishnanagar",
       "phone": "+91-8016222991",
@@ -49,18 +50,27 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
       "is_nearest": true,
     },
     {
-      "type": "Home",
-      "distance": "2.4 km",
-      "address": "RATANR FLAT, 11E Krishnanagar, West Bengal",
+      "type": "Kolkata Home",
+      "distance": "Direct Hub",
+      "address": "Park Street Express Delivery Hub, Kolkata",
       "phone": "+91-8016222991",
-      "lat": 23.4050,
-      "lng": 88.5050,
+      "lat": 22.5726,
+      "lng": 88.3639,
       "is_nearest": false,
     },
     {
-      "type": "Work / Campus",
-      "distance": "79 km",
-      "address": "KGEC Main Building, Block C, Kalyani, West Bengal",
+      "type": "Siliguri Office",
+      "distance": "Direct Hub",
+      "address": "Hill Cart Road Main Hub, Siliguri",
+      "phone": "+91-8016222991",
+      "lat": 26.7271,
+      "lng": 88.3953,
+      "is_nearest": false,
+    },
+    {
+      "type": "Kalyani Campus",
+      "distance": "Direct Hub",
+      "address": "KGEC Main Building, Block C, Kalyani",
       "phone": "+91-8016222991",
       "lat": 22.9750,
       "lng": 88.4344,
@@ -214,7 +224,36 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                               ),
                             );
 
-                            final storeData = await ApiService.fetchSelectedStore(lat: 23.4013, lng: 88.5010, forceRefresh: true);
+                            double? currentLat;
+                            double? currentLng;
+                            try {
+                              bool serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+                                const Duration(seconds: 2),
+                                onTimeout: () => false,
+                              );
+                              if (serviceEnabled) {
+                                LocationPermission permission = await Geolocator.checkPermission();
+                                if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+                                  Position pos = await Geolocator.getCurrentPosition(
+                                    desiredAccuracy: LocationAccuracy.medium,
+                                    timeLimit: const Duration(seconds: 3),
+                                  );
+                                  currentLat = pos.latitude;
+                                  currentLng = pos.longitude;
+                                }
+                              }
+                            } catch (_) {}
+
+                            // Reset manual selection flag when user explicitly requests current GPS location
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('is_manual_location_selected', false);
+
+                            final storeData = await ApiService.fetchSelectedStore(
+                              lat: currentLat,
+                              lng: currentLng,
+                              forceRefresh: true,
+                              isManual: false,
+                            );
                             final bool isServiceable = storeData?['is_serviceable'] ?? true;
                             if (context.mounted) {
                               if (!isServiceable) {
@@ -331,7 +370,13 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                             ),
                           );
 
-                          final storeData = await ApiService.fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true, isManual: true);
+                          final storeData = await ApiService.fetchSelectedStore(
+                            lat: lat,
+                            lng: lng,
+                            address: addr['address'],
+                            forceRefresh: true,
+                            isManual: true,
+                          );
                           final bool isServiceable = storeData?['is_serviceable'] ?? true;
 
                           if (context.mounted) {
@@ -1011,7 +1056,17 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                           longitude: lng,
                         );
 
-                        final storeData = await ApiService.fetchSelectedStore(lat: lat, lng: lng, forceRefresh: true);
+                        final String finalAddrText = _addressDetailsController.text.isNotEmpty
+                            ? "${_addressDetailsController.text.trim()}, $_locationName"
+                            : _locationName;
+
+                        final storeData = await ApiService.fetchSelectedStore(
+                          lat: lat,
+                          lng: lng,
+                          address: finalAddrText,
+                          forceRefresh: true,
+                          isManual: true,
+                        );
                         final bool isServiceable = storeData?['is_serviceable'] ?? true;
 
                         if (mounted) {
