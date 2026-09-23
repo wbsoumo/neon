@@ -124,8 +124,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: _buildTopQuickCard(
                       icon: Icons.account_balance_wallet_outlined,
-                      label: "Blinkit Money",
-                      onTap: () => _navigateToDetail(context, "Blinkit Money", _buildBlinkitMoneyContent()),
+                      label: "SB Mart Money",
+                      onTap: () => _navigateToDetail(context, "SB Mart Money", _buildBlinkitMoneyContent()),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -285,8 +285,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     _buildOptionTile(
                       icon: Icons.account_balance_wallet_outlined,
-                      title: "Blinkit Money",
-                      onTap: () => _navigateToDetail(context, "Blinkit Money", _buildBlinkitMoneyContent()),
+                      title: "SB Mart Money",
+                      onTap: () => _navigateToDetail(context, "SB Mart Money", _buildBlinkitMoneyContent()),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -705,7 +705,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: const [
           Icon(Icons.card_giftcard_outlined, size: 50, color: Color(0XFF0C831F)),
           SizedBox(height: 12),
-          Text("Blinkit E-Gift Cards", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text("SB Mart E-Gift Cards", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           SizedBox(height: 6),
           Text("Gift instant groceries & electronics to your loved ones.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
         ],

@@ -64,7 +64,7 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0XFF0C831F).withOpacity(0.15),
+            color: const Color(0XFF0C831F).withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -97,59 +97,37 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                       unit: widget.unit,
                       categoryId: widget.categoryId,
                     );
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "${widget.name} added to cart",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            Text(
+                              "ADD",
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0XFF0C831F),
+                                letterSpacing: 0.5,
                               ),
+                            ),
+                            SizedBox(width: 2),
+                            Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Color(0XFF0C831F),
                             ),
                           ],
                         ),
-                        backgroundColor: const Color(0XFF0C831F),
-                        duration: const Duration(milliseconds: 1400),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        margin: const EdgeInsets.all(12),
-                      ),
-                    );
-                  },
-                borderRadius: BorderRadius.circular(8),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            "ADD",
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0XFF0C831F),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          SizedBox(width: 2),
-                          Icon(
-                            Icons.add,
-                            size: 14,
-                            color: Color(0XFF0C831F),
-                          ),
-                        ],
                       ),
                     ),
-                  ),
                   ),
                 ),
               )

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/domain/constants/appcolors.dart';
+import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/screens/login/loginscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -63,12 +66,23 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+
+      if (isLoggedIn) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BottomNavScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
+
   @override
   Widget build(BuildContext context) {
    return Scaffold(

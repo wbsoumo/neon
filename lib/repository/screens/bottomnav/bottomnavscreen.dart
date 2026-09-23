@@ -35,10 +35,11 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Nav Bar tab ordering: 0: Home, 1: Categories, 2: Cart, 3: Profile
     final List<Widget> pages = [
       HomeScreen(onProfileTap: _navigateToProfile),
+      CategoryScreen(onProfileTap: _navigateToProfile),
       CartScreen(onBackTap: _navigateToHome),
-      CategoryScreen(),
       ProfileScreen(onBackTap: _navigateToHome),
     ];
 
@@ -64,7 +65,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
               index: currentIndex,
               children: pages,
             ),
-            if (currentIndex != 1)
+            if (currentIndex != 2)
               Positioned(
                 left: 0,
                 right: 0,
@@ -72,14 +73,14 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                 child: FloatingCartPill(
                   onViewCartTap: () {
                     setState(() {
-                      currentIndex = 1;
+                      currentIndex = 2;
                     });
                   },
                 ),
               ),
           ],
         ),
-        bottomNavigationBar: currentIndex == 1
+        bottomNavigationBar: currentIndex == 2
             ? null
             : BlinkitNavBar(
                 currentIndex: currentIndex,

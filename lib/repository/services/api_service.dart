@@ -473,4 +473,75 @@ class ApiService {
     }
     return 0.0;
   }
+
+  // 11. Register User
+  static Future<Map<String, dynamic>> registerUser({
+    required String name,
+    required String phone,
+    required String password,
+    String? deviceInfo,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.register),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "name": name,
+          "phone": phone,
+          "password": password,
+          "device_info": deviceInfo ?? "Flutter Mobile App (${defaultTargetPlatform.name})",
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        // Save session locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_phone', data['user']['phone'] ?? phone);
+        await prefs.setString('user_name', data['user']['name'] ?? name);
+        if (data['token'] != null) {
+          await prefs.setString('auth_token', data['token']);
+        }
+      }
+      return data;
+    } catch (e) {
+      return {"status": "error", "message": "Connection error: $e"};
+    }
+  }
+
+  // 12. Login User
+  static Future<Map<String, dynamic>> loginUser({
+    required String phone,
+    required String password,
+    String? deviceInfo,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.login),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "phone": phone,
+          "password": password,
+          "device_info": deviceInfo ?? "Flutter Mobile App (${defaultTargetPlatform.name})",
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        // Save session locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_phone', data['user']['phone'] ?? phone);
+        await prefs.setString('user_name', data['user']['name'] ?? 'User');
+        if (data['token'] != null) {
+          await prefs.setString('auth_token', data['token']);
+        }
+      }
+      return data;
+    } catch (e) {
+      return {"status": "error", "message": "Connection error: $e"};
+    }
+  }
 }
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:blinkit_series/domain/cart/cart_controller.dart';
 
-class BlinkitNavBar extends StatelessWidget {
+class BlinkitNavBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
@@ -11,7 +12,32 @@ class BlinkitNavBar extends StatelessWidget {
   });
 
   @override
+  State<BlinkitNavBar> createState() => _BlinkitNavBarState();
+}
+
+class _BlinkitNavBarState extends State<BlinkitNavBar> {
+  final CartController _cart = CartController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _cart.addListener(_update);
+  }
+
+  @override
+  void dispose() {
+    _cart.removeListener(_update);
+    super.dispose();
+  }
+
+  void _update() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final int cartCount = _cart.totalItemCount;
+
     return Container(
       height: 64,
       decoration: const BoxDecoration(
@@ -29,29 +55,25 @@ class BlinkitNavBar extends StatelessWidget {
           _buildNavItem(
             index: 0,
             label: "Home",
-            customIcon: _buildHomeIcon(currentIndex == 0),
+            customIcon: _buildHomeIcon(widget.currentIndex == 0),
           ),
           _buildNavItem(
             index: 1,
-            label: "Order Again",
-            customIcon: Icon(
-              Icons.shopping_bag_outlined,
-              size: 26,
-              color: currentIndex == 1 ? Colors.black : const Color(0XFF616161),
-            ),
+            label: "Categories",
+            customIcon: _buildCategoriesIcon(widget.currentIndex == 1),
           ),
           _buildNavItem(
             index: 2,
-            label: "Categories",
-            customIcon: _buildCategoriesIcon(currentIndex == 2),
+            label: "Cart",
+            customIcon: _buildCartIcon(widget.currentIndex == 2, cartCount),
           ),
           _buildNavItem(
             index: 3,
             label: "Profile",
             customIcon: Icon(
-              currentIndex == 3 ? Icons.person : Icons.person_outline_rounded,
+              widget.currentIndex == 3 ? Icons.person : Icons.person_outline_rounded,
               size: 26,
-              color: currentIndex == 3 ? Colors.black : const Color(0XFF616161),
+              color: widget.currentIndex == 3 ? Colors.black : const Color(0XFF616161),
             ),
           ),
         ],
@@ -64,10 +86,10 @@ class BlinkitNavBar extends StatelessWidget {
     required String label,
     required Widget customIcon,
   }) {
-    final bool isSelected = currentIndex == index;
+    final bool isSelected = widget.currentIndex == index;
 
     return InkWell(
-      onTap: () => onTap(index),
+      onTap: () => widget.onTap(index),
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: Column(
@@ -186,6 +208,54 @@ class BlinkitNavBar extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // Cart Icon with Live Small Cart Count Badge
+  Widget _buildCartIcon(bool isSelected, int count) {
+    final Color iconColor = isSelected ? Colors.black : const Color(0XFF616161);
+
+    return SizedBox(
+      width: 32,
+      height: 26,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            isSelected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+            size: 26,
+            color: iconColor,
+          ),
+          if (count > 0)
+            Positioned(
+              right: -4,
+              top: -3,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Color(0XFF097925),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Center(
+                  child: Text(
+                    count > 99 ? "99+" : "$count",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

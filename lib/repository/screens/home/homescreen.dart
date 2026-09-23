@@ -456,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ? ((_selectedStoreData!['is_serviceable'] ?? true)
                                           ? "Delivery in ${_selectedStoreData!['delivery_time_mins'] ?? '15'} mins"
                                           : "🚫 Location Unserviceable")
-                                      : "Blinkit in 18 minutes",
+                                      : "SB Mart in 18 minutes",
                                   style: TextStyle(
                                     color: (_selectedStoreData?['is_serviceable'] ?? true) ? Colors.white70 : const Color(0XFFFFEB3B),
                                     fontSize: 13,

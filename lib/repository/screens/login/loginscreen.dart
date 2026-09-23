@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
+import 'package:blinkit_series/repository/screens/login/registerscreen.dart';
+import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _isLoading = false;
 
   final List<String> _gridImages = const [
     "image 41.png",
@@ -16,286 +29,354 @@ class LoginScreen extends StatelessWidget {
     "image 53.png",
   ];
 
+  Future<void> _handleLogin() async {
+    final phoneInput = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (phoneInput.length != 10) {
+      _showError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
+    if (password.isEmpty) {
+      _showError("Please enter your password");
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final String fullPhone = "+91$phoneInput";
+
+    final response = await ApiService.loginUser(
+      phone: fullPhone,
+      password: password,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? "Welcome back!"),
+            backgroundColor: const Color(0XFF0C831F),
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BottomNavScreen()),
+        );
+      } else {
+        _showError(response['message'] ?? "Invalid mobile number or password.");
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade600,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0XFFF9F9F9),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                // 1. Soft Pastel Circles (Bubbles positioned in background)
-                Positioned(
-                  left: -80,
-                  top: -20,
-                  child: Container(
-                    width: 320,
-                    height: 320,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0XFFEBF7EE).withOpacity(0.85),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // 1. Top Decorative Product Grid Header
+              SizedBox(
+                height: 160,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 1.1,
                     ),
+                    itemCount: _gridImages.length,
+                    itemBuilder: (context, index) {
+                      return UiHelper.CustomImage(
+                        img: _gridImages[index],
+                        fit: BoxFit.contain,
+                      );
+                    },
                   ),
                 ),
-                Positioned(
-                  right: -90,
-                  top: 120,
-                  child: Container(
-                    width: 340,
-                    height: 340,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0XFFFDF5D6).withOpacity(0.85),
-                    ),
-                  ),
-                ),
+              ),
 
-                // 2. Main Page Content
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              // 2. Brand Icon & App Title
+              Container(
+                height: 60,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0XFFF7CB45),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Color(0XFF0C831F),
+                    size: 32,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              const Text(
+                "SB Mart",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0XFF0C831F),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+
+              const SizedBox(height: 2),
+
+              const Text(
+                "Superfast 10-Minute Grocery Delivery",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0XFF757575),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. Login Card Form
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Product Grid Header
-                      Expanded(
-                        flex: 6,
-                        child: GridView.builder(
-                          padding: const EdgeInsets.only(top: 10),
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: _gridImages.length,
-                          itemBuilder: (context, index) {
-                            return UiHelper.CustomImage(
-                              img: _gridImages[index],
-                              fit: BoxFit.contain,
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Yellow Blinkit Logo Card
-                      Container(
-                        height: 64,
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: const Color(0XFFF7CB45),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: UiHelper.CustomImage(
-                            img: "http://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80",
-                            height: 34,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Headlines
                       const Text(
-                        "India’s last minute app",
-                        textAlign: TextAlign.center,
+                        "Login to Your Account",
                         style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                           color: Colors.black,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
                         ),
                       ),
+                      const SizedBox(height: 16),
 
-                      const SizedBox(height: 4),
-
+                      // Mobile Number Input (+91 Prefix)
                       const Text(
-                        "Groceries, essentials and more\ndelivered in minutes.",
-                        textAlign: TextAlign.center,
+                        "Mobile Number",
                         style: TextStyle(
-                          color: Color(0XFF757575),
                           fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                        decoration: InputDecoration(
+                          counterText: "",
+                          hintText: "Enter 10-digit number",
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.normal),
+                          prefixIcon: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Text("🇮🇳", style: TextStyle(fontSize: 18)),
+                                SizedBox(width: 6),
+                                Text(
+                                  "+91",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text("|", style: TextStyle(color: Colors.grey, fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0XFFF9F9F9),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0XFF0C831F), width: 1.8),
+                          ),
                         ),
                       ),
 
                       const SizedBox(height: 16),
 
-                      // Bottom Login Card
-                      Container(
+                      // Password Field
+                      const Text(
+                        "Password",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                        decoration: InputDecoration(
+                          hintText: "Enter your password",
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0XFF0C831F)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          filled: true,
+                          fillColor: const Color(0XFFF9F9F9),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0XFF0C831F), width: 1.8),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Login Button
+                      SizedBox(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0XFF0C831F),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: Color(0XFFE0F2F1),
-                                  child: Icon(Icons.person, color: Color(0XFF00897B), size: 26),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text(
-                                        "Soumojit Saha",
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2),
-                                      Text(
-                                        "8016222991",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0XFF757575),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () {},
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: const Size(40, 30),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: const Text(
-                                    "Edit",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0XFF0C831F),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      ),
 
-                            const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const BottomNavScreen()),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0XFF0C831F),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(
-                                        Icons.near_me,
-                                        color: Color(0XFF0C831F),
-                                        size: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    const Text(
-                                      "Login with ",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const Text(
-                                      "zomato",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                                  ],
-                                ),
+                      // Don't have an account -> Register Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Don't have an account? ",
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                              );
+                            },
+                            child: const Text(
+                              "Register Now",
+                              style: TextStyle(
+                                color: Color(0XFF0C831F),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-
-                            const SizedBox(height: 10),
-
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0XFFE8F5E9),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.check_circle, color: Color(0XFF0C831F), size: 16),
-                                  SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      "Access your saved addresses from Zomato automatically!",
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0XFF0C831F),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

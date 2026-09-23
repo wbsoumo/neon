@@ -47,7 +47,25 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
       "phone": "+91-8016222991",
       "lat": 23.4013,
       "lng": 88.5010,
-      "is_nearest": true,
+      "is_nearest": false,
+    },
+    {
+      "type": "Nabadwip, Nadia",
+      "distance": "12 km",
+      "address": "Nabadwip, Nadia",
+      "phone": "Soumo Jit Saha (8016222991)",
+      "lat": 23.4080,
+      "lng": 88.3658,
+      "is_nearest": false,
+    },
+    {
+      "type": "Debagram, Nadia",
+      "distance": "38 km",
+      "address": "Chatterjee Para, Debagram, Nadia",
+      "phone": "Soumo Jit Saha (8016222991)",
+      "lat": 23.6558,
+      "lng": 88.3842,
+      "is_nearest": false,
     },
     {
       "type": "Kolkata Home",
@@ -86,29 +104,56 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
 
   Future<void> _fetchDbAddresses() async {
     final dbAddresses = await ApiService.getUserAddresses();
-    if (dbAddresses.isNotEmpty && mounted) {
+    final activeStore = ApiService.memoryCachedStore;
+    final double? storeLat = activeStore != null ? (activeStore['latitude'] as num?)?.toDouble() : null;
+    final double? storeLng = activeStore != null ? (activeStore['longitude'] as num?)?.toDouble() : null;
+
+    if (mounted) {
       setState(() {
-        for (var addr in dbAddresses) {
-          final String type = addr['custom_type_name'] != null && addr['custom_type_name'].toString().isNotEmpty
-              ? addr['custom_type_name'].toString()
-              : (addr['address_type'] ?? 'Home');
-          final String phone = addr['receiver_phone'] != null && addr['receiver_phone'].toString().isNotEmpty
-              ? "${addr['receiver_name']} (${addr['receiver_phone']})"
-              : (addr['receiver_name'] ?? 'Soumo Jit Saha');
+        if (dbAddresses.isNotEmpty) {
+          for (var addr in dbAddresses) {
+            final String type = addr['custom_type_name'] != null && addr['custom_type_name'].toString().isNotEmpty
+                ? addr['custom_type_name'].toString()
+                : (addr['address_type'] ?? 'Home');
+            final String phone = addr['receiver_phone'] != null && addr['receiver_phone'].toString().isNotEmpty
+                ? "${addr['receiver_name']} (${addr['receiver_phone']})"
+                : (addr['receiver_name'] ?? 'Soumo Jit Saha');
 
-          final Map<String, dynamic> converted = {
-            "type": type,
-            "distance": "Saved",
-            "address": addr['address_details'] ?? '',
-            "phone": phone,
-            "lat": double.tryParse(addr['latitude']?.toString() ?? '23.4013') ?? 23.4013,
-            "lng": double.tryParse(addr['longitude']?.toString() ?? '88.5010') ?? 88.5010,
-            "is_nearest": false,
-          };
+            final Map<String, dynamic> converted = {
+              "type": type,
+              "distance": "Saved",
+              "address": addr['address_details'] ?? '',
+              "phone": phone,
+              "lat": double.tryParse(addr['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+              "lng": double.tryParse(addr['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+              "is_nearest": false,
+            };
 
-          if (!_savedAddresses.any((a) => a['address'] == converted['address'])) {
-            _savedAddresses.insert(1, converted);
+            if (!_savedAddresses.any((a) => a['address'] == converted['address'])) {
+              _savedAddresses.insert(1, converted);
+            }
           }
+        }
+
+        // Dynamically compute which saved address is nearest to the active store/user selected location
+        if (storeLat != null && storeLng != null) {
+          double minDistance = double.infinity;
+          int nearestIndex = -1;
+          for (int i = 0; i < _savedAddresses.length; i++) {
+            _savedAddresses[i]['is_nearest'] = false;
+            final double aLat = (_savedAddresses[i]['lat'] as num).toDouble();
+            final double aLng = (_savedAddresses[i]['lng'] as num).toDouble();
+            final double d = Geolocator.distanceBetween(storeLat, storeLng, aLat, aLng);
+            if (d < minDistance) {
+              minDistance = d;
+              nearestIndex = i;
+            }
+          }
+          if (nearestIndex != -1 && minDistance <= 30000) { // within 30 km
+            _savedAddresses[nearestIndex]['is_nearest'] = true;
+          }
+        } else {
+          _savedAddresses[0]['is_nearest'] = true;
         }
       });
     }
@@ -271,23 +316,23 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                   ),
                                 );
                               }
-                              final String dynAddress = "${storeData?['address'] ?? '11E Krishnanagar Main Hub'}${storeData?['city'] != null ? ', ${storeData!['city']}' : ''}";
+                              final String dynAddress = "${storeData?['name'] ?? 'Nearest Dark Store'}, ${storeData?['address'] ?? ''}";
                               widget.onAddressSelected?.call(dynAddress);
                               Navigator.pop(context);
                             }
                           },
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                          child: const Padding(
-                            padding: EdgeInsets.all(14),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
                             child: Row(
                               children: [
-                                Icon(Icons.my_location, color: Color(0XFFD32F2F), size: 22),
-                                SizedBox(width: 14),
+                                const Icon(Icons.my_location, color: Color(0XFFD32F2F), size: 22),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
+                                      const Text(
                                         "Use current location",
                                         style: TextStyle(
                                           fontSize: 14,
@@ -295,15 +340,17 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                           color: Color(0XFFD32F2F),
                                         ),
                                       ),
-                                      SizedBox(height: 2),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        "11E Krishnanagar Main Hub (Nearest Dark Store)",
-                                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                                        ApiService.memoryCachedStore != null
+                                            ? "${ApiService.memoryCachedStore!['name'] ?? 'Nearest Dark Store'} (${ApiService.memoryCachedStore!['distance_km'] ?? '0.8'} km)"
+                                            : "Auto-detect nearest store based on GPS",
+                                        style: const TextStyle(fontSize: 12, color: Colors.black54),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Icon(Icons.chevron_right, color: Colors.black38),
+                                const Icon(Icons.chevron_right, color: Colors.black38),
                               ],
                             ),
                           ),

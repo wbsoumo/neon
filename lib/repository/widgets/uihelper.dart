@@ -50,6 +50,30 @@ class UiHelper {
       }
     }
 
+    Widget buildFallback() {
+      return Image.asset(
+        'assets/images/no_product.png',
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (ctx, err, st) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: const Color(0XFFF2F4F7),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Icon(Icons.image_not_supported_outlined, color: Color(0XFF0C831F), size: 24),
+          ),
+        ),
+      );
+    }
+
+    if (cleanUrl.isEmpty) {
+      return buildFallback();
+    }
+
     if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
       return CachedNetworkImage(
         imageUrl: cleanUrl,
@@ -61,26 +85,7 @@ class UiHelper {
           height: height ?? double.infinity,
           borderRadius: 8,
         ),
-        errorWidget: (context, url, error) {
-          String fallbackAsset = "assets/images/image 41.png";
-          return Image.asset(
-            fallbackAsset,
-            width: width,
-            height: height,
-            fit: fit,
-            errorBuilder: (ctx, err, st) => Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Icon(Icons.shopping_bag_outlined, color: Color(0XFF0C831F), size: 24),
-              ),
-            ),
-          );
-        },
+        errorWidget: (context, url, error) => buildFallback(),
       );
     }
 
@@ -91,19 +96,7 @@ class UiHelper {
       width: width,
       height: height,
       fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Center(
-            child: Icon(Icons.fastfood, color: Color(0XFF0C831F), size: 24),
-          ),
-        );
-      },
+      errorBuilder: (context, error, stackTrace) => buildFallback(),
     );
   }
 

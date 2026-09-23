@@ -1,7 +1,10 @@
 class ApiConstants {
   static const String baseUrl = "http://taskbazi.site/api/v1";
 
+  static const String register = "$baseUrl/auth/register";
+  static const String login = "$baseUrl/auth/login";
   static const String selectStore = "$baseUrl/store/select";
+
   static const String syncCheck = "$baseUrl/sync-check";
   static const String categories = "$baseUrl/categories";
   static const String products = "$baseUrl/products";

@@ -28,7 +28,7 @@ class PrintScreen extends StatelessWidget {
                               width: 20,
                             ),
                             UiHelper.CustomText(
-                                text: "Blinkit in",
+                                text: "SB Mart in",
                                 color: Color(0XFF000000),
                                 fontweight: FontWeight.bold,
                                 fontsize: 15,
@@ -95,7 +95,7 @@ class PrintScreen extends StatelessWidget {
                   fontweight: FontWeight.bold,
                   fontsize: 32),
               UiHelper.CustomText(
-                  text: "Blinkit ensures secure prints at every stage",
+                  text: "SB Mart ensures secure prints at every stage",
                   color: Color(0XFF9C9C9C),
                   fontweight: FontWeight.bold,
                   fontsize: 14),
