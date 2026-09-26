@@ -1375,25 +1375,47 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }
                     },
-                    child: imgUrl.startsWith('http')
-                        ? Image.network(
-                            imgUrl,
-                            width: double.infinity,
-                            height: 165,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Image.network(
-                              'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-                              width: double.infinity,
-                              height: 165,
-                              fit: BoxFit.cover,
-                            ),
+                    child: imgUrl.startsWith('data:image/')
+                        ? Builder(
+                            builder: (context) {
+                              try {
+                                final base64Str = imgUrl.split(',').last;
+                                final bytes = base64Decode(base64Str);
+                                return Image.memory(
+                                  bytes,
+                                  width: double.infinity,
+                                  height: 165,
+                                  fit: BoxFit.cover,
+                                );
+                              } catch (_) {
+                                return Image.network(
+                                  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+                                  width: double.infinity,
+                                  height: 165,
+                                  fit: BoxFit.cover,
+                                );
+                              }
+                            },
                           )
-                        : UiHelper.CustomImage(
-                            img: imgUrl,
-                            width: double.infinity,
-                            height: 165,
-                            fit: BoxFit.cover,
-                          ),
+                        : (imgUrl.startsWith('http')
+                            ? Image.network(
+                                imgUrl,
+                                width: double.infinity,
+                                height: 165,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Image.network(
+                                  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+                                  width: double.infinity,
+                                  height: 165,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : UiHelper.CustomImage(
+                                img: imgUrl,
+                                width: double.infinity,
+                                height: 165,
+                                fit: BoxFit.cover,
+                              )),
                   ),
                 ),
               );
