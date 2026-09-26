@@ -1313,7 +1313,14 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             itemBuilder: (context, index) {
               final slider = activeSliders[index];
-              final String imgUrl = slider['image']?.toString() ?? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
+              String rawImg = slider['image']?.toString() ?? '';
+              String imgUrl = rawImg.trim();
+              if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+                imgUrl = "http://taskbazi.site/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
+              }
+              if (imgUrl.isEmpty) {
+                imgUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
+              }
               final dynamic catIdRaw = slider['category_id'];
               final int? catId = catIdRaw != null ? int.tryParse(catIdRaw.toString()) : null;
               final String? redirectUrl = slider['redirect_url']?.toString();
