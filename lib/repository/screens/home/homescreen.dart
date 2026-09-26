@@ -1308,6 +1308,7 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 165,
           child: PageView.builder(
             controller: _sliderPageController,
+            physics: activeSliders.length > 1 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
             itemCount: activeSliders.length,
             onPageChanged: (index) {
               if (_currentSliderIndex != index) {
@@ -1383,7 +1384,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: imgUrl.startsWith('data:image/')
                         ? Image.memory(
                             _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
-                            key: ValueKey<int>(imgUrl.length),
                             width: double.infinity,
                             height: 165,
                             fit: BoxFit.cover,
