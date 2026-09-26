@@ -1319,12 +1319,19 @@ class _HomeScreenState extends State<HomeScreen> {
               final String? redirectUrl = slider['redirect_url']?.toString();
 
               return Container(
-                margin: EdgeInsets.zero,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.zero,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.zero,
+                  borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     onTap: () {
                       if (catId != null) {
