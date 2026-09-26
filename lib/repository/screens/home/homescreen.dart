@@ -1389,7 +1389,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -1397,15 +1397,16 @@ class _HomeScreenState extends State<HomeScreen> {
             (index) => AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 6,
-              width: _currentSliderIndex == index ? 20 : 6,
+              height: 5,
+              width: _currentSliderIndex == index ? 18 : 5,
               decoration: BoxDecoration(
-                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade300,
+                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
         ),
+        const SizedBox(height: 8),
       ],
     );
   }
