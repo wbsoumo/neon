@@ -1315,10 +1315,10 @@ class _HomeScreenState extends State<HomeScreen> {
               final slider = activeSliders[index];
               String rawImg = slider['image']?.toString() ?? '';
               String imgUrl = rawImg.trim();
-              if (imgUrl.contains('localhost')) {
-                imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
-              }
-              if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+              if (!imgUrl.startsWith('data:') && !imgUrl.startsWith('http') && imgUrl.isNotEmpty) {
+                if (imgUrl.contains('localhost')) {
+                  imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
+                }
                 imgUrl = "http://taskbazi.site/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
               }
               if (imgUrl.isEmpty) {
