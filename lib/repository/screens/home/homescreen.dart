@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _sliderAutoTimer;
   int _currentSliderIndex = 0;
   List<Map<String, dynamic>> _sliders = [];
+  final Map<String, Uint8List> _base64ImageCache = {};
 
   void _startSliderAutoTimer() {
     _sliderAutoTimer?.cancel();
@@ -220,10 +221,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     ApiService.fetchSliders().then((slidersData) {
       if (mounted && slidersData.isNotEmpty) {
-        setState(() {
-          _sliders = slidersData;
-        });
-        _startSliderAutoTimer();
+        if (_sliders.length != slidersData.length || jsonEncode(_sliders) != jsonEncode(slidersData)) {
+          setState(() {
+            _sliders = slidersData;
+          });
+          _startSliderAutoTimer();
+        }
       }
     });
 
@@ -1380,9 +1383,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (context) {
                               try {
                                 final base64Str = imgUrl.split(',').last;
-                                final bytes = base64Decode(base64Str);
+                                final bytes = _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(base64Str));
                                 return Image.memory(
                                   bytes,
+                                  key: ValueKey<String>(imgUrl.hashCode.toString()),
                                   width: double.infinity,
                                   height: 165,
                                   fit: BoxFit.cover,
