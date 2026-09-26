@@ -54,9 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _startSliderAutoTimer() {
     _sliderAutoTimer?.cancel();
-    if (_sliders.isEmpty) return;
+    if (_sliders.length <= 1) return;
     _sliderAutoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (mounted && _sliders.isNotEmpty) {
+      if (mounted && _sliders.length > 1) {
         final nextIndex = (_currentSliderIndex + 1) % _sliders.length;
         _sliderPageController.animateToPage(
           nextIndex,
@@ -1422,23 +1422,25 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            activeSliders.length,
-            (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 5,
-              width: _currentSliderIndex == index ? 18 : 5,
-              decoration: BoxDecoration(
-                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(3),
+        if (activeSliders.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              activeSliders.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                height: 5,
+                width: _currentSliderIndex == index ? 18 : 5,
+                decoration: BoxDecoration(
+                  color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(3),
+                ),
               ),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 8),
       ],
     );
