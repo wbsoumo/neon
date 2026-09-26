@@ -86,13 +86,19 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
    return Scaffold(
-     backgroundColor: AppColors.scaffoldbackgroud,
+     backgroundColor: const Color(0xFF018142),
      body: Center(
        child: Column(
          mainAxisAlignment: MainAxisAlignment.center,
          children: [
-         UiHelper.CustomImage(img: "image 1 (1).png"),
-       ],),
+           Image.asset(
+             "assets/images/sbmart.png",
+             width: 180,
+             height: 180,
+             fit: BoxFit.contain,
+           ),
+         ],
+       ),
      ),
    );
   }

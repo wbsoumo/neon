@@ -3,6 +3,7 @@ import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/product_detail_dialog.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
 import 'package:blinkit_series/repository/widgets/skeleton_loader.dart';
+import 'package:blinkit_series/repository/widgets/voice_search_sheet.dart';
 
 class SearchScreen extends StatefulWidget {
   final List<Map<String, dynamic>> allProducts;
@@ -122,7 +123,20 @@ class _SearchScreenState extends State<SearchScreen> {
                                     _performSearch('');
                                   },
                                 )
-                              : const Icon(Icons.mic, color: Colors.black54, size: 20),
+                              : IconButton(
+                                  icon: const Icon(Icons.mic, color: Colors.black54, size: 20),
+                                  onPressed: () {
+                                    VoiceSearchSheet.show(
+                                      context,
+                                      onResult: (spokenQuery) {
+                                        if (spokenQuery.isNotEmpty) {
+                                          _searchController.text = spokenQuery;
+                                          _performSearch(spokenQuery);
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
                         ),

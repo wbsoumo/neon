@@ -7,47 +7,16 @@ class UiHelper {
     String cleanUrl = img.trim();
 
     // Map common asset names from database to high-quality reliable CDN URLs for mobile devices
-    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      final String baseName = cleanUrl.replaceAll('assets/images/', '').split('?').first.trim();
-      switch (baseName) {
-        case 'image 54.png':
-        case 'image 63.png':
-        case 'image 50.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?w=500&q=80';
-          break;
-        case 'image 57.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1599785209707-a456fc1337cc?w=500&q=80';
-          break;
-        case 'image 41.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=500&q=80';
-          break;
-        case 'image 42.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&q=80';
-          break;
-        case 'image 43.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500&q=80';
-          break;
-        case 'image 44 (1).png':
-        case 'image 44.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&q=80';
-          break;
-        case 'image 45 (1).png':
-        case 'image 45.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=500&q=80';
-          break;
-        case 'image 51.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=500&q=80';
-          break;
-        case 'image 52.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
-          break;
-        case 'image 53.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=500&q=80';
-          break;
-        case 'image 35.png':
-          cleanUrl = 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=500&q=80';
-          break;
-      }
+    if (cleanUrl.contains('uploads/categories/') || cleanUrl.contains('01_vegetables') || cleanUrl.contains('02_dairy') || cleanUrl.contains('03_snacks') || cleanUrl.contains('04_personal') || cleanUrl.contains('05_home') || cleanUrl.contains('06_atta') || cleanUrl.contains('07_oil') || cleanUrl.contains('08_instant') || cleanUrl.contains('09_beverages') || cleanUrl.contains('10_baby') || cleanUrl.contains('11_pet') || cleanUrl.contains('12_frozen') || cleanUrl.contains('13_bakery') || cleanUrl.contains('14_fresh') || cleanUrl.contains('15_kitchen') || cleanUrl.contains('16_organic')) {
+      final String fileName = cleanUrl.replaceAll('http://taskbazi.site/uploads/categories/', '').replaceAll('uploads/categories/', '').split('?').first.trim();
+      final String cleanPath = fileName.startsWith('assets/images/') ? fileName : "assets/images/$fileName";
+      return Image.asset(
+        cleanPath,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (ctx, err, st) => Image.asset('assets/images/no_product.png', width: width, height: height, fit: fit),
+      );
     }
 
     Widget buildFallback() {

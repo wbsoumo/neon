@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/screens/profile/profile_detail_screen.dart';
 import 'package:blinkit_series/repository/screens/profile/order_history_screen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:blinkit_series/repository/widgets/uihelper.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -14,6 +17,34 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isDarkMode = false;
+  String _userPhone = "8016222991";
+  String _userName = "Your account";
+  double _walletBalance = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone');
+      final name = prefs.getString('user_name');
+      final targetPhone = phone ?? _userPhone;
+      
+      final wallet = await ApiService.fetchUserWallet(phone: targetPhone);
+
+      if (mounted) {
+        setState(() {
+          if (phone != null && phone.isNotEmpty) _userPhone = phone;
+          if (name != null && name.isNotEmpty) _userName = name;
+          _walletBalance = wallet;
+        });
+      }
+    } catch (_) {}
+  }
 
   void _navigateToDetail(BuildContext context, String title, Widget content) {
     Navigator.push(
@@ -80,18 +111,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 10),
 
                     // Title & Phone Number
-                    const Text(
-                      "Your account",
-                      style: TextStyle(
+                    Text(
+                      _userName,
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      "8016222991",
-                      style: TextStyle(
+                    Text(
+                      _userPhone,
+                      style: const TextStyle(
                         fontSize: 13,
                         color: Color(0XFF666666),
                         fontWeight: FontWeight.w500,
@@ -536,12 +567,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text("Total Wallet Balance", style: TextStyle(color: Colors.white70, fontSize: 13)),
-              SizedBox(height: 6),
-              Text("₹0.00", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
-              SizedBox(height: 12),
-              Text("Fast, 1-click checkout on all your orders", style: TextStyle(color: Colors.white70, fontSize: 12)),
+            children: [
+              const Text("Total Wallet Balance", style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 6),
+              Text(
+                "₹${_walletBalance % 1 == 0 ? _walletBalance.toInt() : _walletBalance.toStringAsFixed(2)}",
+                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 12),
+              const Text("Fast, 1-click checkout on all your orders", style: TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
         ),
@@ -604,33 +638,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAddressBookContent() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: const [
-              Icon(Icons.home_outlined, color: Color(0XFF0C831F), size: 24),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Home - Primary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    SizedBox(height: 4),
-                    Text("RATANR FLAT - 11E, Krishnanagar, India", style: TextStyle(fontSize: 12, color: Colors.black54)),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: ApiService.getUserAddresses(phone: _userPhone),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: Color(0XFF0C831F)),
+            ),
+          );
+        }
+
+        final addresses = snapshot.data ?? [];
+        if (addresses.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.location_off_outlined, size: 48, color: Colors.grey),
+                const SizedBox(height: 12),
+                const Text("No saved addresses found", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                const Text("Add your home or office address for express 10-min delivery.", style: TextStyle(fontSize: 12, color: Colors.black54)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    AddressSelectionBottomSheet.show(context);
+                  },
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: const Text("Add New Address", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0XFF0C831F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            ...addresses.map((addr) {
+              final String type = addr['custom_type_name'] != null && addr['custom_type_name'].toString().isNotEmpty
+                  ? addr['custom_type_name'].toString()
+                  : (addr['address_type'] ?? 'Home');
+              final String details = addr['address_details'] ?? 'Saved Address';
+              final String name = addr['receiver_name'] ?? _userName;
+              final String phone = addr['receiver_phone'] ?? _userPhone;
+
+              IconData icon = Icons.home_outlined;
+              if (type.toLowerCase().contains('work') || type.toLowerCase().contains('office')) {
+                icon = Icons.work_outline;
+              } else if (type.toLowerCase().contains('other')) {
+                icon = Icons.location_on_outlined;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
                 ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0XFFE8F5E9),
+                      child: Icon(icon, color: const Color(0XFF0C831F), size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text(details, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                          const SizedBox(height: 2),
+                          Text("Receiver: $name ($phone)", style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.more_vert, color: Colors.black38),
+                  ],
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                AddressSelectionBottomSheet.show(context);
+              },
+              icon: const Icon(Icons.add, color: Color(0XFF0C831F)),
+              label: const Text("Add Another Address", style: TextStyle(color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0XFF0C831F)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              Icon(Icons.more_vert, color: Colors.black38),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 

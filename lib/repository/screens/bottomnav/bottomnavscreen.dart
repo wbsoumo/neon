@@ -25,6 +25,14 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
     }
   }
 
+  void _navigateToCategories() {
+    if (currentIndex != 1) {
+      setState(() {
+        currentIndex = 1;
+      });
+    }
+  }
+
   void _navigateToProfile() {
     if (currentIndex != 3) {
       setState(() {
@@ -37,7 +45,10 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   Widget build(BuildContext context) {
     // Nav Bar tab ordering: 0: Home, 1: Categories, 2: Cart, 3: Profile
     final List<Widget> pages = [
-      HomeScreen(onProfileTap: _navigateToProfile),
+      HomeScreen(
+        onProfileTap: _navigateToProfile,
+        onCategoriesTap: _navigateToCategories,
+      ),
       CategoryScreen(onProfileTap: _navigateToProfile),
       CartScreen(onBackTap: _navigateToHome),
       ProfileScreen(onBackTap: _navigateToHome),

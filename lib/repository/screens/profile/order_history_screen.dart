@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/screens/cart/orderstatusscreen.dart';
 import 'package:blinkit_series/repository/screens/cart/order_summary_screen.dart';
 import 'package:blinkit_series/domain/cart/cart_controller.dart';
 import 'package:blinkit_series/repository/screens/cart/cartscreen.dart';
+import 'package:blinkit_series/repository/widgets/uihelper.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -15,6 +17,25 @@ class OrderHistoryScreen extends StatefulWidget {
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  String _userPhone = "8016222991";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserPhone();
+  }
+
+  Future<void> _loadUserPhone() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone');
+      if (mounted && phone != null && phone.isNotEmpty) {
+        setState(() {
+          _userPhone = phone;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -106,7 +127,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
               // 2. Fetch Orders List from Backend
               FutureBuilder<List<Map<String, dynamic>>>(
-                future: ApiService.getUserOrders(phone: "8016222991"),
+                future: ApiService.getUserOrders(phone: _userPhone),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Padding(
@@ -268,7 +289,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                       separatorBuilder: (context, idx) => const SizedBox(width: 8),
                                       itemBuilder: (context, idx) {
                                         final it = itemsList[idx];
-                                        final String img = it['image']?.toString() ?? it['img']?.toString() ?? '';
+                                        final String rawImg = it['image']?.toString() ?? it['img']?.toString() ?? '';
                                         return Container(
                                           width: 58,
                                           height: 58,
@@ -278,9 +299,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                             borderRadius: BorderRadius.circular(10),
                                             border: Border.all(color: Colors.black.withOpacity(0.04)),
                                           ),
-                                          child: img.startsWith('http')
-                                              ? Image.network(img, fit: BoxFit.contain, errorBuilder: (c, o, s) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey))
-                                              : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 24),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: UiHelper.CustomImage(
+                                              img: rawImg.isNotEmpty ? rawImg : 'image 41.png',
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
                                         );
                                       },
                                     ),

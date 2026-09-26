@@ -1,4 +1,4 @@
-package com.example.blinkit_series
+package com.sbmart.taskbazi
 
 import io.flutter.embedding.android.FlutterActivity
 

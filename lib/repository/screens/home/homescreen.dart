@@ -1,18 +1,24 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/product_detail_dialog.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
 import 'package:blinkit_series/repository/widgets/skeleton_loader.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:blinkit_series/repository/widgets/voice_search_sheet.dart';
+import 'package:blinkit_series/repository/screens/category/category_products_screen.dart';
 import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onProfileTap;
+  final VoidCallback? onCategoriesTap;
 
-  const HomeScreen({super.key, this.onProfileTap});
+  const HomeScreen({super.key, this.onProfileTap, this.onCategoriesTap});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -41,6 +47,26 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingLiveProducts = true;
   double _userWalletBalance = 0.0;
 
+  final PageController _sliderPageController = PageController();
+  Timer? _sliderAutoTimer;
+  int _currentSliderIndex = 0;
+  List<Map<String, dynamic>> _sliders = [];
+
+  void _startSliderAutoTimer() {
+    _sliderAutoTimer?.cancel();
+    if (_sliders.isEmpty) return;
+    _sliderAutoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (mounted && _sliders.isNotEmpty) {
+        final nextIndex = (_currentSliderIndex + 1) % _sliders.length;
+        _sliderPageController.animateToPage(
+          nextIndex,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,99 +84,146 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _checkAndRequestLocationPermission() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool? isGranted = prefs.getBool('location_permission_granted');
-    
-    // If permission has already been explicitly handled (granted or denied/saved), do not show dialog again
-    if (isGranted != null) {
-      return;
+  Future<void> _checkAndRequestLocationPermission() async {
+    bool serviceEnabled = false;
+    LocationPermission permission = LocationPermission.denied;
+
+    try {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
+
+      if (serviceEnabled) {
+        permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+      } else {
+        // Prompt user to enable location services if disabled
+        permission = await Geolocator.requestPermission();
+      }
+    } catch (e) {
+      debugPrint("Location permission check error: $e");
     }
 
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.location_on, color: Color(0XFFE53935), size: 26),
-              SizedBox(width: 10),
-              Text(
-                "Device Location",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: const Text(
-            "SonarbanglaMart needs location access to check service availability and auto-select your nearest dark store for 15-min delivery.",
-            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
-          ),
-          actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-          actions: [
-            OutlinedButton(
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('location_permission_granted', false);
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                  AddressSelectionBottomSheet.show(
-                    context,
-                    onAddressSelected: (selectedAddress) {
-                      _fetchLiveBackendData(forceRefresh: true);
-                    },
-                  );
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.grey),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text("Deny / Choose", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('location_permission_granted', true);
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                  final storeData = await ApiService.fetchSelectedStore(lat: 23.4013, lng: 88.5010, forceRefresh: true);
-                  if (mounted) {
-                    setState(() {
-                      _selectedStoreData = storeData;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Location access granted! Connected to ${storeData?['name'] ?? 'Nearest Dark Store'}"),
-                        backgroundColor: const Color(0XFF0C831F),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0XFF0C831F),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text("Allow Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      try {
+        Position pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 4),
         );
-      },
-    );
+
+        // Reverse geocode to find exact area name
+        final areaName = await _reverseGeocodeArea(pos.latitude, pos.longitude);
+
+        // Check saved addresses database to see if current GPS matches a saved address nearby (< 1000 meters)
+        String? matchedSavedAddress;
+        try {
+          final dbAddresses = await ApiService.getUserAddresses();
+          double closestDist = double.infinity;
+          for (var addr in dbAddresses) {
+            final double? aLat = double.tryParse(addr['latitude']?.toString() ?? '');
+            final double? aLng = double.tryParse(addr['longitude']?.toString() ?? '');
+            if (aLat != null && aLng != null) {
+              final double distMeters = Geolocator.distanceBetween(pos.latitude, pos.longitude, aLat, aLng);
+              if (distMeters <= 1000 && distMeters < closestDist) {
+                closestDist = distMeters;
+                matchedSavedAddress = addr['address_details'] ?? addr['custom_type_name'] ?? addr['address_type'];
+              }
+            }
+          }
+        } catch (_) {}
+
+        // Query backend for nearest store dynamically based on real GPS lat & lng
+        final storeData = await ApiService.fetchSelectedStore(
+          lat: pos.latitude,
+          lng: pos.longitude,
+          forceRefresh: true,
+          isManual: false,
+        );
+
+        final String finalAddressDisplay = matchedSavedAddress ??
+            areaName ??
+            (storeData != null ? (storeData['address'] ?? storeData['name'] ?? 'Current Location') : 'Current Location');
+
+        if (mounted) {
+          setState(() {
+            _selectedStoreData = storeData;
+            _userSelectedAddress = finalAddressDisplay;
+            ApiService.saveUserSelectedAddress(finalAddressDisplay);
+          });
+        }
+      } catch (e) {
+        debugPrint("Error fetching GPS location & nearest store: $e");
+      }
+    } else {
+      // Permission NOT allowed / denied -> automatically open location selection bottom sheet
+      if (mounted) {
+        AddressSelectionBottomSheet.show(
+          context,
+          onAddressSelected: (selectedAddress) {
+            if (mounted) {
+              setState(() {
+                _userSelectedAddress = selectedAddress;
+              });
+              _fetchLiveBackendData(forceRefresh: true);
+            }
+          },
+        );
+      }
+    }
+  }
+
+  Future<String?> _reverseGeocodeArea(double lat, double lng) async {
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lng',
+      );
+      final response = await http.get(uri, headers: {
+        'User-Agent': 'SonarbanglaMartApp/1.0',
+      }).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null) {
+          final place = address['suburb'] ??
+              address['neighbourhood'] ??
+              address['village'] ??
+              address['town'] ??
+              address['city'] ??
+              address['county'] ??
+              data['name'] ??
+              "";
+          final district = address['state_district'] ?? address['state'] ?? "";
+          if (place.toString().isNotEmpty) {
+            return district.isNotEmpty && !place.toString().contains(district.toString())
+                ? "$place, $district"
+                : "$place";
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
-    // 1. Immediately fetch user wallet balance so top pill updates instantly
+    // 1. Immediately fetch user wallet balance & promotional sliders
     ApiService.fetchUserWallet().then((wallet) {
       if (mounted) {
         setState(() {
           _userWalletBalance = wallet;
         });
+      }
+    });
+
+    ApiService.fetchSliders().then((slidersData) {
+      if (mounted && slidersData.isNotEmpty) {
+        setState(() {
+          _sliders = slidersData;
+        });
+        _startSliderAutoTimer();
       }
     });
 
@@ -783,20 +856,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                               ),
-                              const IntrinsicHeight(
+                              IntrinsicHeight(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    VerticalDivider(
+                                    const VerticalDivider(
                                       width: 1,
                                       thickness: 1,
                                       indent: 10,
                                       endIndent: 10,
                                       color: Color(0XFFE0E0E0),
                                     ),
-                                    SizedBox(width: 8),
-                                    Icon(Icons.mic, color: Colors.black87, size: 22),
-                                    SizedBox(width: 12),
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () {
+                                        VoiceSearchSheet.show(
+                                          context,
+                                          onResult: (spokenQuery) {
+                                            if (spokenQuery.isNotEmpty) {
+                                              final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                                              final Color activeTheme = (hexStr != null && hexStr.length == 6)
+                                                  ? Color(int.parse("0xFF$hexStr"))
+                                                  : const Color(0XFF0C831F);
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) => SearchScreen(
+                                                    allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
+                                                    initialQuery: spokenQuery,
+                                                    themeColor: activeTheme,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        );
+                                      },
+                                      child: const Icon(Icons.mic, color: Colors.black87, size: 22),
+                                    ),
+                                    const SizedBox(width: 12),
                                   ],
                                 ),
                               ),
@@ -906,368 +1003,39 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             if (isAllSelected) ...[
-              // ---------------- MAIN HOME VIEW WHEN "ALL" IS SELECTED ----------------
+              // ---------------- REDESIGNED CONTENT AREA ACCORDING TO REFERENCE DESIGN ----------------
 
-              // Mega Sale Custom Banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                color: () {
-                  final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
-                  if (hexStr != null && hexStr.length == 6) {
-                    return Color(int.parse("0xFF$hexStr"));
-                  }
-                  return const Color(0XFF0C831F);
-                }(),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.stars, color: Color(0XFFF7CB45), size: 20),
-                        const SizedBox(width: 8),
-                        UiHelper.CustomText(
-                            text: _selectedStoreData?['banner_title']?.toString().isNotEmpty == true
-                                ? _selectedStoreData!['banner_title'].toString()
-                                : "Mega Diwali Sale",
-                            color: Colors.white,
-                            fontweight: FontWeight.bold,
-                            fontsize: 20,
-                            fontfamily: "bold"),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.stars, color: Color(0XFFF7CB45), size: 20),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 140,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                        child: ListView.builder(
-                          itemBuilder: (context, index) {
-                            final card = _selectedStoreData?['promo_cards'] != null && (_selectedStoreData!['promo_cards'] as List).length > index
-                                ? (_selectedStoreData!['promo_cards'] as List)[index]
-                                : megaSaleData[index];
+              const SizedBox(height: 12),
 
-                            final String title = card["text"] ?? card["title"] ?? "";
-                            final String img = card["img"] ?? "image 50.png";
-                            final String targetType = card["target_type"] ?? "category";
-                            final String targetId = card["target_id"]?.toString() ?? "";
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              child: InkWell(
-                                onTap: () {
-                                  if (targetType == "product") {
-                                    final cleanId = targetId.replaceAll('prod_', '');
-                                    final matchProd = _liveProducts.firstWhere(
-                                      (p) => p['id'] == cleanId,
-                                      orElse: () => {
-                                        "id": cleanId,
-                                        "name": title,
-                                        "unit": "1 pc",
-                                        "price": 149.0,
-                                        "mrp": 199.0,
-                                        "img": img,
-                                      },
-                                    );
-                                    ProductDetailDialog.show(context, matchProd);
-                                  } else {
-                                    final cleanId = targetId.replaceAll('cat_', '');
-                                    setState(() {
-                                      final foundIndex = _headerCategories.indexWhere((c) => c['name'].toString().toLowerCase().contains(title.toLowerCase()));
-                                      if (foundIndex != -1) {
-                                        _selectedCategoryIndex = foundIndex;
-                                      } else {
-                                        _selectedCategoryIndex = (index + 1) % _headerCategories.length;
-                                      }
-                                    });
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  width: 100,
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                      color: const Color(0XFFEAD3D3),
-                                      borderRadius: BorderRadius.circular(10)),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: UiHelper.CustomImage(
-                                              img: img,
-                                              width: 88,
-                                              height: 70,
-                                              fit: BoxFit.cover),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        title,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 10),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          itemCount: (_selectedStoreData?['promo_cards'] as List?)?.length ?? megaSaleData.length,
-                          scrollDirection: Axis.horizontal,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // 1. Promotional Slider Banner (Dynamic from Admin Panel)
+              _buildPromotionalSlider(),
 
               const SizedBox(height: 16),
 
-              // Featured Products Section
-              if (_isLoadingLiveProducts) ...[
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 12, bottom: 8),
-                  child: UiHelper.CustomText(
-                      text: "Featured Products",
-                      color: Colors.black,
-                      fontweight: FontWeight.bold,
-                      fontsize: 16,
-                      fontfamily: "bold"),
-                ),
-                SizedBox(
-                  height: 195,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 4,
-                    itemBuilder: (context, index) => SkeletonLoader.productCardSkeleton(),
-                  ),
-                ),
-              ] else if (featuredItems.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 12, bottom: 8),
-                  child: UiHelper.CustomText(
-                      text: "Featured Products",
-                      color: Colors.black,
-                      fontweight: FontWeight.bold,
-                      fontsize: 16,
-                      fontfamily: "bold"),
-                ),
-                SizedBox(
-                  height: 195,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    physics: const BouncingScrollPhysics(),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: featuredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = featuredItems[index];
-                      final String title = item["text"].toString();
-                      final double price = (item["price"] as num).toDouble();
-                      final String img = item["img"].toString();
+              // 2. Categories Section
+              _buildCategoriesSection(),
 
-                      return InkWell(
-                        onTap: () => ProductDetailDialog.show(context, item),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 125,
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                clipBehavior: Clip.antiAlias,
-                                height: 85,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                color: const Color(0XFFF9F9F9),
-                              ),
-                              child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                height: 1.1,
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                const Icon(Icons.timer_outlined, size: 11, color: Color(0XFF9C9C9C)),
-                                const SizedBox(width: 2),
-                                UiHelper.CustomText(
-                                    text: "16 MINS",
-                                    color: const Color(0XFF9C9C9C),
-                                    fontweight: FontWeight.normal,
-                                    fontsize: 9)
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                UiHelper.CustomText(
-                                    text: "₹${price.toStringAsFixed(0)}",
-                                    color: Colors.black,
-                                    fontweight: FontWeight.bold,
-                                    fontsize: 12),
-                                AnimatedCartButton(
-                                  id: "feat_$index",
-                                  name: title.replaceAll('\n', ' '),
-                                  img: img,
-                                  price: price,
-                                  width: 60,
-                                  height: 26,
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                    },
-                  ),
-                ),
-              ],
+              const SizedBox(height: 18),
 
-              const SizedBox(height: 15),
+              // 3. Our Bestsellers Section
+              _buildProductSection(
+                icon: "🔥",
+                title: "Our Bestsellers",
+                products: _liveProducts.where((p) => p['is_bestseller'] == true || p['is_bestseller'] == 1 || p['is_bestseller'] == '1').isNotEmpty
+                    ? _liveProducts.where((p) => p['is_bestseller'] == true || p['is_bestseller'] == 1 || p['is_bestseller'] == '1').toList()
+                    : (_liveProducts.isNotEmpty ? _liveProducts.take(10).toList() : _bestsellersList),
+              ),
 
-              // Dynamic Category Sections (Grocery & Kitchen, Beauty, Electronics, etc.)
-              for (var entry in _categoryProducts.entries)
-                if (entry.value.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, bottom: 8),
-                    child: UiHelper.CustomText(
-                        text: entry.key,
-                        color: Colors.black,
-                        fontweight: FontWeight.bold,
-                        fontsize: 16,
-                        fontfamily: "bold"),
-                  ),
-                  SizedBox(
-                    height: 195,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      physics: const BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: entry.value.length,
-                      itemBuilder: (context, index) {
-                        final item = entry.value[index];
-                        final String title = (item["name"] ?? item["text"]).toString();
-                        final double price = (item["price"] as num).toDouble();
-                        final String img = item["img"].toString();
-                        final String id = item["id"].toString();
+              const SizedBox(height: 18),
 
-                        return InkWell(
-                          onTap: () => ProductDetailDialog.show(context, item),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 125,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  clipBehavior: Clip.antiAlias,
-                                  height: 85,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: const Color(0XFFF9F9F9),
-                                  ),
-                                  child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    height: 1.1,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.timer_outlined, size: 11, color: Color(0XFF9C9C9C)),
-                                    const SizedBox(width: 2),
-                                    UiHelper.CustomText(
-                                        text: "16 MINS",
-                                        color: const Color(0XFF9C9C9C),
-                                        fontweight: FontWeight.normal,
-                                        fontsize: 9)
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    UiHelper.CustomText(
-                                        text: "₹${price.toStringAsFixed(0)}",
-                                        color: Colors.black,
-                                        fontweight: FontWeight.bold,
-                                        fontsize: 12),
-                                    AnimatedCartButton(
-                                      id: "${entry.key}_$id",
-                                      name: title.replaceAll('\n', ' '),
-                                      img: img,
-                                      price: price,
-                                      width: 60,
-                                      height: 26,
-                                    ),
-                                  ],
-                                )
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+              // 4. Super Savings Section
+              _buildProductSection(
+                icon: "⚡",
+                title: "Super Savings",
+                products: _liveProducts.where((p) => p['is_featured'] == true || p['is_featured'] == 1 || p['is_featured'] == '1').isNotEmpty
+                    ? _liveProducts.where((p) => p['is_featured'] == true || p['is_featured'] == 1 || p['is_featured'] == '1').toList()
+                    : (_liveProducts.length > 5 ? _liveProducts.skip(5).take(10).toList() : _superSavingsList),
+              ),
 
               const SizedBox(height: 30),
             ] else ...[
@@ -1435,6 +1203,527 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     ),
+    );
+  }
+
+  // ---------------- REFERENCE DESIGN HOMESCREEN HELPER COMPONENTS ----------------
+
+  final List<Map<String, dynamic>> _bestsellersList = [
+    {
+      "id": "best_1",
+      "name": "Banana (1 Kg)",
+      "price": 36.0,
+      "mrp": 40.0,
+      "discount": "10% OFF",
+      "img": "image 50.png",
+    },
+    {
+      "id": "best_2",
+      "name": "Amul Taaza Toned Milk (1 L)",
+      "price": 58.0,
+      "mrp": 61.0,
+      "discount": "5% OFF",
+      "img": "image 51.png",
+    },
+    {
+      "id": "best_3",
+      "name": "Lay's Classic Chips (52g)",
+      "price": 20.0,
+      "mrp": 23.0,
+      "discount": "12% OFF",
+      "img": "image 52.png",
+    },
+    {
+      "id": "best_4",
+      "name": "Eggs (6 Pcs)",
+      "price": 36.0,
+      "mrp": 39.0,
+      "discount": "8% OFF",
+      "img": "image 53.png",
+    },
+  ];
+
+  final List<Map<String, dynamic>> _superSavingsList = [
+    {
+      "id": "sav_1",
+      "name": "India Gate Basmati Rice (5 Kg)",
+      "price": 449.0,
+      "mrp": 529.0,
+      "discount": "15% OFF",
+      "img": "image 50.png",
+    },
+    {
+      "id": "sav_2",
+      "name": "Fortune Sunlite Oil (1 L)",
+      "price": 132.0,
+      "mrp": 149.0,
+      "discount": "12% OFF",
+      "img": "image 51.png",
+    },
+    {
+      "id": "sav_3",
+      "name": "Surf Excel Detergent (1 Kg)",
+      "price": 159.0,
+      "mrp": 199.0,
+      "discount": "20% OFF",
+      "img": "image 52.png",
+    },
+    {
+      "id": "sav_4",
+      "name": "Maggi Noodles (70g)",
+      "price": 14.0,
+      "mrp": 17.0,
+      "discount": "18% OFF",
+      "img": "image 53.png",
+    },
+  ];
+
+  Widget _buildPromotionalSlider() {
+    final List<Map<String, dynamic>> activeSliders = _sliders.isNotEmpty
+        ? _sliders
+        : [
+            {
+              "title": "Big Savings Every Day",
+              "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
+              "category_id": 1,
+            },
+            {
+              "title": "Fresh Farm Vegetables",
+              "image": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1200&q=80",
+              "category_id": 1,
+            },
+            {
+              "title": "Daily Dairy & Bakery",
+              "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=1200&q=80",
+              "category_id": 2,
+            },
+          ];
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 165,
+          child: PageView.builder(
+            controller: _sliderPageController,
+            itemCount: activeSliders.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentSliderIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final slider = activeSliders[index];
+              final String imgUrl = slider['image']?.toString() ?? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
+              final dynamic catIdRaw = slider['category_id'];
+              final int? catId = catIdRaw != null ? int.tryParse(catIdRaw.toString()) : null;
+              final String? redirectUrl = slider['redirect_url']?.toString();
+
+              return Container(
+                margin: EdgeInsets.zero,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.zero,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.zero,
+                  child: InkWell(
+                    onTap: () {
+                      if (catId != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => CategoryProductsScreen(
+                              categoryName: slider['title']?.toString() ?? "Vegetables & Fruits",
+                              categoryImg: imgUrl,
+                              categoryId: catId,
+                            ),
+                          ),
+                        );
+                      } else if (redirectUrl != null && redirectUrl.isNotEmpty) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => SearchScreen(
+                              allProducts: _liveProducts,
+                              initialQuery: redirectUrl,
+                            ),
+                          ),
+                        );
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const CategoryProductsScreen(
+                              categoryName: "Vegetables & Fruits",
+                              categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+                              categoryId: 1,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: imgUrl.startsWith('http')
+                        ? Image.network(
+                            imgUrl,
+                            width: double.infinity,
+                            height: 165,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0XFFE8F5E9),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.shopping_basket, size: 60, color: Color(0XFF0C831F)),
+                            ),
+                          )
+                        : UiHelper.CustomImage(
+                            img: imgUrl,
+                            width: double.infinity,
+                            height: 165,
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            activeSliders.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: _currentSliderIndex == index ? 20 : 6,
+              decoration: BoxDecoration(
+                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoriesSection() {
+    final List<Map<String, dynamic>> categoryCards = [
+      {
+        "id": 1,
+        "name": "Vegetables & Fruits",
+        "asset": "assets/images/01_vegetables_fruits.png",
+        "url": "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+      },
+      {
+        "id": 2,
+        "name": "Dairy, Bread & Eggs",
+        "asset": "assets/images/02_dairy_bread_eggs.png",
+        "url": "http://taskbazi.site/uploads/categories/02_dairy_bread_eggs.png",
+      },
+      {
+        "id": 3,
+        "name": "Snacks & Beverages",
+        "asset": "assets/images/03_snacks_beverages.png",
+        "url": "http://taskbazi.site/uploads/categories/03_snacks_beverages.png",
+      },
+      {
+        "id": 4,
+        "name": "Personal Care",
+        "asset": "assets/images/04_personal_care.png",
+        "url": "http://taskbazi.site/uploads/categories/04_personal_care.png",
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Categories",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  if (widget.onCategoriesTap != null) {
+                    widget.onCategoriesTap!();
+                  } else {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const CategoryProductsScreen(
+                          categoryName: "Vegetables & Fruits",
+                          categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+                          categoryId: 1,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0XFFE8F5E9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "View All",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0XFF0C831F),
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.arrow_forward, size: 12, color: Color(0XFF0C831F)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(categoryCards.length, (index) {
+              final cat = categoryCards[index];
+              final int catId = cat["id"] ?? (index + 1);
+              final String catName = cat["name"];
+              final String assetPath = cat["asset"];
+              final String urlPath = cat["url"];
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => CategoryProductsScreen(
+                            categoryName: catName,
+                            categoryImg: urlPath,
+                            categoryId: catId,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.network(
+                        urlPath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, size: 36, color: Color(0XFF0C831F)),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductSection({
+    required String icon,
+    required String title,
+    required List<Map<String, dynamic>> products,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(icon, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => SearchScreen(
+                        allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
+                        initialQuery: title.contains("Bestseller") ? "bestseller" : "savings",
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0XFFE8F5E9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "View All",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0XFF0C831F),
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.arrow_forward, size: 12, color: Color(0XFF0C831F)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 240,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final item = products[index];
+              final String name = (item["name"] ?? item["text"] ?? "").toString();
+              final double price = double.tryParse(item["price"]?.toString() ?? '0') ?? 0.0;
+              final double mrp = double.tryParse(item["mrp"]?.toString() ?? '') ?? (price * 1.15);
+              final String img = (item["image"] != null && item["image"].toString().isNotEmpty) ? item["image"].toString() : (item["img"]?.toString() ?? "image 50.png");
+              final String discount = item["discount"]?.toString() ?? "${(((mrp - price) / (mrp > 0 ? mrp : 1)) * 100).round()}% OFF";
+              final String id = item["id"]?.toString() ?? "prod_$index";
+
+              return Container(
+                width: 145,
+                margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0XFFE0E0E0), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: () => ProductDetailDialog.show(context, item),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0XFF0C831F),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                discount,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Center(
+                          child: SizedBox(
+                            height: 85,
+                            child: UiHelper.CustomImage(img: img, fit: BoxFit.contain),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                            height: 1.15,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "₹${price.toInt()}",
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                if (mrp > price)
+                                  Text(
+                                    "₹${mrp.toInt()}",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade500,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            AnimatedCartButton(
+                              id: id,
+                              name: name.replaceAll('\n', ' '),
+                              img: img,
+                              price: price,
+                              width: 58,
+                              height: 28,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
+import 'package:blinkit_series/repository/widgets/voice_search_sheet.dart';
 
 class CategoryScreen extends StatefulWidget {
   final VoidCallback? onProfileTap;
@@ -22,14 +23,22 @@ class _CategoryScreenState extends State<CategoryScreen> {
   String _userAddress = "HOME - Sujal Dave, Ratanada, Jodhpur (Raj)";
 
   final List<Map<String, dynamic>> _fallbackCategories = [
-    {"id": 1, "name": "Vegetables & Fruits", "image": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=500&q=80"},
-    {"id": 2, "name": "Atta, Dal & Rice", "image": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&q=80"},
-    {"id": 3, "name": "Oil, Ghee & Masala", "image": "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500&q=80"},
-    {"id": 4, "name": "Dairy, Bread & Milk", "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&q=80"},
-    {"id": 5, "name": "Biscuits & Bakery", "image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=500&q=80"},
-    {"id": 6, "name": "Lights, Diyas & Candles", "image": "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?w=500&q=80"},
-    {"id": 7, "name": "Electronics & Gadgets", "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80"},
-    {"id": 8, "name": "Beauty & Cosmetics", "image": "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=500&q=80"},
+    {"id": 1, "name": "Vegetables & Fruits", "image": "assets/images/01_vegetables_fruits.png"},
+    {"id": 2, "name": "Dairy, Bread & Eggs", "image": "assets/images/02_dairy_bread_eggs.png"},
+    {"id": 3, "name": "Snacks & Beverages", "image": "assets/images/03_snacks_beverages.png"},
+    {"id": 4, "name": "Personal Care", "image": "assets/images/04_personal_care.png"},
+    {"id": 5, "name": "Home Care & Cleaning", "image": "assets/images/05_home_care_cleaning.png"},
+    {"id": 6, "name": "Atta, Dal & Rice", "image": "assets/images/06_atta_dal_rice.png"},
+    {"id": 7, "name": "Oil, Ghee & Masala", "image": "assets/images/07_oil_ghee_masala.png"},
+    {"id": 8, "name": "Instant Food", "image": "assets/images/08_instant_food.png"},
+    {"id": 9, "name": "Beverages", "image": "assets/images/09_beverages.png"},
+    {"id": 10, "name": "Baby Care", "image": "assets/images/10_baby_care.png"},
+    {"id": 11, "name": "Pet Care", "image": "assets/images/11_pet_care.png"},
+    {"id": 12, "name": "Frozen Food", "image": "assets/images/12_frozen_food.png"},
+    {"id": 13, "name": "Bakery & Sweets", "image": "assets/images/13_bakery_sweets.png"},
+    {"id": 14, "name": "Fresh Fruits", "image": "assets/images/14_fresh_fruits.png"},
+    {"id": 15, "name": "Kitchen & Household", "image": "assets/images/15_kitchen_household.png"},
+    {"id": 16, "name": "Organic & Healthy Living", "image": "assets/images/16_organic_healthy_living.png"},
   ];
 
   @override
@@ -202,11 +211,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               color: const Color(0XFFC5C5C5),
                             ),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.search, color: Color(0XFF9C9C9C), size: 22),
-                              SizedBox(width: 8),
-                              Expanded(
+                              const Icon(Icons.search, color: Color(0XFF9C9C9C), size: 22),
+                              const SizedBox(width: 8),
+                              const Expanded(
                                 child: Text(
                                   "Search 'ice-cream' or categories",
                                   style: TextStyle(
@@ -215,7 +224,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                   ),
                                 ),
                               ),
-                              Icon(Icons.mic, color: Color(0XFF9C9C9C), size: 20),
+                              GestureDetector(
+                                onTap: () {
+                                  VoiceSearchSheet.show(
+                                    context,
+                                    onResult: (spokenQuery) {
+                                      if (spokenQuery.isNotEmpty) {
+                                        _openSearchScreen(spokenQuery);
+                                      }
+                                    },
+                                  );
+                                },
+                                child: const Icon(Icons.mic, color: Color(0XFF9C9C9C), size: 20),
+                              ),
                             ],
                           ),
                         ),
@@ -248,12 +269,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 : GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 4,
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 12,
                         ),
                         itemCount: _categoriesFromApi.length,
                         itemBuilder: (context, index) {
@@ -276,40 +297,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               );
                             },
                             borderRadius: BorderRadius.circular(12),
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 70,
-                                  width: 70,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: const Color(0XFFD9EBEB),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.03),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: UiHelper.CustomImage(img: img, fit: BoxFit.cover),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  catName,
-                                  maxLines: 2,
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: UiHelper.CustomImage(img: img, fit: BoxFit.contain),
                             ),
                           );
                         },

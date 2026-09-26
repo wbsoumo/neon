@@ -30,6 +30,13 @@ class ApiService {
     }
   }
 
+  static Future<void> saveUserSelectedAddress(String address) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_selected_address', address);
+    } catch (_) {}
+  }
+
   // 0. Light-Weight Sync Status Checker
   static Future<Map<String, dynamic>?> checkSyncStatus({int storeId = 1}) async {
     try {
@@ -167,6 +174,12 @@ class ApiService {
       if (jsonStr != null) {
         final List list = jsonDecode(jsonStr);
         cachedCategories = List<Map<String, dynamic>>.from(list);
+        if (cachedCategories.any((cat) => (cat['image']?.toString() ?? '').contains('unsplash.com')) || cachedCategories.length < 16) {
+          cachedCategories = [];
+          etag = null;
+          prefs.remove(_kCategoriesCacheKey);
+          prefs.remove(_kCategoriesEtagKey);
+        }
       }
     } catch (e) {
       debugPrint("Error reading categories cache: $e");
@@ -227,6 +240,12 @@ class ApiService {
         if (jsonStr != null) {
           final List list = jsonDecode(jsonStr);
           cachedProducts = List<Map<String, dynamic>>.from(list);
+          if (cachedProducts.any((p) => (p['image']?.toString() ?? '').contains('01_vegetables_fruits.png'))) {
+            cachedProducts = [];
+            etag = null;
+            prefs.remove(cacheKey);
+            prefs.remove(etagKey);
+          }
         }
       }
     } catch (e) {
@@ -456,10 +475,18 @@ class ApiService {
   }
 
   // 10. Fetch Customer Wallet Balance
-  static Future<double> fetchUserWallet({String phone = "8016222991"}) async {
+  static Future<double> fetchUserWallet({String? phone}) async {
     try {
+      String targetPhone = phone ?? '';
+      if (targetPhone.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        targetPhone = prefs.getString('user_phone') ?? '';
+      }
+      if (targetPhone.isEmpty) {
+        return 0.0;
+      }
       final response = await http.get(
-        Uri.parse("${ApiConstants.userWallet}?phone=$phone"),
+        Uri.parse("${ApiConstants.userWallet}?phone=$targetPhone"),
       ).timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {
@@ -472,6 +499,25 @@ class ApiService {
       debugPrint("API Error fetching wallet balance: $e");
     }
     return 0.0;
+  }
+
+  // 11. Fetch Active Promotional Sliders
+  static Future<List<Map<String, dynamic>>> fetchSliders() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.sliders),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching sliders: $e");
+    }
+    return [];
   }
 
   // 11. Register User
@@ -543,5 +589,26 @@ class ApiService {
       return {"status": "error", "message": "Connection error: $e"};
     }
   }
+
+  // 13. Register Device FCM Token for Push Notifications
+  static Future<void> registerFcmToken(String fcmToken) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone') ?? '8016222991';
+
+      await http.post(
+        Uri.parse(ApiConstants.registerFcmToken),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "phone": phone,
+          "fcm_token": fcmToken,
+          "device_type": defaultTargetPlatform.name,
+        }),
+      ).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint("Failed to register FCM token: $e");
+    }
+  }
 }
+
 

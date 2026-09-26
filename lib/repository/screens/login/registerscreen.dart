@@ -100,10 +100,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // Brand Icon Header
               Center(
                 child: Container(
-                  height: 72,
-                  width: 72,
+                  height: 75,
+                  width: 75,
                   decoration: BoxDecoration(
-                    color: const Color(0XFFF7CB45),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -113,12 +113,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.shopping_bag_outlined,
-                      color: Color(0XFF0C831F),
-                      size: 38,
-                    ),
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(
+                    "assets/images/sbmart.png",
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),

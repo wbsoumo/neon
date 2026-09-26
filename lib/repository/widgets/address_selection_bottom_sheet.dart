@@ -96,10 +96,70 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
     },
   ];
 
+  String? _currentGpsAreaName;
+
   @override
   void initState() {
     super.initState();
     _fetchDbAddresses();
+    _detectCurrentLocationArea();
+  }
+
+  Future<void> _detectCurrentLocationArea() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          Position pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 3),
+          );
+          final area = await _reverseGeocodeArea(pos.latitude, pos.longitude);
+          if (mounted && area != null && area.isNotEmpty) {
+            setState(() {
+              _currentGpsAreaName = area;
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _reverseGeocodeArea(double lat, double lng) async {
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lng',
+      );
+      final response = await http.get(uri, headers: {
+        'User-Agent': 'SonarbanglaMartApp/1.0',
+      }).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null) {
+          final place = address['suburb'] ??
+              address['neighbourhood'] ??
+              address['village'] ??
+              address['town'] ??
+              address['city'] ??
+              address['county'] ??
+              data['name'] ??
+              "";
+          final district = address['state_district'] ?? address['state'] ?? "";
+          if (place.toString().isNotEmpty) {
+            return district.isNotEmpty && !place.toString().contains(district.toString())
+                ? "$place, $district"
+                : "$place";
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _fetchDbAddresses() async {
@@ -107,6 +167,26 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
     final activeStore = ApiService.memoryCachedStore;
     final double? storeLat = activeStore != null ? (activeStore['latitude'] as num?)?.toDouble() : null;
     final double? storeLng = activeStore != null ? (activeStore['longitude'] as num?)?.toDouble() : null;
+
+    Position? currentPos;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          currentPos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 3),
+          );
+        }
+      }
+    } catch (_) {}
+
+    final double refLat = currentPos?.latitude ?? storeLat ?? 23.4013;
+    final double refLng = currentPos?.longitude ?? storeLng ?? 88.5010;
 
     if (mounted) {
       setState(() {
@@ -135,25 +215,22 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
           }
         }
 
-        // Dynamically compute which saved address is nearest to the active store/user selected location
-        if (storeLat != null && storeLng != null) {
-          double minDistance = double.infinity;
-          int nearestIndex = -1;
-          for (int i = 0; i < _savedAddresses.length; i++) {
-            _savedAddresses[i]['is_nearest'] = false;
-            final double aLat = (_savedAddresses[i]['lat'] as num).toDouble();
-            final double aLng = (_savedAddresses[i]['lng'] as num).toDouble();
-            final double d = Geolocator.distanceBetween(storeLat, storeLng, aLat, aLng);
-            if (d < minDistance) {
-              minDistance = d;
-              nearestIndex = i;
-            }
-          }
-          if (nearestIndex != -1 && minDistance <= 30000) { // within 30 km
-            _savedAddresses[nearestIndex]['is_nearest'] = true;
-          }
-        } else {
-          _savedAddresses[0]['is_nearest'] = true;
+        // Dynamically compute distances from current GPS position and sort saved addresses nearest-first
+        for (int i = 0; i < _savedAddresses.length; i++) {
+          final double aLat = (_savedAddresses[i]['lat'] as num).toDouble();
+          final double aLng = (_savedAddresses[i]['lng'] as num).toDouble();
+          final double distMeters = Geolocator.distanceBetween(refLat, refLng, aLat, aLng);
+          _savedAddresses[i]['dist_meters'] = distMeters;
+          final double distKm = distMeters / 1000.0;
+          _savedAddresses[i]['distance'] = distKm < 1.0
+              ? "${distMeters.toInt()} m"
+              : "${distKm.toStringAsFixed(1)} km";
+        }
+
+        _savedAddresses.sort((a, b) => (a['dist_meters'] as double).compareTo(b['dist_meters'] as double));
+
+        for (int i = 0; i < _savedAddresses.length; i++) {
+          _savedAddresses[i]['is_nearest'] = (i == 0);
         }
       });
     }
@@ -316,7 +393,15 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                   ),
                                 );
                               }
-                              final String dynAddress = "${storeData?['name'] ?? 'Nearest Dark Store'}, ${storeData?['address'] ?? ''}";
+                              String dynAddress = _currentGpsAreaName ?? '';
+                              if (dynAddress.isEmpty) {
+                                if (currentLat != null && currentLng != null) {
+                                  dynAddress = await _reverseGeocodeArea(currentLat, currentLng) ?? '';
+                                }
+                              }
+                              if (dynAddress.isEmpty) {
+                                dynAddress = "${storeData?['name'] ?? 'Nearest Dark Store'}, ${storeData?['address'] ?? ''}";
+                              }
                               widget.onAddressSelected?.call(dynAddress);
                               Navigator.pop(context);
                             }
@@ -342,9 +427,11 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        ApiService.memoryCachedStore != null
-                                            ? "${ApiService.memoryCachedStore!['name'] ?? 'Nearest Dark Store'} (${ApiService.memoryCachedStore!['distance_km'] ?? '0.8'} km)"
-                                            : "Auto-detect nearest store based on GPS",
+                                        _currentGpsAreaName != null && _currentGpsAreaName!.isNotEmpty
+                                            ? _currentGpsAreaName!
+                                            : (ApiService.memoryCachedStore != null
+                                                ? "${ApiService.memoryCachedStore!['name'] ?? 'Nearest Dark Store'}"
+                                                : "Auto-detect location from GPS"),
                                         style: const TextStyle(fontSize: 12, color: Colors.black54),
                                       ),
                                     ],
@@ -589,6 +676,43 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
   @override
   void initState() {
     super.initState();
+    _fetchAndCenterLiveLocation();
+  }
+
+  Future<void> _fetchAndCenterLiveLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          Position pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 4),
+          );
+          final LatLng currentGps = LatLng(pos.latitude, pos.longitude);
+          if (mounted) {
+            setState(() {
+              _currentCenter = currentGps;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              try {
+                _mapController.move(currentGps, 16.0);
+              } catch (_) {}
+            });
+            _reverseGeocode(currentGps);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching live map location: $e");
+    }
     _reverseGeocode(_currentCenter);
   }
 

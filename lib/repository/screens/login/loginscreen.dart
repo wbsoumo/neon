@@ -121,10 +121,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // 2. Brand Icon & App Title
               Container(
-                height: 60,
-                width: 60,
+                height: 70,
+                width: 70,
                 decoration: BoxDecoration(
-                  color: const Color(0XFFF7CB45),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -134,12 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Color(0XFF0C831F),
-                    size: 32,
-                  ),
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  "assets/images/sbmart.png",
+                  fit: BoxFit.contain,
                 ),
               ),
 

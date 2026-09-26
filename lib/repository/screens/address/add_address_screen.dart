@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
@@ -16,31 +19,72 @@ class AddAddressScreen extends StatefulWidget {
 }
 
 class _AddAddressScreenState extends State<AddAddressScreen> {
+  final MapController _mapController = MapController();
   final TextEditingController _houseNoController = TextEditingController();
   final TextEditingController _areaController = TextEditingController(text: "Krishnanagar, Nadia, West Bengal - 741101");
   final TextEditingController _landmarkController = TextEditingController();
-  final TextEditingController _receiverNameController = TextEditingController();
-  final TextEditingController _receiverPhoneController = TextEditingController();
 
+  LatLng _currentPosition = const LatLng(23.4013, 88.5010); // Default Krishnanagar
+  bool _isFetchingLocation = true;
   String _selectedTag = "Home";
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
+    _getCurrentLocation();
   }
 
-  Future<void> _loadUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _getCurrentLocation() async {
     setState(() {
-      _receiverNameController.text = prefs.getString('user_name') ?? '';
-      String phone = prefs.getString('user_phone') ?? '';
-      if (phone.startsWith('+91')) {
-        phone = phone.replaceFirst('+91', '').trim();
-      }
-      _receiverPhoneController.text = phone;
+      _isFetchingLocation = true;
     });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _useDefaultLocation();
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _useDefaultLocation();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _useDefaultLocation();
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+          _isFetchingLocation = false;
+        });
+        _mapController.move(_currentPosition, 16.0);
+      }
+    } catch (e) {
+      debugPrint("Error fetching location: $e");
+      _useDefaultLocation();
+    }
+  }
+
+  void _useDefaultLocation() {
+    if (mounted) {
+      setState(() {
+        _isFetchingLocation = false;
+      });
+    }
   }
 
   Future<void> _saveAddress() async {
@@ -59,23 +103,25 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     });
 
     final String fullAddress = "${_houseNoController.text.trim()}, ${_areaController.text.trim()}${_landmarkController.text.trim().isNotEmpty ? ' (Near ${_landmarkController.text.trim()})' : ''}";
-    final String receiverPhone = _receiverPhoneController.text.trim().isNotEmpty
-        ? "+91${_receiverPhoneController.text.trim()}"
-        : "";
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_selected_address', fullAddress);
+      await prefs.setDouble('user_selected_lat', _currentPosition.latitude);
+      await prefs.setDouble('user_selected_lng', _currentPosition.longitude);
+
+      final userName = prefs.getString('user_name') ?? 'Customer';
+      final userPhone = prefs.getString('user_phone') ?? '8016222991';
 
       // Call API to save address
-      await ApiService.storeAddress(
-        userPhone: prefs.getString('user_phone') ?? receiverPhone,
+      await ApiService.saveUserAddress(
+        userPhone: userPhone,
         addressType: _selectedTag,
         addressDetails: fullAddress,
-        receiverName: _receiverNameController.text.trim().isNotEmpty
-            ? _receiverNameController.text.trim()
-            : (prefs.getString('user_name') ?? 'Customer'),
-        receiverPhone: receiverPhone,
+        receiverName: userName,
+        receiverPhone: userPhone,
+        latitude: _currentPosition.latitude,
+        longitude: _currentPosition.longitude,
       );
 
       if (mounted) {
@@ -94,7 +140,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       }
     } catch (e) {
       if (mounted) {
-        // Even on network timeout, save locally and proceed
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_selected_address', fullAddress);
         Navigator.pushAndRemoveUntil(
@@ -129,7 +174,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text(
-              "Enter Complete Address",
+              "Select Delivery Location",
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 16,
@@ -137,7 +182,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               ),
             ),
             Text(
-              "Step 2 of 2: Save delivery location",
+              "Point marker to your exact location",
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 11,
@@ -151,66 +196,117 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Map Mock Card with Location Pin
-            Container(
-              height: 180,
+            // Real Interactive Map Container with FlutterMap
+            SizedBox(
+              height: 250,
               width: double.infinity,
-              color: Colors.blueGrey.shade100,
               child: Stack(
                 children: [
-                  // Map Background Image / Graphic
-                  Image.network(
-                    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&q=80",
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                  Container(
-                    color: Colors.black.withOpacity(0.15),
-                  ),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: const BoxDecoration(
-                            color: Color(0XFF0C831F),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black12, blurRadius: 6),
-                            ],
-                          ),
-                          child: const Text(
-                            "Order will be delivered here",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0XFF0C831F),
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _currentPosition,
+                      initialZoom: 16.0,
+                      onTap: (tapPosition, point) {
+                        setState(() {
+                          _currentPosition = point;
+                        });
+                      },
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.sbmart.taskbazi',
+                      ),
+
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _currentPosition,
+                            width: 60,
+                            height: 60,
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0XFF0C831F),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 8,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // Floating "Locate Me" Button
+                  Positioned(
+                    right: 14,
+                    bottom: 14,
+                    child: FloatingActionButton.small(
+                      heroTag: "locate_btn",
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0XFF0C831F),
+                      onPressed: _getCurrentLocation,
+                      child: _isFetchingLocation
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0XFF0C831F),
+                              ),
+                            )
+                          : const Icon(Icons.my_location, size: 20),
+                    ),
+                  ),
+
+                  // Pin Banner Helper
+                  Positioned(
+                    top: 12,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 6),
+                          ],
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.touch_app, color: Color(0XFFF7CB45), size: 14),
+                            SizedBox(width: 6),
+                            Text(
+                              "Tap anywhere on map to set marker",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -222,7 +318,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location Banner
+                  // Current Selected Coordinates info
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -232,28 +328,40 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.my_location, color: Color(0XFF0C831F), size: 22),
+                        const Icon(Icons.location_on, color: Color(0XFF0C831F), size: 24),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
-                                "Krishnanagar Main Hub",
-                                style: TextStyle(
+                                "Lat: ${_currentPosition.latitude.toStringAsFixed(4)}, Lng: ${_currentPosition.longitude.toStringAsFixed(4)}",
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: Colors.black,
                                 ),
                               ),
-                              Text(
-                                "Standard 10-15 Min Superfast Delivery Available",
+                              const SizedBox(height: 2),
+                              const Text(
+                                "Superfast 10-Minute Delivery Area",
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.grey,
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _getCurrentLocation,
+                          child: const Text(
+                            "Re-detect",
+                            style: TextStyle(
+                              color: Color(0XFF0C831F),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -307,35 +415,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     label: "Nearby Landmark (Optional)",
                     hint: "e.g. Near Collectorate Office",
                     icon: Icons.storefront,
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    "RECEIVER DETAILS",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildInputField(
-                    controller: _receiverNameController,
-                    label: "Receiver Name",
-                    hint: "Enter receiver's name",
-                    icon: Icons.person_outline,
-                  ),
-                  const SizedBox(height: 14),
-
-                  _buildInputField(
-                    controller: _receiverPhoneController,
-                    label: "Receiver Phone Number",
-                    hint: "10-digit mobile number",
-                    icon: Icons.phone_android,
-                    keyboardType: TextInputType.phone,
-                    prefixText: "+91 ",
                   ),
                   const SizedBox(height: 24),
 
@@ -423,7 +502,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
-    String? prefixText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,8 +523,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
             prefixIcon: Icon(icon, color: const Color(0XFF0C831F), size: 20),
-            prefixText: prefixText,
-            prefixStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
