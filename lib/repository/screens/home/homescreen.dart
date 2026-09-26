@@ -1310,9 +1310,11 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _sliderPageController,
             itemCount: activeSliders.length,
             onPageChanged: (index) {
-              setState(() {
-                _currentSliderIndex = index;
-              });
+              if (_currentSliderIndex != index) {
+                setState(() {
+                  _currentSliderIndex = index;
+                });
+              }
             },
             itemBuilder: (context, index) {
               final slider = activeSliders[index];
@@ -1379,27 +1381,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                     },
                     child: imgUrl.startsWith('data:image/')
-                        ? Builder(
-                            builder: (context) {
-                              try {
-                                final base64Str = imgUrl.split(',').last;
-                                final bytes = _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(base64Str));
-                                return Image.memory(
-                                  bytes,
-                                  key: ValueKey<String>(imgUrl.hashCode.toString()),
-                                  width: double.infinity,
-                                  height: 165,
-                                  fit: BoxFit.cover,
-                                );
-                              } catch (_) {
-                                return Image.network(
-                                  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-                                  width: double.infinity,
-                                  height: 165,
-                                  fit: BoxFit.cover,
-                                );
-                              }
-                            },
+                        ? Image.memory(
+                            _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
+                            key: ValueKey<int>(imgUrl.length),
+                            width: double.infinity,
+                            height: 165,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
                           )
                         : (imgUrl.startsWith('http')
                             ? Image.network(
@@ -1407,11 +1395,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: double.infinity,
                                 height: 165,
                                 fit: BoxFit.cover,
+                                gaplessPlayback: true,
                                 errorBuilder: (_, __, ___) => Image.network(
                                   'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
                                   width: double.infinity,
                                   height: 165,
                                   fit: BoxFit.cover,
+                                  gaplessPlayback: true,
                                 ),
                               )
                             : UiHelper.CustomImage(
