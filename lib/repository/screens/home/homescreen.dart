@@ -1381,10 +1381,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: double.infinity,
                             height: 165,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0XFFE8F5E9),
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.shopping_basket, size: 60, color: Color(0XFF0C831F)),
+                            errorBuilder: (_, __, ___) => Image.network(
+                              'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+                              width: double.infinity,
+                              height: 165,
+                              fit: BoxFit.cover,
                             ),
                           )
                         : UiHelper.CustomImage(
