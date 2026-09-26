@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final PageController _sliderPageController = PageController();
   Timer? _sliderAutoTimer;
-  int _currentSliderIndex = 0;
+  final ValueNotifier<int> _currentSliderNotifier = ValueNotifier<int>(0);
   List<Map<String, dynamic>> _sliders = [];
   final Map<String, Uint8List> _base64ImageCache = {};
 
@@ -58,9 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_sliders.length <= 1) return;
     _sliderAutoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (mounted && _sliders.length > 1 && _sliderPageController.hasClients) {
-        _currentSliderIndex = (_currentSliderIndex + 1) % _sliders.length;
+        final nextIdx = (_currentSliderNotifier.value + 1) % _sliders.length;
         _sliderPageController.animateToPage(
-          _currentSliderIndex,
+          nextIdx,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
@@ -1406,11 +1406,7 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const BouncingScrollPhysics(),
             itemCount: activeSliders.length,
             onPageChanged: (index) {
-              if (_currentSliderIndex != index) {
-                setState(() {
-                  _currentSliderIndex = index;
-                });
-              }
+              _currentSliderNotifier.value = index;
             },
             itemBuilder: (context, index) {
               return buildSingleBannerItem(activeSliders[index]);
@@ -1418,21 +1414,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            activeSliders.length,
-            (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 5,
-              width: _currentSliderIndex == index ? 18 : 5,
-              decoration: BoxDecoration(
-                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(3),
+        ValueListenableBuilder<int>(
+          valueListenable: _currentSliderNotifier,
+          builder: (context, currentIndex, _) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                activeSliders.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  height: 5,
+                  width: currentIndex == index ? 18 : 5,
+                  decoration: BoxDecoration(
+                    color: currentIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
         const SizedBox(height: 8),
       ],
