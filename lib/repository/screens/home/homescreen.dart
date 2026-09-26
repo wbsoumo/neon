@@ -57,10 +57,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _sliderAutoTimer?.cancel();
     if (_sliders.length <= 1) return;
     _sliderAutoTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (mounted && _sliders.length > 1) {
-        final nextIndex = (_currentSliderIndex + 1) % _sliders.length;
+      if (mounted && _sliders.length > 1 && _sliderPageController.hasClients) {
+        _currentSliderIndex = (_currentSliderIndex + 1) % _sliders.length;
         _sliderPageController.animateToPage(
-          nextIndex,
+          _currentSliderIndex,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
