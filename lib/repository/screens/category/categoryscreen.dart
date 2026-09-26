@@ -19,7 +19,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   final TextEditingController searchController = TextEditingController();
   List<Map<String, dynamic>> _categoriesFromApi = [];
   List<Map<String, dynamic>> _allProducts = [];
-  Map<String, dynamic>? _selectedStoreData;
+  Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
   String _userAddress = "HOME - Sujal Dave, Ratanada, Jodhpur (Raj)";
 
   final List<Map<String, dynamic>> _fallbackCategories = [
@@ -95,7 +95,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
           children: [
             // Top Location & Search Header matching HomeScreen
             Container(
-              color: const Color(0XFFF7CB45),
+              decoration: BoxDecoration(
+                color: () {
+                  final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+                  if (hexStr != null && hexStr.length == 6) {
+                    return Color(int.parse("0xFF$hexStr"));
+                  }
+                  return const Color(0XFF0C831F);
+                }(),
+              ),
               child: SafeArea(
                 bottom: false,
                 child: Padding(
@@ -119,7 +127,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                           : "🚫 Location Unserviceable")
                                       : "SB Mart in 16 minutes",
                                   style: const TextStyle(
-                                    color: Colors.black87,
+                                    color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -133,7 +141,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: Colors.black,
+                                    color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900,
                                     height: 1.1,
@@ -166,13 +174,13 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            color: Colors.black,
+                                            color: Colors.white,
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                      const Icon(Icons.arrow_drop_down, color: Colors.black, size: 20),
+                                      const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
                                     ],
                                   ),
                                 ),

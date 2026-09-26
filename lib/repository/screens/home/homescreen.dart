@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
@@ -29,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 0;
 
   Timer? _searchHintTimer;
-  int _searchHintIndex = 0;
+  final ValueNotifier<int> _searchHintNotifier = ValueNotifier<int>(0);
   final List<String> _searchHints = [
     "milk",
     "atta, dal",
@@ -74,9 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchLiveBackendData();
     _searchHintTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (mounted) {
-        setState(() {
-          _searchHintIndex = (_searchHintIndex + 1) % _searchHints.length;
-        });
+        _searchHintNotifier.value = (_searchHintNotifier.value + 1) % _searchHints.length;
       }
     });
 
@@ -477,6 +477,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _searchHintTimer?.cancel();
+    _sliderAutoTimer?.cancel();
+    _searchHintNotifier.dispose();
+    _currentSliderNotifier.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -771,39 +774,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ),
                                             ClipRect(
-                                              child: AnimatedSwitcher(
-                                                duration: const Duration(milliseconds: 400),
-                                                transitionBuilder: (Widget child, Animation<double> animation) {
-                                                  final inAnimation = Tween<Offset>(
-                                                    begin: const Offset(0, 1.0),
-                                                    end: Offset.zero,
-                                                  ).animate(animation);
-                                                  final outAnimation = Tween<Offset>(
-                                                    begin: const Offset(0, -1.0),
-                                                    end: Offset.zero,
-                                                  ).animate(animation);
+                                              child: ValueListenableBuilder<int>(
+                                                valueListenable: _searchHintNotifier,
+                                                builder: (context, hintIndex, _) {
+                                                  return AnimatedSwitcher(
+                                                    duration: const Duration(milliseconds: 400),
+                                                    transitionBuilder: (Widget child, Animation<double> animation) {
+                                                      final inAnimation = Tween<Offset>(
+                                                        begin: const Offset(0, 1.0),
+                                                        end: Offset.zero,
+                                                      ).animate(animation);
+                                                      final outAnimation = Tween<Offset>(
+                                                        begin: const Offset(0, -1.0),
+                                                        end: Offset.zero,
+                                                      ).animate(animation);
 
-                                                  if (child.key == ValueKey<int>(_searchHintIndex)) {
-                                                    return SlideTransition(
-                                                      position: inAnimation,
-                                                      child: FadeTransition(opacity: animation, child: child),
-                                                    );
-                                                  } else {
-                                                    return SlideTransition(
-                                                      position: outAnimation,
-                                                      child: FadeTransition(opacity: animation, child: child),
-                                                    );
-                                                  }
+                                                      if (child.key == ValueKey<int>(hintIndex)) {
+                                                        return SlideTransition(
+                                                          position: inAnimation,
+                                                          child: FadeTransition(opacity: animation, child: child),
+                                                        );
+                                                      } else {
+                                                        return SlideTransition(
+                                                          position: outAnimation,
+                                                          child: FadeTransition(opacity: animation, child: child),
+                                                        );
+                                                      }
+                                                    },
+                                                    child: Text(
+                                                      '"${_searchHints[hintIndex]}"',
+                                                      key: ValueKey<int>(hintIndex),
+                                                      style: const TextStyle(
+                                                        color: Color(0XFF5C6BC0),
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  );
                                                 },
-                                                child: Text(
-                                                  '"${_searchHints[_searchHintIndex]}"',
-                                                  key: ValueKey<int>(_searchHintIndex),
-                                                  style: const TextStyle(
-                                                    color: Color(0XFF5C6BC0),
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
                                               ),
                                             ),
                                           ],
@@ -1107,14 +1115,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0XFFF9F9F9),
-                                borderRadius: BorderRadius.circular(8),
+                              width: double.infinity,
+                              color: const Color(0XFFF9F9F9),
+                              child: UiHelper.CustomImage(
+                                img: img,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
                               ),
-                              padding: const EdgeInsets.all(6),
-                              child: UiHelper.CustomImage(img: img),
                             ),
                           ),
                         ),
@@ -1354,24 +1365,32 @@ class _HomeScreenState extends State<HomeScreen> {
             child: imgUrl.startsWith('data:image/')
                 ? Image.memory(
                     _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
+                    key: ValueKey(imgUrl),
                     width: double.infinity,
                     height: 165,
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
                   )
                 : (imgUrl.startsWith('http')
-                    ? Image.network(
-                        imgUrl,
+                    ? CachedNetworkImage(
+                        key: ValueKey(imgUrl),
+                        imageUrl: imgUrl,
                         width: double.infinity,
                         height: 165,
                         fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        errorBuilder: (_, __, ___) => Image.network(
-                          'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+                        fadeInDuration: Duration.zero,
+                        fadeOutDuration: Duration.zero,
+                        useOldImageOnUrlChange: true,
+                        placeholder: (context, url) => Container(
+                          color: const Color(0XFFE8ECEF),
+                        ),
+                        errorWidget: (_, __, ___) => CachedNetworkImage(
+                          imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
                           width: double.infinity,
                           height: 165,
                           fit: BoxFit.cover,
-                          gaplessPlayback: true,
+                          fadeInDuration: Duration.zero,
+                          fadeOutDuration: Duration.zero,
                         ),
                       )
                     : UiHelper.CustomImage(
@@ -1654,7 +1673,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final String id = item["id"]?.toString() ?? "prod_$index";
 
               return Container(
-                width: 145,
+                width: 148,
                 margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -1671,89 +1690,106 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: InkWell(
                   onTap: () => ProductDetailDialog.show(context, item),
                   borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                        child: Stack(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0XFF0C831F),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                discount,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                              height: 115,
+                              width: double.infinity,
+                              color: const Color(0XFFF9F9F9),
+                              child: UiHelper.CustomImage(
+                                img: img,
+                                width: double.infinity,
+                                height: 115,
+                                fit: BoxFit.cover,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Center(
-                          child: SizedBox(
-                            height: 85,
-                            child: UiHelper.CustomImage(img: img, fit: BoxFit.contain),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                            height: 1.15,
-                          ),
-                        ),
-                        const Spacer(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "₹${price.toInt()}",
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.black,
+                            if (discount.isNotEmpty)
+                              Positioned(
+                                top: 6,
+                                left: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0XFF0C831F),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                ),
-                                if (mrp > price)
-                                  Text(
-                                    "₹${mrp.toInt()}",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500,
-                                      decoration: TextDecoration.lineThrough,
+                                  child: Text(
+                                    discount,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
-                              ],
-                            ),
-                            AnimatedCartButton(
-                              id: id,
-                              name: name.replaceAll('\n', ' '),
-                              img: img,
-                              price: price,
-                              width: 58,
-                              height: 28,
-                            ),
+                                ),
+                              ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                  height: 1.15,
+                                ),
+                              ),
+                              const Spacer(),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "₹${price.toInt()}",
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      if (mrp > price)
+                                        Text(
+                                          "₹${mrp.toInt()}",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade500,
+                                            decoration: TextDecoration.lineThrough,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  AnimatedCartButton(
+                                    id: id,
+                                    name: name.replaceAll('\n', ' '),
+                                    img: img,
+                                    price: price,
+                                    width: 58,
+                                    height: 28,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
