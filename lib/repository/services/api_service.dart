@@ -174,7 +174,7 @@ class ApiService {
       if (jsonStr != null) {
         final List list = jsonDecode(jsonStr);
         cachedCategories = List<Map<String, dynamic>>.from(list);
-        if (cachedCategories.any((cat) => (cat['image']?.toString() ?? '').contains('unsplash.com')) || cachedCategories.length < 16) {
+        if (cachedCategories.any((cat) => (cat['image']?.toString() ?? '').contains('unsplash.com'))) {
           cachedCategories = [];
           etag = null;
           prefs.remove(_kCategoriesCacheKey);

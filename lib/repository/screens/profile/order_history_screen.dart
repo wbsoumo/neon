@@ -18,23 +18,41 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   String _userPhone = "8016222991";
+  Future<List<Map<String, dynamic>>>? _ordersFuture;
 
   @override
   void initState() {
     super.initState();
+    _ordersFuture = _fetchOrders();
     _loadUserPhone();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchOrders() async {
+    final list = await ApiService.getUserOrders(phone: _userPhone);
+    if (list.isEmpty && _userPhone != "8016222991") {
+      return await ApiService.getUserOrders(phone: "8016222991");
+    }
+    return list;
   }
 
   Future<void> _loadUserPhone() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final phone = prefs.getString('user_phone');
-      if (mounted && phone != null && phone.isNotEmpty) {
+      if (mounted && phone != null && phone.isNotEmpty && phone != _userPhone) {
         setState(() {
           _userPhone = phone;
+          _ordersFuture = _fetchOrders();
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _ordersFuture = _fetchOrders();
+    });
+    await _ordersFuture;
   }
 
   @override
@@ -87,47 +105,50 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            children: [
-              // 1. Search Bar
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0XFF0C831F),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                // 1. Search Bar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val.trim().toLowerCase();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: "Search your orders or e-gift cards",
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.black45),
+                      prefixIcon: Icon(Icons.search, color: Colors.black54),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val.trim().toLowerCase();
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    hintText: "Search your orders or e-gift cards",
-                    hintStyle: TextStyle(fontSize: 14, color: Colors.black45),
-                    prefixIcon: Icon(Icons.search, color: Colors.black54),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // 2. Fetch Orders List from Backend
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: ApiService.getUserOrders(phone: _userPhone),
+                // 2. Fetch Orders List from Backend
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _ordersFuture ??= _fetchOrders(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Padding(
@@ -277,40 +298,58 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                 ),
                               ),
 
-                              // Items Thumbnail Row
+                              // Items Thumbnail Row: Show first 2 item images + "+ X" badge if more than 2 items
                               if (itemsList.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: SizedBox(
-                                    height: 60,
-                                    child: ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: itemsList.length,
-                                      separatorBuilder: (context, idx) => const SizedBox(width: 8),
-                                      itemBuilder: (context, idx) {
-                                        final it = itemsList[idx];
-                                        final String rawImg = it['image']?.toString() ?? it['img']?.toString() ?? '';
-                                        return Container(
-                                          width: 58,
-                                          height: 58,
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0XFFF5F6F8),
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(color: Colors.black.withOpacity(0.04)),
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(6),
-                                            child: UiHelper.CustomImage(
-                                              img: rawImg.isNotEmpty ? rawImg : 'image 41.png',
-                                              width: 48,
-                                              height: 48,
-                                              fit: BoxFit.contain,
+                                  child: Row(
+                                    children: [
+                                      ...itemsList.take(2).map((it) {
+                                        final String rawImg = (it['product_image'] ?? it['image'] ?? it['img'] ?? '').toString();
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: Container(
+                                            width: 58,
+                                            height: 58,
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0XFFF5F6F8),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(color: Colors.black.withOpacity(0.06)),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: UiHelper.CustomImage(
+                                                img: rawImg.isNotEmpty ? rawImg : 'image 41.png',
+                                                width: 48,
+                                                height: 48,
+                                                fit: BoxFit.contain,
+                                              ),
                                             ),
                                           ),
                                         );
-                                      },
-                                    ),
+                                      }),
+                                      if (itemsList.length > 2)
+                                        Container(
+                                          width: 58,
+                                          height: 58,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0XFFF0F2F5),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: Colors.grey.shade300),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              "+ ${itemsList.length - 2}",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
 
@@ -391,6 +430,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

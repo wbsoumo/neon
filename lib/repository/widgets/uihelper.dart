@@ -6,17 +6,8 @@ class UiHelper {
   static Widget CustomImage({required String img, double? width, double? height, BoxFit fit = BoxFit.contain}) {
     String cleanUrl = img.trim();
 
-    // Map common asset names from database to high-quality reliable CDN URLs for mobile devices
-    if (cleanUrl.contains('uploads/categories/') || cleanUrl.contains('01_vegetables') || cleanUrl.contains('02_dairy') || cleanUrl.contains('03_snacks') || cleanUrl.contains('04_personal') || cleanUrl.contains('05_home') || cleanUrl.contains('06_atta') || cleanUrl.contains('07_oil') || cleanUrl.contains('08_instant') || cleanUrl.contains('09_beverages') || cleanUrl.contains('10_baby') || cleanUrl.contains('11_pet') || cleanUrl.contains('12_frozen') || cleanUrl.contains('13_bakery') || cleanUrl.contains('14_fresh') || cleanUrl.contains('15_kitchen') || cleanUrl.contains('16_organic')) {
-      final String fileName = cleanUrl.replaceAll('http://taskbazi.site/uploads/categories/', '').replaceAll('uploads/categories/', '').split('?').first.trim();
-      final String cleanPath = fileName.startsWith('assets/images/') ? fileName : "assets/images/$fileName";
-      return Image.asset(
-        cleanPath,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (ctx, err, st) => Image.asset('assets/images/no_product.png', width: width, height: height, fit: fit),
-      );
+    if (cleanUrl.startsWith('/uploads/')) {
+      cleanUrl = 'https://taskbazi.site$cleanUrl';
     }
 
     Widget buildFallback() {
@@ -36,6 +27,35 @@ class UiHelper {
             child: Icon(Icons.image_not_supported_outlined, color: Color(0XFF0C831F), size: 24),
           ),
         ),
+      );
+    }
+
+    // Map common asset names from database to high-quality reliable CDN / local assets
+    if (cleanUrl.contains('01_vegetables') || cleanUrl.contains('02_dairy') || cleanUrl.contains('03_snacks') || cleanUrl.contains('04_personal') || cleanUrl.contains('05_home') || cleanUrl.contains('06_atta') || cleanUrl.contains('07_oil') || cleanUrl.contains('08_instant') || cleanUrl.contains('09_beverages') || cleanUrl.contains('10_baby') || cleanUrl.contains('11_pet') || cleanUrl.contains('12_frozen') || cleanUrl.contains('13_bakery') || cleanUrl.contains('14_fresh') || cleanUrl.contains('15_kitchen') || cleanUrl.contains('16_organic')) {
+      final String fileName = cleanUrl.replaceAll('https://taskbazi.site/uploads/categories/', '').replaceAll('http://taskbazi.site/uploads/categories/', '').replaceAll('/uploads/categories/', '').replaceAll('uploads/categories/', '').split('?').first.trim();
+      final String cleanPath = fileName.startsWith('assets/images/') ? fileName : "assets/images/$fileName";
+      return Image.asset(
+        cleanPath,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (ctx, err, st) {
+          if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+            return CachedNetworkImage(
+              imageUrl: cleanUrl,
+              width: width,
+              height: height,
+              fit: fit,
+              placeholder: (context, url) => SkeletonLoader(
+                width: width ?? double.infinity,
+                height: height ?? double.infinity,
+                borderRadius: 8,
+              ),
+              errorWidget: (context, url, error) => buildFallback(),
+            );
+          }
+          return buildFallback();
+        },
       );
     }
 
