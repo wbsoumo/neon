@@ -1282,25 +1282,120 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   Widget _buildPromotionalSlider() {
-    final List<Map<String, dynamic>> activeSliders = _sliders.isNotEmpty
-        ? _sliders
-        : [
-            {
-              "title": "Big Savings Every Day",
-              "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
-              "category_id": 1,
+    final List<Map<String, dynamic>> activeSliders = _sliders;
+
+    if (activeSliders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    Widget buildSingleBannerItem(Map<String, dynamic> slider) {
+      String rawImg = slider['image']?.toString() ?? '';
+      String imgUrl = rawImg.trim();
+      if (!imgUrl.startsWith('data:') && !imgUrl.startsWith('http') && imgUrl.isNotEmpty) {
+        if (imgUrl.contains('localhost')) {
+          imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
+        }
+        imgUrl = "http://taskbazi.site/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
+      }
+      if (imgUrl.isEmpty) {
+        imgUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
+      }
+      final dynamic catIdRaw = slider['category_id'];
+      final int? catId = catIdRaw != null ? int.tryParse(catIdRaw.toString()) : null;
+      final String? redirectUrl = slider['redirect_url']?.toString();
+
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () {
+              if (catId != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CategoryProductsScreen(
+                      categoryName: slider['title']?.toString() ?? "Vegetables & Fruits",
+                      categoryImg: imgUrl,
+                      categoryId: catId,
+                    ),
+                  ),
+                );
+              } else if (redirectUrl != null && redirectUrl.isNotEmpty) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SearchScreen(
+                      allProducts: _liveProducts,
+                      initialQuery: redirectUrl,
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const CategoryProductsScreen(
+                      categoryName: "Vegetables & Fruits",
+                      categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+                      categoryId: 1,
+                    ),
+                  ),
+                );
+              }
             },
-            {
-              "title": "Fresh Farm Vegetables",
-              "image": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1200&q=80",
-              "category_id": 1,
-            },
-            {
-              "title": "Daily Dairy & Bakery",
-              "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=1200&q=80",
-              "category_id": 2,
-            },
-          ];
+            child: imgUrl.startsWith('data:image/')
+                ? Image.memory(
+                    _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
+                    width: double.infinity,
+                    height: 165,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  )
+                : (imgUrl.startsWith('http')
+                    ? Image.network(
+                        imgUrl,
+                        width: double.infinity,
+                        height: 165,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) => Image.network(
+                          'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+                          width: double.infinity,
+                          height: 165,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        ),
+                      )
+                    : UiHelper.CustomImage(
+                        img: imgUrl,
+                        width: double.infinity,
+                        height: 165,
+                        fit: BoxFit.cover,
+                      )),
+          ),
+        ),
+      );
+    }
+
+    if (activeSliders.length == 1) {
+      return Column(
+        children: [
+          SizedBox(
+            height: 165,
+            child: buildSingleBannerItem(activeSliders[0]),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
 
     return Column(
       children: [
@@ -1308,7 +1403,7 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 165,
           child: PageView.builder(
             controller: _sliderPageController,
-            physics: activeSliders.length > 1 ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             itemCount: activeSliders.length,
             onPageChanged: (index) {
               if (_currentSliderIndex != index) {
@@ -1318,123 +1413,27 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (context, index) {
-              final slider = activeSliders[index];
-              String rawImg = slider['image']?.toString() ?? '';
-              String imgUrl = rawImg.trim();
-              if (!imgUrl.startsWith('data:') && !imgUrl.startsWith('http') && imgUrl.isNotEmpty) {
-                if (imgUrl.contains('localhost')) {
-                  imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
-                }
-                imgUrl = "http://taskbazi.site/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
-              }
-              if (imgUrl.isEmpty) {
-                imgUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
-              }
-              final dynamic catIdRaw = slider['category_id'];
-              final int? catId = catIdRaw != null ? int.tryParse(catIdRaw.toString()) : null;
-              final String? redirectUrl = slider['redirect_url']?.toString();
-
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    onTap: () {
-                      if (catId != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => CategoryProductsScreen(
-                              categoryName: slider['title']?.toString() ?? "Vegetables & Fruits",
-                              categoryImg: imgUrl,
-                              categoryId: catId,
-                            ),
-                          ),
-                        );
-                      } else if (redirectUrl != null && redirectUrl.isNotEmpty) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => SearchScreen(
-                              allProducts: _liveProducts,
-                              initialQuery: redirectUrl,
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const CategoryProductsScreen(
-                              categoryName: "Vegetables & Fruits",
-                              categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
-                              categoryId: 1,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: imgUrl.startsWith('data:image/')
-                        ? Image.memory(
-                            _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
-                            width: double.infinity,
-                            height: 165,
-                            fit: BoxFit.cover,
-                            gaplessPlayback: true,
-                          )
-                        : (imgUrl.startsWith('http')
-                            ? Image.network(
-                                imgUrl,
-                                width: double.infinity,
-                                height: 165,
-                                fit: BoxFit.cover,
-                                gaplessPlayback: true,
-                                errorBuilder: (_, __, ___) => Image.network(
-                                  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-                                  width: double.infinity,
-                                  height: 165,
-                                  fit: BoxFit.cover,
-                                  gaplessPlayback: true,
-                                ),
-                              )
-                            : UiHelper.CustomImage(
-                                img: imgUrl,
-                                width: double.infinity,
-                                height: 165,
-                                fit: BoxFit.cover,
-                              )),
-                  ),
-                ),
-              );
+              return buildSingleBannerItem(activeSliders[index]);
             },
           ),
         ),
-        if (activeSliders.length > 1) ...[
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              activeSliders.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                height: 5,
-                width: _currentSliderIndex == index ? 18 : 5,
-                decoration: BoxDecoration(
-                  color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            activeSliders.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 5,
+              width: _currentSliderIndex == index ? 18 : 5,
+              decoration: BoxDecoration(
+                color: _currentSliderIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
-        ],
+        ),
         const SizedBox(height: 8),
       ],
     );
