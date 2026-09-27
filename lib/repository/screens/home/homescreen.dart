@@ -1381,9 +1381,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         fadeInDuration: Duration.zero,
                         fadeOutDuration: Duration.zero,
                         useOldImageOnUrlChange: true,
-                        placeholder: (context, url) => Container(
-                          color: const Color(0XFFE8ECEF),
-                        ),
                         errorWidget: (_, __, ___) => CachedNetworkImage(
                           imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
                           width: double.infinity,
