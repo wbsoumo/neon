@@ -1306,7 +1306,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (imgUrl.contains('localhost')) {
           imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
         }
-        imgUrl = "http://taskbazi.site/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
+        imgUrl = "https://sbmartquick.com/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
       }
       if (imgUrl.isEmpty) {
         imgUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
@@ -1355,7 +1355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const CategoryProductsScreen(
                       categoryName: "Vegetables & Fruits",
-                      categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+                      categoryImg: "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
                       categoryId: 1,
                     ),
                   ),
@@ -1462,25 +1462,25 @@ class _HomeScreenState extends State<HomeScreen> {
         "id": 1,
         "name": "Vegetables & Fruits",
         "asset": "assets/images/01_vegetables_fruits.png",
-        "url": "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+        "url": "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
       },
       {
         "id": 2,
         "name": "Dairy, Bread & Eggs",
         "asset": "assets/images/02_dairy_bread_eggs.png",
-        "url": "http://taskbazi.site/uploads/categories/02_dairy_bread_eggs.png",
+        "url": "https://sbmartquick.com/uploads/categories/02_dairy_bread_eggs.png",
       },
       {
         "id": 3,
         "name": "Snacks & Beverages",
         "asset": "assets/images/03_snacks_beverages.png",
-        "url": "http://taskbazi.site/uploads/categories/03_snacks_beverages.png",
+        "url": "https://sbmartquick.com/uploads/categories/03_snacks_beverages.png",
       },
       {
         "id": 4,
         "name": "Personal Care",
         "asset": "assets/images/04_personal_care.png",
-        "url": "http://taskbazi.site/uploads/categories/04_personal_care.png",
+        "url": "https://sbmartquick.com/uploads/categories/04_personal_care.png",
       },
     ];
 
@@ -1509,7 +1509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(
                         builder: (context) => const CategoryProductsScreen(
                           categoryName: "Vegetables & Fruits",
-                          categoryImg: "http://taskbazi.site/uploads/categories/01_vegetables_fruits.png",
+                          categoryImg: "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
                           categoryId: 1,
                         ),
                       ),

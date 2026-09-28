@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = "http://taskbazi.site/api/v1";
+  static const String baseUrl = "https://sbmartquick.com/api/v1";
 
   static const String register = "$baseUrl/auth/register";
   static const String login = "$baseUrl/auth/login";
