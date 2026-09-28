@@ -282,6 +282,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     img: img,
                                     price: price,
                                     unit: unit,
+                                    maxStock: int.tryParse(item['available_stock']?.toString() ?? item['stock']?.toString() ?? '10'),
                                     width: 70,
                                     height: 28,
                                   ),

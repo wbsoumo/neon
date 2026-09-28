@@ -8,6 +8,7 @@ class AnimatedCartButton extends StatefulWidget {
   final double price;
   final String unit;
   final int? categoryId;
+  final int? maxStock;
   final double width;
   final double height;
 
@@ -19,6 +20,7 @@ class AnimatedCartButton extends StatefulWidget {
     required this.price,
     this.unit = "1 unit",
     this.categoryId,
+    this.maxStock,
     this.width = 72,
     this.height = 32,
   });
@@ -46,9 +48,59 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
     if (mounted) setState(() {});
   }
 
+  void _tryAddToCart() {
+    final bool success = _cart.addItem(
+      id: widget.id,
+      name: widget.name,
+      img: widget.img,
+      price: widget.price,
+      unit: widget.unit,
+      categoryId: widget.categoryId,
+      maxStock: widget.maxStock,
+    );
+
+    if (!success && mounted) {
+      final String msg = (widget.maxStock != null && widget.maxStock! <= 0)
+          ? "Item is currently out of stock"
+          : "Cannot add more than ${widget.maxStock ?? 10} item(s) in stock";
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final int qty = _cart.getItemQuantity(widget.id);
+    final bool isOutOfStock = widget.maxStock != null && widget.maxStock! <= 0;
+
+    if (isOutOfStock) {
+      return Container(
+        height: widget.height,
+        width: widget.width,
+        decoration: BoxDecoration(
+          color: const Color(0XFFEEEEEE),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0XFFBDBDBD), width: 1),
+        ),
+        child: const Center(
+          child: Text(
+            "OUT OF STOCK",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+        ),
+      );
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -88,16 +140,7 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                 },
                 child: InkWell(
                   key: const ValueKey("add_btn"),
-                  onTap: () {
-                    _cart.addItem(
-                      id: widget.id,
-                      name: widget.name,
-                      img: widget.img,
-                      price: widget.price,
-                      unit: widget.unit,
-                      categoryId: widget.categoryId,
-                    );
-                  },
+                  onTap: _tryAddToCart,
                   borderRadius: BorderRadius.circular(8),
                   child: const Center(
                     child: FittedBox(
@@ -158,16 +201,7 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      _cart.addItem(
-                        id: widget.id,
-                        name: widget.name,
-                        img: widget.img,
-                        price: widget.price,
-                        unit: widget.unit,
-                        categoryId: widget.categoryId,
-                      );
-                    },
+                    onTap: _tryAddToCart,
                     behavior: HitTestBehavior.opaque,
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),

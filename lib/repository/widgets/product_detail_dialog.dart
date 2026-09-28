@@ -352,6 +352,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                     img: mainImg,
                     price: price,
                     unit: unit,
+                    maxStock: int.tryParse(widget.product['available_stock']?.toString() ?? widget.product['stock']?.toString() ?? '10'),
                     width: 100,
                     height: 38,
                   ),

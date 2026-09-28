@@ -7,6 +7,7 @@ class CartItem {
   final double price;
   final String unit;
   final int? categoryId;
+  final int? maxStock;
   int quantity;
 
   CartItem({
@@ -16,6 +17,7 @@ class CartItem {
     required this.price,
     this.unit = "1 unit",
     this.categoryId,
+    this.maxStock,
     this.quantity = 1,
   });
 }
@@ -52,17 +54,26 @@ class CartController extends ChangeNotifier {
     return _items[id]?.quantity ?? 0;
   }
 
-  void addItem({
+  bool addItem({
     required String id,
     required String name,
     required String img,
     required double price,
     String unit = "1 unit",
     int? categoryId,
+    int? maxStock,
   }) {
     if (_items.containsKey(id)) {
+      final currentQty = _items[id]!.quantity;
+      final limit = maxStock ?? _items[id]!.maxStock;
+      if (limit != null && currentQty >= limit) {
+        return false; // Reached maximum stock limit
+      }
       _items[id]!.quantity += 1;
     } else {
+      if (maxStock != null && maxStock <= 0) {
+        return false; // Out of stock
+      }
       _items[id] = CartItem(
         id: id,
         name: name,
@@ -70,10 +81,12 @@ class CartController extends ChangeNotifier {
         price: price,
         unit: unit,
         categoryId: categoryId,
+        maxStock: maxStock,
         quantity: 1,
       );
     }
     notifyListeners();
+    return true;
   }
 
   void removeSingleQuantity(String id) {
