@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:blinkit_series/domain/cart/cart_controller.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/screens/cart/couponsscreen.dart';
 import 'package:blinkit_series/repository/screens/cart/orderstatusscreen.dart';
@@ -1549,9 +1550,13 @@ class _CartScreenState extends State<CartScreen> {
 
                           final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
 
+                          final prefs = await SharedPreferences.getInstance();
+                          final savedPhone = prefs.getString('user_phone') ?? '';
+                          final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
+
                           final response = await ApiService.createOrder(
-                            userName: "Demo Customer",
-                            userPhone: "8016222991",
+                            userName: savedName,
+                            userPhone: savedPhone.isNotEmpty ? savedPhone : "8016222991",
                             deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
                             latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
                             longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
