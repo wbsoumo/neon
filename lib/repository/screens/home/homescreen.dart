@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
   String? _userSelectedAddress;
   List<Map<String, dynamic>> _liveProducts = [];
+  List<Map<String, dynamic>> _liveCategories = [];
   bool _isLoadingLiveProducts = true;
   double _userWalletBalance = 0.0;
 
@@ -313,6 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _populateCategoriesData(List<Map<String, dynamic>> categories) {
     setState(() {
+      _liveCategories = categories;
       final List<Map<String, dynamic>> updatedHeaderCats = [
         {"name": "All", "icon": Icons.shopping_bag_outlined}
       ];
@@ -1457,32 +1459,46 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoriesSection() {
-    final List<Map<String, dynamic>> categoryCards = [
-      {
-        "id": 1,
-        "name": "Vegetables & Fruits",
-        "asset": "assets/images/01_vegetables_fruits.png",
-        "url": "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
-      },
-      {
-        "id": 2,
-        "name": "Dairy, Bread & Eggs",
-        "asset": "assets/images/02_dairy_bread_eggs.png",
-        "url": "https://sbmartquick.com/uploads/categories/02_dairy_bread_eggs.png",
-      },
-      {
-        "id": 3,
-        "name": "Snacks & Beverages",
-        "asset": "assets/images/03_snacks_beverages.png",
-        "url": "https://sbmartquick.com/uploads/categories/03_snacks_beverages.png",
-      },
-      {
-        "id": 4,
-        "name": "Personal Care",
-        "asset": "assets/images/04_personal_care.png",
-        "url": "https://sbmartquick.com/uploads/categories/04_personal_care.png",
-      },
-    ];
+    List<Map<String, dynamic>> categoryCards = [];
+
+    if (_liveCategories.isNotEmpty) {
+      final sortedCats = List<Map<String, dynamic>>.from(_liveCategories);
+      sortedCats.sort((a, b) {
+        int orderA = int.tryParse(a['display_order']?.toString() ?? '999') ?? 999;
+        int orderB = int.tryParse(b['display_order']?.toString() ?? '999') ?? 999;
+        return orderA.compareTo(orderB);
+      });
+      categoryCards = sortedCats.take(4).toList();
+    }
+
+    if (categoryCards.isEmpty) {
+      categoryCards = [
+        {
+          "id": 1,
+          "name": "Vegetables & Fruits",
+          "image": "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
+          "asset": "assets/images/01_vegetables_fruits.png",
+        },
+        {
+          "id": 2,
+          "name": "Dairy, Bread & Eggs",
+          "image": "https://sbmartquick.com/uploads/categories/02_dairy_bread_eggs.png",
+          "asset": "assets/images/02_dairy_bread_eggs.png",
+        },
+        {
+          "id": 3,
+          "name": "Snacks & Beverages",
+          "image": "https://sbmartquick.com/uploads/categories/03_snacks_beverages.png",
+          "asset": "assets/images/03_snacks_beverages.png",
+        },
+        {
+          "id": 4,
+          "name": "Personal Care",
+          "image": "https://sbmartquick.com/uploads/categories/04_personal_care.png",
+          "asset": "assets/images/04_personal_care.png",
+        },
+      ];
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1505,12 +1521,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (widget.onCategoriesTap != null) {
                     widget.onCategoriesTap!();
                   } else {
+                    final firstCat = categoryCards.first;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const CategoryProductsScreen(
-                          categoryName: "Vegetables & Fruits",
-                          categoryImg: "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
-                          categoryId: 1,
+                        builder: (context) => CategoryProductsScreen(
+                          categoryName: firstCat['name']?.toString() ?? "Vegetables & Fruits",
+                          categoryImg: firstCat['image']?.toString() ?? firstCat['asset'] ?? "",
+                          categoryId: int.tryParse(firstCat['id']?.toString() ?? '1') ?? 1,
                         ),
                       ),
                     );
@@ -1523,9 +1540,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0XFFE8F5E9),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Text(
                         "View All",
                         style: TextStyle(
@@ -1544,15 +1561,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: List.generate(categoryCards.length, (index) {
               final cat = categoryCards[index];
-              final int catId = cat["id"] ?? (index + 1);
-              final String catName = cat["name"];
-              final String assetPath = cat["asset"];
-              final String urlPath = cat["url"];
+              final int catId = int.tryParse(cat["id"]?.toString() ?? '${index + 1}') ?? (index + 1);
+              final String catName = cat["name"]?.toString() ?? "Category";
+              final String imgUrl = cat["image"]?.toString() ?? cat["asset"]?.toString() ?? "";
 
               return Expanded(
                 child: Padding(
@@ -1563,19 +1580,47 @@ class _HomeScreenState extends State<HomeScreen> {
                         MaterialPageRoute(
                           builder: (context) => CategoryProductsScreen(
                             categoryName: catName,
-                            categoryImg: urlPath,
+                            categoryImg: imgUrl,
                             categoryId: catId,
                           ),
                         ),
                       );
                     },
-                    child: Image.asset(
-                      assetPath,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Image.network(
-                        urlPath,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, size: 36, color: Color(0XFF0C831F)),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0XFFF8F9FA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              height: 65,
+                              width: double.infinity,
+                              child: UiHelper.CustomImage(
+                                img: imgUrl,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            catName,
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
