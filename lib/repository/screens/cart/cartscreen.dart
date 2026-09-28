@@ -91,8 +91,9 @@ class _CartScreenState extends State<CartScreen> {
   ];
 
   List<Map<String, dynamic>> _savedAddresses = [];
-  String _selectedDeliveryAddress = "RATANR FLAT, 11E Krishnanagar, India";
-  String _selectedDeliveryTag = "Home";
+  String _selectedDeliveryAddress = "";
+  String _selectedDeliveryTag = "Location";
+  bool _hasSavedAddressInArea = false;
 
   @override
   void initState() {
@@ -104,27 +105,47 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _fetchUserAddresses() async {
-    // 1. Fetch lastly selected store location first
+    final homeLocation = await ApiService.getUserSelectedAddress();
     final store = await ApiService.fetchSelectedStore();
-    if (store != null && mounted) {
-      setState(() {
-        final storeAddr = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}";
-        if (storeAddr.trim().isNotEmpty) {
-          _selectedDeliveryAddress = storeAddr;
-          _selectedDeliveryTag = store['name'] ?? 'Selected Location';
-        }
-      });
+    final addresses = await ApiService.getUserAddresses();
+
+    if (!mounted) return;
+
+    String currentLoc = homeLocation ?? "";
+    if (currentLoc.isEmpty && store != null) {
+      currentLoc = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}".trim();
     }
 
-    final addresses = await ApiService.getUserAddresses();
-    if (addresses.isNotEmpty && mounted) {
-      setState(() {
-        _savedAddresses = addresses;
-        final first = addresses.first;
-        _selectedDeliveryAddress = first['address_details'] ?? _selectedDeliveryAddress;
-        _selectedDeliveryTag = first['address_type'] ?? first['custom_type_name'] ?? 'Home';
-      });
+    bool hasSaved = false;
+    String matchedAddress = currentLoc;
+    String tag = store?['name'] ?? 'Selected Area';
+
+    if (addresses.isNotEmpty) {
+      _savedAddresses = addresses;
+      Map<String, dynamic>? matched;
+      for (var addr in addresses) {
+        final detail = (addr['address_details'] ?? '').toString().toLowerCase();
+        final locLower = currentLoc.toLowerCase();
+        if (locLower.isNotEmpty && (detail.contains(locLower) || locLower.contains(detail))) {
+          matched = addr;
+          break;
+        }
+      }
+      if (matched == null && addresses.isNotEmpty) {
+        matched = addresses.first;
+      }
+      if (matched != null) {
+        matchedAddress = matched['address_details'] ?? currentLoc;
+        tag = matched['address_type'] ?? matched['custom_type_name'] ?? 'Home';
+        hasSaved = true;
+      }
     }
+
+    setState(() {
+      _selectedDeliveryAddress = matchedAddress.isNotEmpty ? matchedAddress : (currentLoc.isNotEmpty ? currentLoc : "No address selected");
+      _selectedDeliveryTag = tag;
+      _hasSavedAddressInArea = hasSaved;
+    });
   }
 
   // Verify stock availability of all items currently in cart when store changes
@@ -1387,6 +1408,7 @@ class _CartScreenState extends State<CartScreen> {
                             setState(() {
                               if (newAddr.isNotEmpty) {
                                 _selectedDeliveryAddress = newAddr;
+                                _hasSavedAddressInArea = true;
                               } else if (store != null) {
                                 _selectedDeliveryAddress = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}";
                                 _selectedDeliveryTag = store['name'] ?? 'Selected Location';
@@ -1401,16 +1423,20 @@ class _CartScreenState extends State<CartScreen> {
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      color: const Color(0XFFFDFDFD),
+                      color: _hasSavedAddressInArea ? const Color(0XFFFDFDFD) : const Color(0XFFFFF8E1),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const CircleAvatar(
+                              CircleAvatar(
                                 radius: 12,
-                                backgroundColor: Color(0XFFF7CB45),
-                                child: Icon(Icons.location_on, color: Colors.black87, size: 14),
+                                backgroundColor: _hasSavedAddressInArea ? const Color(0XFFF7CB45) : Colors.orange,
+                                child: Icon(
+                                  _hasSavedAddressInArea ? Icons.location_on : Icons.add_location_alt,
+                                  color: Colors.black87,
+                                  size: 14,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -1418,11 +1444,11 @@ class _CartScreenState extends State<CartScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Delivering to $_selectedDeliveryTag",
-                                      style: const TextStyle(
+                                      _hasSavedAddressInArea ? "Delivering to $_selectedDeliveryTag" : "No saved address for $_selectedDeliveryTag",
+                                      style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w900,
-                                        color: Colors.black,
+                                        color: _hasSavedAddressInArea ? Colors.black : Colors.deepOrange,
                                       ),
                                     ),
                                     const SizedBox(height: 1),
@@ -1438,12 +1464,19 @@ class _CartScreenState extends State<CartScreen> {
                                   ],
                                 ),
                               ),
-                              const Text(
-                                "Change",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0XFF0C831F),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: _hasSavedAddressInArea ? Colors.transparent : const Color(0XFF0C831F),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _hasSavedAddressInArea ? "Change" : "+ Add New Address",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: _hasSavedAddressInArea ? const Color(0XFF0C831F) : Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1503,6 +1536,27 @@ class _CartScreenState extends State<CartScreen> {
                           if (_cart.items.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Your cart is empty! Add items first.")),
+                            );
+                            return;
+                          }
+
+                          if (!_isPickupSelected && !_hasSavedAddressInArea) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: Colors.redAccent,
+                                content: Text("No delivery address saved for this location area. Please add an address to place your order."),
+                              ),
+                            );
+                            AddressSelectionBottomSheet.show(
+                              context,
+                              onAddressSelected: (newAddr) async {
+                                if (newAddr.isNotEmpty && mounted) {
+                                  setState(() {
+                                    _selectedDeliveryAddress = newAddr;
+                                    _hasSavedAddressInArea = true;
+                                  });
+                                }
+                              },
                             );
                             return;
                           }
