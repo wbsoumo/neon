@@ -3,6 +3,7 @@ import 'package:blinkit_series/repository/screens/cart/cartscreen.dart';
 import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/floating_cart_pill.dart';
+import 'package:blinkit_series/repository/widgets/product_detail_dialog.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 
@@ -584,7 +585,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             Row(
               children: const [
                 Text(
-                  "Delivering to Ratanr Flat 11E: 11E, Kris...",
+                  "Select Location",
                   style: TextStyle(
                     color: Color(0XFF0C831F),
                     fontSize: 11,
@@ -803,7 +804,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                             physics: const NeverScrollableScrollPhysics(),
                                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                               crossAxisCount: 2,
-                                              childAspectRatio: 0.64,
+                                              childAspectRatio: 0.63,
                                               crossAxisSpacing: 10,
                                               mainAxisSpacing: 10,
                                             ),
@@ -821,199 +822,199 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                               final String img = item["img"];
                                               final bool isFav = _favoriteIds.contains(id);
 
-                                              return Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black.withValues(alpha: 0.04),
-                                                      blurRadius: 6,
-                                                      offset: const Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    // Top Image with Heart & ADD button overlay
-                                                    Stack(
-                                                      children: [
-                                                        ClipRRect(
-                                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                                          child: Container(
-                                                            height: 110,
-                                                            width: double.infinity,
-                                                            color: const Color(0XFFF9F9F9),
-                                                            child: UiHelper.CustomImage(
-                                                              img: img,
-                                                              fit: BoxFit.cover,
-                                                            ),
-                                                          ),
-                                                        ),
+                                               return InkWell(
+                                                 onTap: () => ProductDetailDialog.show(context, item),
+                                                 borderRadius: BorderRadius.circular(12),
+                                                 child: Container(
+                                                   decoration: BoxDecoration(
+                                                     color: Colors.white,
+                                                     borderRadius: BorderRadius.circular(12),
+                                                     boxShadow: [
+                                                       BoxShadow(
+                                                         color: Colors.black.withValues(alpha: 0.04),
+                                                         blurRadius: 6,
+                                                         offset: const Offset(0, 2),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                   child: Column(
+                                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                                     children: [
+                                                       // Top Image with Heart & ADD button overlay
+                                                       Stack(
+                                                         children: [
+                                                           ClipRRect(
+                                                             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                                             child: Container(
+                                                               height: 98,
+                                                               width: double.infinity,
+                                                               color: const Color(0XFFF9F9F9),
+                                                               child: UiHelper.CustomImage(
+                                                                 img: img,
+                                                                 fit: BoxFit.cover,
+                                                               ),
+                                                             ),
+                                                           ),
 
-                                                        // Heart Favorite Icon
-                                                        Positioned(
-                                                          top: 6,
-                                                          right: 6,
-                                                          child: InkWell(
-                                                            onTap: () {
-                                                              setState(() {
-                                                                if (isFav) {
-                                                                  _favoriteIds.remove(id);
-                                                                } else {
-                                                                  _favoriteIds.add(id);
-                                                                }
-                                                              });
-                                                            },
-                                                            child: CircleAvatar(
-                                                              radius: 12,
-                                                              backgroundColor: Colors.white.withValues(alpha: 0.85),
-                                                              child: Icon(
-                                                                isFav ? Icons.favorite : Icons.favorite_border,
-                                                                size: 14,
-                                                                color: isFav ? Colors.red : Colors.grey,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
+                                                           // Heart Favorite Icon
+                                                           Positioned(
+                                                             top: 6,
+                                                             right: 6,
+                                                             child: InkWell(
+                                                               onTap: () {
+                                                                 setState(() {
+                                                                   if (isFav) {
+                                                                     _favoriteIds.remove(id);
+                                                                   } else {
+                                                                     _favoriteIds.add(id);
+                                                                   }
+                                                                 });
+                                                               },
+                                                               child: CircleAvatar(
+                                                                 radius: 12,
+                                                                 backgroundColor: Colors.white.withValues(alpha: 0.85),
+                                                                 child: Icon(
+                                                                   isFav ? Icons.favorite : Icons.favorite_border,
+                                                                   size: 14,
+                                                                   color: isFav ? Colors.red : Colors.grey,
+                                                                 ),
+                                                               ),
+                                                             ),
+                                                           ),
 
-                                                        // Bottom Bar over Image: Unit tag on left, ADD button on right
-                                                        Positioned(
-                                                          bottom: 6,
-                                                          left: 6,
-                                                          right: 6,
-                                                          child: Row(
-                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                                            children: [
-                                                              Container(
-                                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                                decoration: BoxDecoration(
-                                                                  color: Colors.white.withValues(alpha: 0.9),
-                                                                  borderRadius: BorderRadius.circular(4),
-                                                                ),
-                                                                child: Text(
-                                                                  unit,
-                                                                  style: const TextStyle(
-                                                                    fontSize: 10,
-                                                                    fontWeight: FontWeight.bold,
-                                                                    color: Colors.black87,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              AnimatedCartButton(
-                                                                id: id,
-                                                                name: name,
-                                                                img: img,
-                                                                price: price,
-                                                                unit: unit,
-                                                                maxStock: (item["available_stock"] is int) ? item["available_stock"] : int.tryParse(item["available_stock"]?.toString() ?? "10"),
-                                                                width: 54,
-                                                                height: 28,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
+                                                           // Bottom Bar over Image: Unit tag on left
+                                                           Positioned(
+                                                             bottom: 6,
+                                                             left: 6,
+                                                             child: Container(
+                                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                               decoration: BoxDecoration(
+                                                                 color: Colors.white.withValues(alpha: 0.9),
+                                                                 borderRadius: BorderRadius.circular(4),
+                                                               ),
+                                                               child: Text(
+                                                                 unit,
+                                                                 style: const TextStyle(
+                                                                   fontSize: 10,
+                                                                   fontWeight: FontWeight.bold,
+                                                                   color: Colors.black87,
+                                                                 ),
+                                                               ),
+                                                             ),
+                                                           ),
+                                                         ],
+                                                       ),
 
-                                                    // Content Section Below Image
-                                                    Padding(
-                                                      padding: const EdgeInsets.all(8.0),
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          // Price & Strikethrough
-                                                          Row(
-                                                            children: [
-                                                              Text(
-                                                                "₹${price.toStringAsFixed(0)}",
-                                                                style: const TextStyle(
-                                                                  fontSize: 15,
-                                                                  fontWeight: FontWeight.w900,
-                                                                  color: Colors.black,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(width: 4),
-                                                              Text(
-                                                                "₹${mrp.toStringAsFixed(0)}",
-                                                                style: const TextStyle(
-                                                                  fontSize: 11,
-                                                                  color: Color(0XFF9E9E9E),
-                                                                  decoration: TextDecoration.lineThrough,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(height: 4),
+                                                       // Content Section Below Image
+                                                       Padding(
+                                                         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                                                         child: Column(
+                                                           crossAxisAlignment: CrossAxisAlignment.start,
+                                                           mainAxisSize: MainAxisSize.min,
+                                                           children: [
+                                                             // 1. Price & Strikethrough
+                                                             Row(
+                                                               children: [
+                                                                 Text(
+                                                                   "₹${price.toStringAsFixed(0)}",
+                                                                   style: const TextStyle(
+                                                                     fontSize: 17,
+                                                                     fontWeight: FontWeight.w900,
+                                                                     color: Colors.black,
+                                                                   ),
+                                                                 ),
+                                                                 if (mrp > price) ...[
+                                                                   const SizedBox(width: 4),
+                                                                   Text(
+                                                                     "₹${mrp.toStringAsFixed(0)}",
+                                                                     style: TextStyle(
+                                                                       fontSize: 12,
+                                                                       color: Colors.grey.shade500,
+                                                                       decoration: TextDecoration.lineThrough,
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                               ],
+                                                             ),
+                                                             const SizedBox(height: 3),
 
-                                                          // Product Name
-                                                          Text(
-                                                            name,
-                                                            maxLines: 2,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: const TextStyle(
-                                                              fontSize: 11,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: Colors.black87,
-                                                              height: 1.2,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(height: 4),
+                                                             // 2. Product Name (Fixed height so 1-line & 2-line titles align ADD button perfectly)
+                                                             SizedBox(
+                                                               height: 28,
+                                                               child: Text(
+                                                                 name,
+                                                                 maxLines: 2,
+                                                                 overflow: TextOverflow.ellipsis,
+                                                                 style: const TextStyle(
+                                                                   fontSize: 12,
+                                                                   fontWeight: FontWeight.bold,
+                                                                   color: Colors.black87,
+                                                                   height: 1.15,
+                                                                 ),
+                                                               ),
+                                                             ),
+                                                             const SizedBox(height: 3),
 
-                                                          if (tag != null)
-                                                            Container(
-                                                              margin: const EdgeInsets.only(bottom: 4),
-                                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                              decoration: BoxDecoration(
-                                                                color: const Color(0XFFFFECB3),
-                                                                borderRadius: BorderRadius.circular(3),
-                                                              ),
-                                                              child: Text(
-                                                                tag,
-                                                                style: const TextStyle(
-                                                                  fontSize: 9,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  color: Color(0XFF8D6E63),
-                                                                ),
-                                                              ),
-                                                            ),
+                                                             // 3. Delivery Estimate & Stock Row
+                                                             Row(
+                                                               children: [
+                                                                 const Icon(Icons.access_time_rounded, size: 12, color: Color(0XFF616161)),
+                                                                 const SizedBox(width: 3),
+                                                                 Text(
+                                                                   mins,
+                                                                   style: const TextStyle(
+                                                                     fontSize: 11,
+                                                                     color: Color(0XFF616161),
+                                                                     fontWeight: FontWeight.w500,
+                                                                   ),
+                                                                 ),
+                                                                 if (stock != null) ...[
+                                                                   Padding(
+                                                                     padding: const EdgeInsets.symmetric(horizontal: 5),
+                                                                     child: Container(
+                                                                       height: 9,
+                                                                       width: 1,
+                                                                       color: Colors.grey.shade300,
+                                                                     ),
+                                                                   ),
+                                                                   const Icon(Icons.shopping_bag_outlined, size: 12, color: Color(0XFF616161)),
+                                                                   const SizedBox(width: 3),
+                                                                   Text(
+                                                                     stock,
+                                                                     style: const TextStyle(
+                                                                       fontSize: 11,
+                                                                       color: Color(0XFF616161),
+                                                                       fontWeight: FontWeight.w500,
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                               ],
+                                                             ),
+                                                             const SizedBox(height: 6),
 
-                                                          // Delivery Estimate & Low Stock Indicator
-                                                          Row(
-                                                            children: [
-                                                              const Icon(Icons.timer_outlined, size: 11, color: Color(0XFF757575)),
-                                                              const SizedBox(width: 2),
-                                                              Text(
-                                                                mins,
-                                                                style: const TextStyle(
-                                                                  fontSize: 10,
-                                                                  color: Color(0XFF757575),
-                                                                  fontWeight: FontWeight.w500,
-                                                                ),
-                                                              ),
-                                                              if (stock != null) ...[
-                                                                const SizedBox(width: 6),
-                                                                const Icon(Icons.battery_2_bar, size: 11, color: Color(0XFF757575)),
-                                                                const SizedBox(width: 2),
-                                                                Text(
-                                                                  stock,
-                                                                  style: const TextStyle(
-                                                                    fontSize: 10,
-                                                                    color: Color(0XFF757575),
-                                                                    fontWeight: FontWeight.w500,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ],
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
+                                                             // 4. Full-Width ADD Button sitting tightly under 12 mins & stock
+                                                             SizedBox(
+                                                               width: double.infinity,
+                                                               height: 34,
+                                                               child: AnimatedCartButton(
+                                                                 id: id,
+                                                                 name: name,
+                                                                 img: img,
+                                                                 price: price,
+                                                                 unit: unit,
+                                                                 maxStock: (item["available_stock"] is int) ? item["available_stock"] : int.tryParse(item["available_stock"]?.toString() ?? "10"),
+                                                                 width: double.infinity,
+                                                                 height: 34,
+                                                                 themeColor: const Color(0XFF0C831F),
+                                                               ),
+                                                             ),
+                                                           ],
+                                                         ),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                 ),
+                                               );
                                             },
                                           ),
                                       ],

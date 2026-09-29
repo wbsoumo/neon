@@ -11,6 +11,7 @@ class AnimatedCartButton extends StatefulWidget {
   final int? maxStock;
   final double width;
   final double height;
+  final Color? themeColor;
 
   const AnimatedCartButton({
     super.key,
@@ -23,6 +24,7 @@ class AnimatedCartButton extends StatefulWidget {
     this.maxStock,
     this.width = 72,
     this.height = 32,
+    this.themeColor,
   });
 
   @override
@@ -78,6 +80,8 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
   Widget build(BuildContext context) {
     final int qty = _cart.getItemQuantity(widget.id);
     final bool isOutOfStock = widget.maxStock != null && widget.maxStock! <= 0;
+    final Color activeColor = widget.themeColor ?? const Color(0XFF0C831F);
+    final Color lightBgColor = activeColor.withValues(alpha: 0.08);
 
     if (isOutOfStock) {
       return Container(
@@ -108,15 +112,15 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
       height: widget.height,
       width: qty > 0 ? (widget.width < 80 ? 82 : widget.width) : widget.width,
       decoration: BoxDecoration(
-        color: qty > 0 ? const Color(0XFF0C831F) : const Color(0XFFF7FFF9),
+        color: qty > 0 ? activeColor : lightBgColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: const Color(0XFF0C831F),
+          color: activeColor,
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0XFF0C831F).withValues(alpha: 0.15),
+            color: activeColor.withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -142,11 +146,11 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                   key: const ValueKey("add_btn"),
                   onTap: _tryAddToCart,
                   borderRadius: BorderRadius.circular(8),
-                  child: const Center(
+                  child: Center(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -157,15 +161,15 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0XFF0C831F),
+                                color: activeColor,
                                 letterSpacing: 0.5,
                               ),
                             ),
-                            SizedBox(width: 2),
+                            const SizedBox(width: 2),
                             Icon(
                               Icons.add,
                               size: 14,
-                              color: Color(0XFF0C831F),
+                              color: activeColor,
                             ),
                           ],
                         ),

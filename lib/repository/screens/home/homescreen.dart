@@ -53,8 +53,35 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _sliderPageController = PageController();
   Timer? _sliderAutoTimer;
   final ValueNotifier<int> _currentSliderNotifier = ValueNotifier<int>(0);
-  List<Map<String, dynamic>> _sliders = [];
+  List<Map<String, dynamic>> _sliders = [
+    {
+      "id": 1,
+      "title": "Lights, Diyas & Candles",
+      "subtitle": "Upto 50% Off on Festive Decor",
+      "offer_text": "UP TO 50% OFF",
+      "image": "assets/images/image 50.png",
+      "category_id": 1,
+    },
+    {
+      "id": 2,
+      "title": "Diwali Gifts & Hampers",
+      "subtitle": "Express 10-Minute Delivery",
+      "offer_text": "FESTIVE SPECIAL",
+      "image": "assets/images/image 51.png",
+      "category_id": 1,
+    },
+  ];
   final Map<String, Uint8List> _base64ImageCache = {};
+
+  Color get _activeThemeColor {
+    final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+    if (hexStr != null && hexStr.length == 6) {
+      try {
+        return Color(int.parse("0xFF$hexStr"));
+      } catch (_) {}
+    }
+    return const Color(0XFF0C831F);
+  }
 
   void _startSliderAutoTimer() {
     _sliderAutoTimer?.cancel();
@@ -74,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _startSliderAutoTimer();
     _fetchLiveBackendData();
     _searchHintTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (mounted) {
@@ -116,30 +144,29 @@ class _HomeScreenState extends State<HomeScreen> {
           timeLimit: const Duration(seconds: 4),
         );
 
-        // Reverse geocode to find exact area name
-        final areaName = await _reverseGeocodeArea(pos.latitude, pos.longitude);
-
-        // Check saved addresses database to see if current GPS matches a saved address nearby (< 1000 meters)
-        String? matchedSavedAddress;
+        // 1. Fetch user's saved addresses from backend
+        String? nearestSavedAddress;
         try {
           final prefs = await SharedPreferences.getInstance();
           final userPhone = prefs.getString('user_phone') ?? '';
-          final dbAddresses = await ApiService.getUserAddresses(phone: userPhone);
-          double closestDist = double.infinity;
-          for (var addr in dbAddresses) {
-            final double? aLat = double.tryParse(addr['latitude']?.toString() ?? '');
-            final double? aLng = double.tryParse(addr['longitude']?.toString() ?? '');
-            if (aLat != null && aLng != null) {
-              final double distMeters = Geolocator.distanceBetween(pos.latitude, pos.longitude, aLat, aLng);
-              if (distMeters <= 1000 && distMeters < closestDist) {
-                closestDist = distMeters;
-                matchedSavedAddress = addr['address_details'] ?? addr['custom_type_name'] ?? addr['address_type'];
+          if (userPhone.isNotEmpty) {
+            final dbAddresses = await ApiService.getUserAddresses(phone: userPhone);
+            double closestDistMeters = double.infinity;
+            for (var addr in dbAddresses) {
+              final double? aLat = double.tryParse(addr['latitude']?.toString() ?? '');
+              final double? aLng = double.tryParse(addr['longitude']?.toString() ?? '');
+              if (aLat != null && aLng != null) {
+                final double distMeters = Geolocator.distanceBetween(pos.latitude, pos.longitude, aLat, aLng);
+                if (distMeters < closestDistMeters) {
+                  closestDistMeters = distMeters;
+                  nearestSavedAddress = addr['address_details'] ?? addr['custom_type_name'] ?? addr['address_type'];
+                }
               }
             }
           }
         } catch (_) {}
 
-        // Query backend for nearest store dynamically based on real GPS lat & lng
+        // 2. Query backend for nearest store dynamically based on real GPS lat & lng
         final storeData = await ApiService.fetchSelectedStore(
           lat: pos.latitude,
           lng: pos.longitude,
@@ -147,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
           isManual: false,
         );
 
-        final String finalAddressDisplay = matchedSavedAddress ??
-            areaName ??
-            (storeData != null ? (storeData['address'] ?? storeData['name'] ?? 'Current Location') : 'Current Location');
+        // 3. Reverse geocode to find real area name if no saved address
+        final areaName = nearestSavedAddress == null ? await _reverseGeocodeArea(pos.latitude, pos.longitude) : null;
+        String finalAddressDisplay = (nearestSavedAddress ?? areaName ?? 'Select Location');
 
         if (mounted) {
           setState(() {
@@ -162,8 +189,21 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint("Error fetching GPS location & nearest store: $e");
       }
     } else {
-      // Permission NOT allowed / denied -> automatically open location selection bottom sheet
+      // Permission DENIED:
+      // 1. Fetch oldest store added for products (no lat/lng passed -> backend returns oldest store added id asc)
+      final oldestStore = await ApiService.fetchSelectedStore(forceRefresh: true);
+
       if (mounted) {
+        setState(() {
+          if (oldestStore != null) {
+            _selectedStoreData = oldestStore;
+          }
+          if (_userSelectedAddress == null || _userSelectedAddress!.isEmpty || _userSelectedAddress!.contains('RATANR')) {
+            _userSelectedAddress = 'Select Location';
+          }
+        });
+
+        // 2. Open navigation bottom sheet for user to choose location
         AddressSelectionBottomSheet.show(
           context,
           onAddressSelected: (selectedAddress) {
@@ -240,8 +280,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final cachedProds = await ApiService.fetchProducts(storeId: cachedStore?['id'] ?? 1, forceRefresh: false);
 
     bool hasAnyData = false;
-    if (savedAddress != null && mounted) {
-      _userSelectedAddress = savedAddress;
+    if (savedAddress != null && savedAddress.isNotEmpty && mounted) {
+      if (_userSelectedAddress == null || _userSelectedAddress!.isEmpty) {
+        _userSelectedAddress = savedAddress;
+      }
     }
     if (cachedStore != null && mounted) {
       _selectedStoreData = cachedStore;
@@ -499,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ? SkeletonLoader.homePageFullSkeleton()
           : RefreshIndicator(
               onRefresh: () => _fetchLiveBackendData(forceRefresh: true),
-              color: const Color(0XFF0C831F),
+              color: _activeThemeColor,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 child: Column(
@@ -508,13 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // 1. Fresh Customizable Header Banner
             Container(
               decoration: BoxDecoration(
-                color: () {
-                  final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
-                  if (hexStr != null && hexStr.length == 6) {
-                    return Color(int.parse("0xFF$hexStr"));
-                  }
-                  return const Color(0XFF0C831F);
-                }(),
+                color: _activeThemeColor,
               ),
               child: SafeArea(
                 bottom: false,
@@ -582,9 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         child: Text(
                                           _userSelectedAddress != null && _userSelectedAddress!.isNotEmpty
                                               ? _userSelectedAddress!
-                                              : (_selectedStoreData != null
-                                                  ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
-                                                  : "RATANR FLAT, 11E Krishnanagar Main Hub..."),
+                                              : "Select Location",
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -657,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             color: Color(0XFFF7CB45),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.account_balance_wallet, color: Color(0XFF0C831F), size: 16),
+                                          child: Icon(Icons.account_balance_wallet, color: _activeThemeColor, size: 16),
                                         ),
                                         const SizedBox(width: 4),
                                         Container(
@@ -837,7 +871,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               builder: (context) => SearchScreen(
                                                 allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
                                                 initialQuery: typedValue,
-                                                themeColor: activeTheme,
+                                                themeColor: _activeThemeColor,
                                               ),
                                             ),
                                           );
@@ -898,7 +932,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   builder: (context) => SearchScreen(
                                                     allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
                                                     initialQuery: spokenQuery,
-                                                    themeColor: activeTheme,
+                                                    themeColor: _activeThemeColor,
                                                   ),
                                                 ),
                                               );
@@ -1307,15 +1341,17 @@ class _HomeScreenState extends State<HomeScreen> {
     Widget buildSingleBannerItem(Map<String, dynamic> slider) {
       String rawImg = slider['image']?.toString() ?? '';
       String imgUrl = rawImg.trim();
-      if (!imgUrl.startsWith('data:') && !imgUrl.startsWith('http') && imgUrl.isNotEmpty) {
+      if (!imgUrl.startsWith('data:') && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/') && imgUrl.isNotEmpty) {
         if (imgUrl.contains('localhost')) {
           imgUrl = imgUrl.replaceAll(RegExp(r'^https?://[^/]+/'), '');
         }
-        imgUrl = "https://sbmartquick.com/${imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl}";
+        final String cleanPath = imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl;
+        imgUrl = "https://admin.sbmartquick.com/$cleanPath";
+      } else if (imgUrl.contains('sbmartquick.com/uploads/')) {
+        final String uploadPath = imgUrl.substring(imgUrl.indexOf('uploads/'));
+        imgUrl = "https://admin.sbmartquick.com/$uploadPath";
       }
-      if (imgUrl.isEmpty) {
-        imgUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80';
-      }
+
       final dynamic catIdRaw = slider['category_id'];
       final int? catId = catIdRaw != null ? int.tryParse(catIdRaw.toString()) : null;
       final String? redirectUrl = slider['redirect_url']?.toString();
@@ -1360,7 +1396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const CategoryProductsScreen(
                       categoryName: "Vegetables & Fruits",
-                      categoryImg: "https://sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
+                      categoryImg: "https://admin.sbmartquick.com/uploads/categories/01_vegetables_fruits.png",
                       categoryId: 1,
                     ),
                   ),
@@ -1376,31 +1412,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
                   )
-                : (imgUrl.startsWith('http')
-                    ? CachedNetworkImage(
-                        key: ValueKey(imgUrl),
-                        imageUrl: imgUrl,
-                        width: double.infinity,
-                        height: 165,
-                        fit: BoxFit.cover,
-                        fadeInDuration: Duration.zero,
-                        fadeOutDuration: Duration.zero,
-                        useOldImageOnUrlChange: true,
-                        errorWidget: (_, __, ___) => CachedNetworkImage(
-                          imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-                          width: double.infinity,
-                          height: 165,
-                          fit: BoxFit.cover,
-                          fadeInDuration: Duration.zero,
-                          fadeOutDuration: Duration.zero,
-                        ),
-                      )
-                    : UiHelper.CustomImage(
-                        img: imgUrl,
-                        width: double.infinity,
-                        height: 165,
-                        fit: BoxFit.cover,
-                      )),
+                : UiHelper.CustomImage(
+                    img: imgUrl,
+                    width: double.infinity,
+                    height: 165,
+                    fit: BoxFit.cover,
+                  ),
           ),
         ),
       );
@@ -1438,6 +1455,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ValueListenableBuilder<int>(
           valueListenable: _currentSliderNotifier,
           builder: (context, currentIndex, _) {
+            final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
+            final Color activeTheme = (hexStr != null && hexStr.length == 6)
+                ? Color(int.parse("0xFF$hexStr"))
+                : const Color(0XFF0C831F);
+
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -1448,7 +1470,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 5,
                   width: currentIndex == index ? 18 : 5,
                   decoration: BoxDecoration(
-                    color: currentIndex == index ? const Color(0XFF0C831F) : Colors.grey.shade400,
+                    color: currentIndex == index ? activeTheme : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -1540,10 +1562,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0XFFE8F5E9),
+                    color: _activeThemeColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -1551,11 +1573,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0XFF0C831F),
+                          color: _activeThemeColor,
                         ),
                       ),
-                      SizedBox(width: 2),
-                      Icon(Icons.arrow_forward, size: 12, color: Color(0XFF0C831F)),
+                      const SizedBox(width: 2),
+                      Icon(Icons.arrow_forward, size: 12, color: _activeThemeColor),
                     ],
                   ),
                 ),
@@ -1678,22 +1700,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0XFFE8F5E9),
+                    color: _activeThemeColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Text(
                         "View All",
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0XFF0C831F),
+                          color: _activeThemeColor,
                         ),
                       ),
-                      SizedBox(width: 2),
-                      Icon(Icons.arrow_forward, size: 12, color: Color(0XFF0C831F)),
+                      const SizedBox(width: 2),
+                      Icon(Icons.arrow_forward, size: 12, color: _activeThemeColor),
                     ],
                   ),
                 ),
@@ -1760,7 +1782,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0XFF0C831F),
+                                    color: _activeThemeColor,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -1828,6 +1850,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     maxStock: int.tryParse(item["available_stock"]?.toString() ?? item["stock"]?.toString() ?? '10'),
                                     width: 58,
                                     height: 28,
+                                    themeColor: _activeThemeColor,
                                   ),
                                 ],
                               ),

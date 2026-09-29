@@ -16,7 +16,7 @@ class AddressSelectionBottomSheet extends StatefulWidget {
 
   const AddressSelectionBottomSheet({
     super.key,
-    this.currentAddress = "RATANR FLAT, 11E Krishnanagar Main Hub, Krishnanagar",
+    this.currentAddress = "Select Location",
     this.onAddressSelected,
   });
 
@@ -26,7 +26,7 @@ class AddressSelectionBottomSheet extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => AddressSelectionBottomSheet(
-        currentAddress: currentAddress ?? "RATANR FLAT, 11E Krishnanagar Main Hub, Krishnanagar",
+        currentAddress: currentAddress ?? "Select Location",
         onAddressSelected: onAddressSelected,
       ),
     );
@@ -112,8 +112,8 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
     final userPhone = prefs.getString('user_phone') ?? '';
     final dbAddresses = await ApiService.getUserAddresses(phone: userPhone);
     final activeStore = ApiService.memoryCachedStore;
-    final double? storeLat = activeStore != null ? (activeStore['latitude'] as num?)?.toDouble() : null;
-    final double? storeLng = activeStore != null ? (activeStore['longitude'] as num?)?.toDouble() : null;
+    final double? storeLat = activeStore != null ? double.tryParse(activeStore['latitude']?.toString() ?? '') : null;
+    final double? storeLng = activeStore != null ? double.tryParse(activeStore['longitude']?.toString() ?? '') : null;
 
     Position? currentPos;
     try {

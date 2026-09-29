@@ -20,7 +20,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   List<Map<String, dynamic>> _categoriesFromApi = [];
   List<Map<String, dynamic>> _allProducts = [];
   Map<String, dynamic>? _selectedStoreData = ApiService.memoryCachedStore;
-  String _userAddress = "HOME - Sujal Dave, Ratanada, Jodhpur (Raj)";
+  String _userAddress = "";
 
   final List<Map<String, dynamic>> _fallbackCategories = [
     {"id": 1, "name": "Vegetables & Fruits", "image": "assets/images/01_vegetables_fruits.png"},
@@ -170,7 +170,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                               ? _userAddress
                                               : (_selectedStoreData != null
                                                   ? "${_selectedStoreData!['address'] ?? 'Store Location'}, ${_selectedStoreData!['city'] ?? ''}"
-                                                  : "HOME - Sujal Dave, Ratanada, Jodhpur (Raj)"),
+                                                  : "Select Location"),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -308,15 +308,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                Container(
+                                SizedBox(
                                   height: 68,
                                   width: 68,
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF4F6F8),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
                                   child: UiHelper.CustomImage(img: img, fit: BoxFit.contain),
                                 ),
                                 const SizedBox(height: 6),

@@ -55,7 +55,7 @@ class PrintScreen extends StatelessWidget {
                             ),
                             Expanded(
                               child: UiHelper.CustomText(
-                                  text: "HOME - Sujal Dave, Ratanada, Jodhpur (Raj)",
+                                  text: "Select Delivery Address",
                                   color: Color(0XFF000000),
                                   fontweight: FontWeight.bold,
                                   fontsize: 14),

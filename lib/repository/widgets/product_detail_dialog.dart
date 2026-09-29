@@ -347,7 +347,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                     ],
                   ),
                   AnimatedCartButton(
-                    id: "popup_$id",
+                    id: id,
                     name: title,
                     img: mainImg,
                     price: price,
