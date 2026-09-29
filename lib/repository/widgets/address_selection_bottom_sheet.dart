@@ -39,62 +39,7 @@ class AddressSelectionBottomSheet extends StatefulWidget {
 class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomSheet> {
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _savedAddresses = [
-    {
-      "type": "Krishnanagar Hub",
-      "distance": "0.8 km",
-      "address": "11E Krishnanagar Main Hub, Krishnanagar",
-      "phone": "+91-8016222991",
-      "lat": 23.4013,
-      "lng": 88.5010,
-      "is_nearest": false,
-    },
-    {
-      "type": "Nabadwip, Nadia",
-      "distance": "12 km",
-      "address": "Nabadwip, Nadia",
-      "phone": "Soumo Jit Saha (8016222991)",
-      "lat": 23.4080,
-      "lng": 88.3658,
-      "is_nearest": false,
-    },
-    {
-      "type": "Debagram, Nadia",
-      "distance": "38 km",
-      "address": "Chatterjee Para, Debagram, Nadia",
-      "phone": "Soumo Jit Saha (8016222991)",
-      "lat": 23.6558,
-      "lng": 88.3842,
-      "is_nearest": false,
-    },
-    {
-      "type": "Kolkata Home",
-      "distance": "Direct Hub",
-      "address": "Park Street Express Delivery Hub, Kolkata",
-      "phone": "+91-8016222991",
-      "lat": 22.5726,
-      "lng": 88.3639,
-      "is_nearest": false,
-    },
-    {
-      "type": "Siliguri Office",
-      "distance": "Direct Hub",
-      "address": "Hill Cart Road Main Hub, Siliguri",
-      "phone": "+91-8016222991",
-      "lat": 26.7271,
-      "lng": 88.3953,
-      "is_nearest": false,
-    },
-    {
-      "type": "Kalyani Campus",
-      "distance": "Direct Hub",
-      "address": "KGEC Main Building, Block C, Kalyani",
-      "phone": "+91-8016222991",
-      "lat": 22.9750,
-      "lng": 88.4344,
-      "is_nearest": false,
-    },
-  ];
+  final List<Map<String, dynamic>> _savedAddresses = [];
 
   String? _currentGpsAreaName;
 
@@ -163,7 +108,9 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
   }
 
   Future<void> _fetchDbAddresses() async {
-    final dbAddresses = await ApiService.getUserAddresses();
+    final prefs = await SharedPreferences.getInstance();
+    final userPhone = prefs.getString('user_phone') ?? '';
+    final dbAddresses = await ApiService.getUserAddresses(phone: userPhone);
     final activeStore = ApiService.memoryCachedStore;
     final double? storeLat = activeStore != null ? (activeStore['latitude'] as num?)?.toDouble() : null;
     final double? storeLng = activeStore != null ? (activeStore['longitude'] as num?)?.toDouble() : null;
@@ -190,6 +137,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
 
     if (mounted) {
       setState(() {
+        _savedAddresses.clear();
         if (dbAddresses.isNotEmpty) {
           for (var addr in dbAddresses) {
             final String type = addr['custom_type_name'] != null && addr['custom_type_name'].toString().isNotEmpty
@@ -197,7 +145,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                 : (addr['address_type'] ?? 'Home');
             final String phone = addr['receiver_phone'] != null && addr['receiver_phone'].toString().isNotEmpty
                 ? "${addr['receiver_name']} (${addr['receiver_phone']})"
-                : (addr['receiver_name'] ?? 'Soumo Jit Saha');
+                : (addr['receiver_name'] ?? '');
 
             final Map<String, dynamic> converted = {
               "type": type,
@@ -210,7 +158,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
             };
 
             if (!_savedAddresses.any((a) => a['address'] == converted['address'])) {
-              _savedAddresses.insert(1, converted);
+              _savedAddresses.add(converted);
             }
           }
         }
@@ -487,10 +435,24 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                     ),
                   ),
 
-                  const SizedBox(height: 12),
-
-                  Column(
-                    children: _savedAddresses.map((addr) {
+                  if (_savedAddresses.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0XFFEBEBEB)),
+                      ),
+                      child: const Text(
+                        "No saved addresses for your account yet.\nTap '+ Add Address' above to save a new address.",
+                        style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: _savedAddresses.map((addr) {
                       final bool isNearest = addr['is_nearest'] == true;
                       return InkWell(
                         onTap: () async {
@@ -660,8 +622,8 @@ class AddAddressBottomSheet extends StatefulWidget {
 
 class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
   final TextEditingController _addressDetailsController = TextEditingController();
-  final TextEditingController _receiverNameController = TextEditingController(text: "Soumo Jit Saha");
-  final TextEditingController _receiverPhoneController = TextEditingController(text: "8016222991");
+  final TextEditingController _receiverNameController = TextEditingController();
+  final TextEditingController _receiverPhoneController = TextEditingController();
   final TextEditingController _customTypeController = TextEditingController();
   final MapController _mapController = MapController();
 
@@ -676,7 +638,20 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
   @override
   void initState() {
     super.initState();
+    _loadUserInfo();
     _fetchAndCenterLiveLocation();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? '';
+    final phone = prefs.getString('user_phone') ?? '';
+    if (mounted) {
+      setState(() {
+        _receiverNameController.text = name.isNotEmpty ? name : 'User';
+        _receiverPhoneController.text = phone.isNotEmpty ? phone : '';
+      });
+    }
   }
 
   Future<void> _fetchAndCenterLiveLocation() async {
@@ -1213,8 +1188,12 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                           ),
                         );
 
+                        final prefs = await SharedPreferences.getInstance();
+                        final userPhone = prefs.getString('user_phone') ?? _receiverPhoneController.text.trim();
+
                         // Save to backend database via API
                         await ApiService.saveUserAddress(
+                          userPhone: userPhone,
                           addressType: _selectedType,
                           customTypeName: _selectedType == "Other" ? _customTypeController.text.trim() : null,
                           addressDetails: _addressDetailsController.text.isNotEmpty

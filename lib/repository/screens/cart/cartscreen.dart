@@ -105,9 +105,11 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _fetchUserAddresses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userPhone = prefs.getString('user_phone') ?? '';
     final homeLocation = await ApiService.getUserSelectedAddress();
     final store = await ApiService.fetchSelectedStore();
-    final addresses = await ApiService.getUserAddresses();
+    final addresses = await ApiService.getUserAddresses(phone: userPhone);
 
     if (!mounted) return;
 
@@ -1569,29 +1571,8 @@ class _CartScreenState extends State<CartScreen> {
                           );
 
                           final itemsList = _cart.items.values.map((it) {
-                            int prodId = int.tryParse(it.id) ?? 1;
-                            
-                            // Dynamic string ID to backend database ID resolution by product name matching
-                            final nameLower = it.name.toLowerCase();
-                            if (nameLower.contains('panch phal') || nameLower.contains('fruits for pooja')) {
-                              prodId = 3;
-                            } else if (nameLower.contains('tomato')) {
-                              prodId = 3;
-                            } else if (nameLower.contains('atta') || nameLower.contains('potato')) {
-                              prodId = 4;
-                            } else if (nameLower.contains('oil') || nameLower.contains('mustard')) {
-                              prodId = 5;
-                            } else if (nameLower.contains('milk')) {
-                              prodId = 6;
-                            } else if (nameLower.contains('headphone')) {
-                              prodId = 7;
-                            } else if (nameLower.contains('lipstick')) {
-                              prodId = 8;
-                            } else if (nameLower.contains('gulab jamun') || nameLower.contains('bikano')) {
-                              prodId = 2;
-                            } else if (nameLower.contains('candle')) {
-                              prodId = 1;
-                            }
+                            final cleanIdStr = it.id.replaceAll(RegExp(r'^[a-zA-Z_]+'), '');
+                            int prodId = int.tryParse(cleanIdStr) ?? int.tryParse(it.id) ?? 1;
 
                             return {
                               "product_id": prodId,
@@ -1608,9 +1589,24 @@ class _CartScreenState extends State<CartScreen> {
                           final savedPhone = prefs.getString('user_phone') ?? '';
                           final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
 
+                          // Automatically persist the chosen delivery address to database under user_phone
+                          if (!_isPickupSelected && _selectedDeliveryAddress.isNotEmpty && savedPhone.isNotEmpty) {
+                            if (!_savedAddresses.any((a) => (a['address_details'] ?? '') == _selectedDeliveryAddress)) {
+                              await ApiService.saveUserAddress(
+                                userPhone: savedPhone,
+                                addressType: _selectedDeliveryTag.isNotEmpty ? _selectedDeliveryTag : "Home",
+                                addressDetails: _selectedDeliveryAddress,
+                                receiverName: savedName,
+                                receiverPhone: savedPhone,
+                                latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                                longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+                              );
+                            }
+                          }
+
                           final response = await ApiService.createOrder(
                             userName: savedName,
-                            userPhone: savedPhone.isNotEmpty ? savedPhone : "8016222991",
+                            userPhone: savedPhone,
                             deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
                             latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
                             longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
@@ -1643,11 +1639,15 @@ class _CartScreenState extends State<CartScreen> {
                                     TextButton(
                                       onPressed: () {
                                         final String ordNum = response['order_number'] ?? 'SUCCESS';
+                                        final orderData = response['order'] ?? response;
                                         Navigator.of(ctx).pop();
                                         widget.onBackTap?.call();
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
-                                            builder: (_) => OrderStatusScreen(orderNumber: ordNum),
+                                            builder: (_) => OrderStatusScreen(
+                                              orderNumber: ordNum,
+                                              initialOrderData: orderData is Map<String, dynamic> ? orderData : null,
+                                            ),
                                           ),
                                         );
                                       },

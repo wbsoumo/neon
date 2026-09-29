@@ -122,7 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // Check saved addresses database to see if current GPS matches a saved address nearby (< 1000 meters)
         String? matchedSavedAddress;
         try {
-          final dbAddresses = await ApiService.getUserAddresses();
+          final prefs = await SharedPreferences.getInstance();
+          final userPhone = prefs.getString('user_phone') ?? '';
+          final dbAddresses = await ApiService.getUserAddresses(phone: userPhone);
           double closestDist = double.infinity;
           for (var addr in dbAddresses) {
             final double? aLat = double.tryParse(addr['latitude']?.toString() ?? '');

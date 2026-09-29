@@ -346,9 +346,18 @@ class ApiService {
   }
 
   // 5. Fetch User Saved Addresses from Database
-  static Future<List<Map<String, dynamic>>> getUserAddresses({String phone = "8016222991"}) async {
+  static Future<List<Map<String, dynamic>>> getUserAddresses({String? phone}) async {
     try {
-      final Uri uri = Uri.parse(ApiConstants.userAddresses).replace(queryParameters: {'phone': phone});
+      String targetPhone = phone ?? '';
+      if (targetPhone.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        targetPhone = prefs.getString('user_phone') ?? '';
+      }
+      if (targetPhone.isEmpty) {
+        return [];
+      }
+
+      final Uri uri = Uri.parse(ApiConstants.userAddresses).replace(queryParameters: {'phone': targetPhone});
       final response = await http.get(uri).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -372,11 +381,20 @@ class ApiService {
     bool isForSomeoneElse = false,
     double latitude = 23.4126,
     double longitude = 88.4292,
-    String userPhone = "8016222991",
+    String? userPhone,
   }) async {
     try {
+      String targetPhone = userPhone ?? '';
+      if (targetPhone.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        targetPhone = prefs.getString('user_phone') ?? '';
+      }
+      if (targetPhone.isEmpty) {
+        targetPhone = receiverPhone;
+      }
+
       final body = jsonEncode({
-        "user_phone": userPhone,
+        "user_phone": targetPhone,
         "address_type": addressType,
         "custom_type_name": customTypeName,
         "address_details": addressDetails,

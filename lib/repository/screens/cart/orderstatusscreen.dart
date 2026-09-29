@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lottie/lottie.dart' hide Marker;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -55,15 +56,29 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
   }
 
   Future<void> _fetchLiveOrderStatus() async {
-    final userOrders = await ApiService.getUserOrders(phone: "8016222991");
-    if (mounted) {
-      Map<String, dynamic>? match;
-      for (var o in userOrders) {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('user_phone') ?? "8016222991";
+    List<Map<String, dynamic>> userOrders = await ApiService.getUserOrders(phone: phone);
+    
+    Map<String, dynamic>? match;
+    for (var o in userOrders) {
+      if (o['order_number'] == widget.orderNumber) {
+        match = o;
+        break;
+      }
+    }
+
+    if (match == null && phone != "8016222991") {
+      final fallbackOrders = await ApiService.getUserOrders(phone: "8016222991");
+      for (var o in fallbackOrders) {
         if (o['order_number'] == widget.orderNumber) {
           match = o;
           break;
         }
       }
+    }
+
+    if (mounted) {
       setState(() {
         if (match != null) {
           _order = match;
@@ -84,19 +99,30 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
     final String status = _order?['status']?.toString() ?? 'Pending';
     final String statusLower = status.toLowerCase();
     final String orderType = _order?['order_type']?.toString() ?? 'delivery';
-    final double grandTotal = double.tryParse(_order?['grand_total']?.toString() ?? _order?['total']?.toString() ?? '0') ?? 0.0;
-    final double subtotal = double.tryParse(_order?['subtotal']?.toString() ?? '0') ?? 0.0;
+    double subtotal = double.tryParse(_order?['subtotal']?.toString() ?? '0') ?? 0.0;
+    double grandTotal = double.tryParse(_order?['grand_total']?.toString() ?? _order?['total']?.toString() ?? '0') ?? 0.0;
     final double deliveryFee = double.tryParse(_order?['delivery_fee']?.toString() ?? _order?['delivery_charge']?.toString() ?? '0') ?? 0.0;
     final double handlingFee = double.tryParse(_order?['handling_fee']?.toString() ?? _order?['tax']?.toString() ?? '0') ?? 0.0;
     final double discount = double.tryParse(_order?['discount']?.toString() ?? _order?['coupon_discount']?.toString() ?? '0') ?? 0.0;
+    final List items = _order?['items'] as List? ?? [];
+
+    if (subtotal == 0.0 && items.isNotEmpty) {
+      for (var it in items) {
+        final double p = double.tryParse(it['price']?.toString() ?? '0') ?? 0.0;
+        final int q = int.tryParse(it['quantity']?.toString() ?? '1') ?? 1;
+        subtotal += (double.tryParse(it['total']?.toString() ?? '0') ?? (p * q));
+      }
+    }
+    if (grandTotal == 0.0 && subtotal > 0.0) {
+      grandTotal = subtotal + deliveryFee + handlingFee - discount;
+    }
+
     final String paymentMethod = _order?['payment_method']?.toString().toUpperCase() ?? 'CASH ON DELIVERY (COD)';
 
     final String createdAt = _order?['created_at']?.toString() ?? '';
     final String timeFormatted = createdAt.contains(',')
         ? createdAt.split(',').last.trim()
         : (createdAt.length > 10 ? createdAt.substring(11, 16) : 'Recently');
-
-    final List items = _order?['items'] as List? ?? [];
 
     // Calculate item total sum if subtotal column is 0
     double computedItemTotal = 0.0;
