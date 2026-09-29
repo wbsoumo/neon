@@ -38,20 +38,23 @@ class _BlinkitNavBarState extends State<BlinkitNavBar> {
   Widget build(BuildContext context) {
     final int cartCount = _cart.totalItemCount;
 
-    return Container(
-      height: 64,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Color(0XFFE0E0E0),
-            width: 0.5,
+    return SafeArea(
+      top: false,
+      bottom: true,
+      child: Container(
+        height: 56,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: Color(0XFFE0E0E0),
+              width: 0.5,
+            ),
           ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
           _buildNavItem(
             index: 0,
             label: "Home",
@@ -78,7 +81,8 @@ class _BlinkitNavBarState extends State<BlinkitNavBar> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildNavItem({

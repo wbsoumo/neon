@@ -80,7 +80,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 12,
+                bottom: 12 + MediaQuery.of(context).padding.bottom,
                 child: FloatingCartPill(
                   onViewCartTap: () {
                     setState(() {

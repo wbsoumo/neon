@@ -11,12 +11,16 @@ class ApiService {
   static const String _kCategoriesEtagKey = 'cache_categories_etag';
   static const String _kCategoriesVersionKey = 'cache_categories_version';
 
+  static const String _kSlidersCacheKey = 'cache_sliders_data';
+  static const String _kSlidersEtagKey = 'cache_sliders_etag';
+
   static const String _kProductsCacheKey = 'cache_products_data_';
   static const String _kProductsEtagKey = 'cache_products_etag_';
   static const String _kProductsVersionKey = 'cache_products_version_';
 
   static Map<String, dynamic>? _memoryCachedStore;
   static List<Map<String, dynamic>>? _memoryCachedCategories;
+  static List<Map<String, dynamic>>? _memoryCachedSliders;
 
   // Instant Sync Memory Cache Accessor
   static Map<String, dynamic>? get memoryCachedStore => _memoryCachedStore;
@@ -519,23 +523,64 @@ class ApiService {
     return 0.0;
   }
 
-  // 11. Fetch Active Promotional Sliders
-  static Future<List<Map<String, dynamic>>> fetchSliders() async {
+  // 11. Fetch Active Promotional Sliders with Local Storage Cache & ETag Check
+  static Future<List<Map<String, dynamic>>> fetchSliders({bool forceRefresh = false}) async {
+    if (!forceRefresh && _memoryCachedSliders != null && _memoryCachedSliders!.isNotEmpty) {
+      return _memoryCachedSliders!;
+    }
+
+    SharedPreferences? prefs;
+    List<Map<String, dynamic>> cachedSliders = [];
+    String? etag;
+
     try {
+      prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_kSlidersCacheKey);
+      etag = prefs.getString(_kSlidersEtagKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List list = jsonDecode(jsonStr);
+        cachedSliders = List<Map<String, dynamic>>.from(list);
+        _memoryCachedSliders = cachedSliders;
+      }
+    } catch (e) {
+      debugPrint("Error reading sliders cache: $e");
+    }
+
+    try {
+      final Map<String, String> headers = {};
+      if (!forceRefresh && etag != null && etag.isNotEmpty) {
+        headers['If-None-Match'] = etag;
+      }
+
       final response = await http.get(
         Uri.parse(ApiConstants.sliders),
+        headers: headers,
       ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 304 && cachedSliders.isNotEmpty) {
+        return cachedSliders;
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success' && data['data'] != null) {
-          return List<Map<String, dynamic>>.from(data['data']);
+          final List<Map<String, dynamic>> freshSliders = List<Map<String, dynamic>>.from(data['data']);
+          _memoryCachedSliders = freshSliders;
+          if (prefs != null) {
+            prefs.setString(_kSlidersCacheKey, jsonEncode(freshSliders));
+            final String? newEtag = response.headers['etag'];
+            if (newEtag != null) {
+              prefs.setString(_kSlidersEtagKey, newEtag);
+            }
+          }
+          return freshSliders;
         }
       }
     } catch (e) {
       debugPrint("API Error fetching sliders: $e");
     }
-    return [];
+
+    return cachedSliders;
   }
 
   // 11. Register User

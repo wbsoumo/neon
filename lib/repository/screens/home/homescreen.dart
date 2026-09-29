@@ -213,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchLiveBackendData({bool forceRefresh = false}) async {
-    // 1. Immediately fetch user wallet balance & promotional sliders
+    // 1. Immediately fetch user wallet balance & promotional sliders from local storage
     ApiService.fetchUserWallet().then((wallet) {
       if (mounted) {
         setState(() {
@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    ApiService.fetchSliders().then((slidersData) {
+    ApiService.fetchSliders(forceRefresh: forceRefresh).then((slidersData) {
       if (mounted && slidersData.isNotEmpty) {
         if (_sliders.length != slidersData.length || jsonEncode(_sliders) != jsonEncode(slidersData)) {
           setState(() {

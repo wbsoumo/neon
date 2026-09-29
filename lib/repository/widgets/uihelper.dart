@@ -6,10 +6,6 @@ class UiHelper {
   static Widget CustomImage({required String img, double? width, double? height, BoxFit fit = BoxFit.contain}) {
     String cleanUrl = img.trim();
 
-    if (cleanUrl.startsWith('/uploads/')) {
-      cleanUrl = 'https://sbmartquick.com$cleanUrl';
-    }
-
     Widget buildFallback() {
       return Image.asset(
         'assets/images/no_product.png',
@@ -30,7 +26,21 @@ class UiHelper {
       );
     }
 
+    if (cleanUrl.isEmpty) {
+      return buildFallback();
+    }
+
+    // Fix: Handle relative server upload paths (with or without leading slash)
+    if (cleanUrl.startsWith('uploads/') || cleanUrl.startsWith('/uploads/')) {
+      final path = cleanUrl.startsWith('/') ? cleanUrl : '/$cleanUrl';
+      cleanUrl = 'https://sbmartquick.com$path';
+    }
+
+    // Handle Network Images (HTTP / HTTPS)
     if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      if (cleanUrl.contains(' ')) {
+        cleanUrl = Uri.encodeFull(cleanUrl);
+      }
       return CachedNetworkImage(
         imageUrl: cleanUrl,
         width: width,
@@ -45,7 +55,7 @@ class UiHelper {
       );
     }
 
-    // Fallback mapping for asset-only references
+    // Fallback mapping for asset-only category references
     if (cleanUrl.contains('01_vegetables') || cleanUrl.contains('02_dairy') || cleanUrl.contains('03_snacks') || cleanUrl.contains('04_personal') || cleanUrl.contains('05_home') || cleanUrl.contains('06_atta') || cleanUrl.contains('07_oil') || cleanUrl.contains('08_instant') || cleanUrl.contains('09_beverages') || cleanUrl.contains('10_baby') || cleanUrl.contains('11_pet') || cleanUrl.contains('12_frozen') || cleanUrl.contains('13_bakery') || cleanUrl.contains('14_fresh') || cleanUrl.contains('15_kitchen') || cleanUrl.contains('16_organic')) {
       final String fileName = cleanUrl.replaceAll('https://sbmartquick.com/uploads/categories/', '').replaceAll('http://sbmartquick.com/uploads/categories/', '').replaceAll('https://taskbazi.site/uploads/categories/', '').replaceAll('http://taskbazi.site/uploads/categories/', '').replaceAll('/uploads/categories/', '').replaceAll('uploads/categories/', '').split('?').first.trim();
       final String cleanPath = fileName.startsWith('assets/images/') ? fileName : "assets/images/$fileName";
@@ -55,25 +65,6 @@ class UiHelper {
         height: height,
         fit: fit,
         errorBuilder: (ctx, err, st) => buildFallback(),
-      );
-    }
-
-    if (cleanUrl.isEmpty) {
-      return buildFallback();
-    }
-
-    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-      return CachedNetworkImage(
-        imageUrl: cleanUrl,
-        width: width,
-        height: height,
-        fit: fit,
-        placeholder: (context, url) => SkeletonLoader(
-          width: width ?? double.infinity,
-          height: height ?? double.infinity,
-          borderRadius: 8,
-        ),
-        errorWidget: (context, url, error) => buildFallback(),
       );
     }
 

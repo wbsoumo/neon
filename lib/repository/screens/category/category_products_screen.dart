@@ -81,12 +81,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
       if (matchIdx != -1) initialIdx = matchIdx;
     }
 
-    // Fetch products for all categories in parallel
+    // Fetch products for all categories in parallel simultaneously
+    final List<Future<List<Map<String, dynamic>>>> prodFutures = categoriesToUse.map((cat) {
+      final catId = cat['id'] is int ? cat['id'] : int.tryParse(cat['id']?.toString() ?? '');
+      return ApiService.fetchProducts(categoryId: catId);
+    }).toList();
+
+    final List<List<Map<String, dynamic>>> allProdsRaw = await Future.wait(prodFutures);
+
     final List<Map<String, dynamic>> sections = [];
     for (int i = 0; i < categoriesToUse.length; i++) {
       final cat = categoriesToUse[i];
-      final catId = cat['id'] is int ? cat['id'] : int.tryParse(cat['id']?.toString() ?? '');
-      final prodsRaw = await ApiService.fetchProducts(categoryId: catId);
+      final prodsRaw = allProdsRaw[i];
 
       List<Map<String, dynamic>> formattedProducts = [];
       if (prodsRaw.isNotEmpty) {
