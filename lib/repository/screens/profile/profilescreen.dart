@@ -5,8 +5,6 @@ import 'package:blinkit_series/repository/screens/profile/order_history_screen.d
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
-import 'package:blinkit_series/repository/screens/manager/manager_login_screen.dart';
-import 'package:blinkit_series/repository/screens/manager/manager_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -285,37 +283,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.description_outlined,
                       title: "Your prescriptions",
                       onTap: () => _navigateToDetail(context, "Your prescriptions", _buildPrescriptionsContent()),
-                    ),
-                    const Divider(height: 1, indent: 48),
-                    _buildOptionTile(
-                      icon: Icons.storefront_rounded,
-                      title: "Store Manager Partner Portal",
-                      onTap: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        final isManagerLoggedIn = prefs.getBool('is_manager_logged_in') ?? false;
-                        if (context.mounted) {
-                          if (isManagerLoggedIn) {
-                            final storeId = prefs.getInt('manager_store_id') ?? 1;
-                            final storeName = prefs.getString('manager_store_name') ?? 'Dark Store';
-                            final managerName = prefs.getString('manager_name') ?? 'Store Manager';
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ManagerDashboardScreen(
-                                  storeId: storeId,
-                                  storeName: storeName,
-                                  managerName: managerName,
-                                ),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const ManagerLoginScreen()),
-                            );
-                          }
-                        }
-                      },
                     ),
                     const SizedBox(height: 8),
                   ],
