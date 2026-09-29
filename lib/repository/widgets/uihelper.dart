@@ -33,7 +33,7 @@ class UiHelper {
     // Fix: Handle relative server upload paths (with or without leading slash)
     if (cleanUrl.startsWith('uploads/') || cleanUrl.startsWith('/uploads/')) {
       final path = cleanUrl.startsWith('/') ? cleanUrl : '/$cleanUrl';
-      cleanUrl = 'https://sbmartquick.com$path';
+      cleanUrl = 'https://admin.sbmartquick.com$path';
     }
 
     // Handle Network Images (HTTP / HTTPS)
