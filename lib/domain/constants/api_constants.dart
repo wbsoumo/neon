@@ -16,6 +16,12 @@ class ApiConstants {
   static const String userWallet = "$baseUrl/user/wallet";
   static const String registerFcmToken = "$baseUrl/user/fcm-token";
   static const String sliders = "$baseUrl/sliders";
+
+  // Store Manager App Endpoints
+  static const String managerLogin = "$baseUrl/manager/login";
+  static const String managerOrders = "$baseUrl/manager/orders";
+  static const String managerRiders = "$baseUrl/manager/riders";
+  static const String managerUpdateOrderStatus = "$baseUrl/manager/orders/update-status";
 }
 
 
