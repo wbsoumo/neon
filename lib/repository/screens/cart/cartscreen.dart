@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dotlottie_flutter/dotlottie_flutter.dart';
 import 'package:blinkit_series/domain/cart/cart_controller.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:blinkit_series/repository/widgets/uihelper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/screens/cart/couponsscreen.dart';
@@ -293,6 +295,95 @@ class _CartScreenState extends State<CartScreen> {
     }).toList();
 
     final displayRecs = filteredRecs.isNotEmpty ? filteredRecs : _defaultRecommendations.where((item) => !cartItemIds.contains(item['id'].toString())).toList();
+
+    if (cartItems.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            onPressed: () {
+              widget.onBackTap?.call();
+            },
+          ),
+          title: const Text(
+            "Cart",
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  height: MediaQuery.of(context).size.width * 0.75,
+                  child: DotLottieView(
+                    sourceType: 'url',
+                    source: 'https://lottie.host/5efe4328-eeaa-4806-8188-3e804cfe962d/QBDkMPKbvz.lottie',
+                    autoplay: true,
+                    loop: true,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Your cart is empty",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Looks like you haven't added anything to your cart yet",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      widget.onBackTap?.call();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0XFF0C831F),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.grid_view_rounded, size: 20),
+                    label: const Text(
+                      "Browse Categories",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0XFFF5F6F8),
@@ -853,18 +944,60 @@ class _CartScreenState extends State<CartScreen> {
 
                         if (cartItems.isEmpty) ...[
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
                             child: Center(
                               child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.shopping_basket_outlined, size: 48, color: Colors.grey.shade400),
-                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: 240,
+                                    height: 240,
+                                    child: DotLottieView(
+                                      sourceType: 'url',
+                                      source: 'https://lottie.host/5efe4328-eeaa-4806-8188-3e804cfe962d/QBDkMPKbvz.lottie',
+                                      autoplay: true,
+                                      loop: true,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
                                   const Text(
-                                    "Your cart is currently empty",
+                                    "Your cart is empty",
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    "Looks like you haven't added anything to your cart yet",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
                                       color: Colors.black54,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      widget.onBackTap?.call();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0XFF0C831F),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.grid_view_rounded, size: 18),
+                                    label: const Text(
+                                      "Browse Categories",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -885,17 +1018,13 @@ class _CartScreenState extends State<CartScreen> {
                                         color: const Color(0XFFF9F9F9),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: item.img.startsWith('http')
-                                          ? Image.network(
-                                              item.img,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: Color(0XFF0C831F), size: 28),
-                                            )
-                                          : Image.asset(
-                                              "assets/images/${item.img}",
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: Color(0XFF0C831F), size: 28),
-                                            ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: UiHelper.CustomImage(
+                                          img: item.img,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -1006,17 +1135,13 @@ class _CartScreenState extends State<CartScreen> {
                                       color: const Color(0XFFF9F9F9),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: img.startsWith('http')
-                                        ? Image.network(
-                                            img,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 36),
-                                          )
-                                        : Image.asset(
-                                            "assets/images/$img",
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 36),
-                                          ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: UiHelper.CustomImage(
+                                        img: img,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -1566,102 +1691,76 @@ class _CartScreenState extends State<CartScreen> {
                           final activeStore = ApiService.memoryCachedStore;
                           final int currentStoreId = activeStore?['id'] ?? 1;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(_isPickupSelected ? "Scheduling Store Pickup order..." : "Placing Cash on Delivery order...")),
+                          // Show smooth order placement dialog with pre-loaded Lottie & typing animation
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (ctx) {
+                              return _OrderPlacementProgressDialog(
+                                isPickup: _isPickupSelected,
+                                onPlaceOrderAction: () async {
+                                  final itemsList = _cart.items.values.map((it) {
+                                    final cleanIdStr = it.id.replaceAll(RegExp(r'^[a-zA-Z_]+'), '');
+                                    int prodId = int.tryParse(cleanIdStr) ?? int.tryParse(it.id) ?? 1;
+
+                                    return {
+                                      "product_id": prodId,
+                                      "name": it.name,
+                                      "price": it.price,
+                                      "quantity": it.quantity,
+                                      "total": it.price * it.quantity,
+                                    };
+                                  }).toList();
+
+                                  final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
+
+                                  final prefs = await SharedPreferences.getInstance();
+                                  final savedPhone = prefs.getString('user_phone') ?? '';
+                                  final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
+
+                                  if (!_isPickupSelected && _selectedDeliveryAddress.isNotEmpty && savedPhone.isNotEmpty) {
+                                    if (!_savedAddresses.any((a) => (a['address_details'] ?? '') == _selectedDeliveryAddress)) {
+                                      await ApiService.saveUserAddress(
+                                        userPhone: savedPhone,
+                                        addressType: _selectedDeliveryTag.isNotEmpty ? _selectedDeliveryTag : "Home",
+                                        addressDetails: _selectedDeliveryAddress,
+                                        receiverName: savedName,
+                                        receiverPhone: savedPhone,
+                                        latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                                        longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+                                      );
+                                    }
+                                  }
+
+                                  return await ApiService.createOrder(
+                                    userName: savedName,
+                                    userPhone: savedPhone,
+                                    deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
+                                    latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                                    longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+                                    items: itemsList,
+                                    storeId: currentStoreId,
+                                    paymentMethod: "Cash on Delivery",
+                                    orderType: _isPickupSelected ? "pickup" : "delivery",
+                                    pickupDate: formattedDate,
+                                    pickupTime: _selectedPickupTimeSlot,
+                                  );
+                                },
+                                onOrderSuccess: (ordNum, orderData) {
+                                  _cart.clearCart();
+                                  widget.onBackTap?.call();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => OrderStatusScreen(
+                                        orderNumber: ordNum,
+                                        initialOrderData: orderData is Map<String, dynamic> ? orderData : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           );
-
-                          final itemsList = _cart.items.values.map((it) {
-                            final cleanIdStr = it.id.replaceAll(RegExp(r'^[a-zA-Z_]+'), '');
-                            int prodId = int.tryParse(cleanIdStr) ?? int.tryParse(it.id) ?? 1;
-
-                            return {
-                              "product_id": prodId,
-                              "name": it.name,
-                              "price": it.price,
-                              "quantity": it.quantity,
-                              "total": it.price * it.quantity,
-                            };
-                          }).toList();
-
-                          final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
-
-                          final prefs = await SharedPreferences.getInstance();
-                          final savedPhone = prefs.getString('user_phone') ?? '';
-                          final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
-
-                          // Automatically persist the chosen delivery address to database under user_phone
-                          if (!_isPickupSelected && _selectedDeliveryAddress.isNotEmpty && savedPhone.isNotEmpty) {
-                            if (!_savedAddresses.any((a) => (a['address_details'] ?? '') == _selectedDeliveryAddress)) {
-                              await ApiService.saveUserAddress(
-                                userPhone: savedPhone,
-                                addressType: _selectedDeliveryTag.isNotEmpty ? _selectedDeliveryTag : "Home",
-                                addressDetails: _selectedDeliveryAddress,
-                                receiverName: savedName,
-                                receiverPhone: savedPhone,
-                                latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
-                                longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
-                              );
-                            }
-                          }
-
-                          final response = await ApiService.createOrder(
-                            userName: savedName,
-                            userPhone: savedPhone,
-                            deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
-                            latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
-                            longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
-                            items: itemsList,
-                            storeId: currentStoreId,
-                            paymentMethod: "Cash on Delivery",
-                            orderType: _isPickupSelected ? "pickup" : "delivery",
-                            pickupDate: formattedDate,
-                            pickupTime: _selectedPickupTimeSlot,
-                          );
-
-                          if (mounted) {
-                            if (response['status'] == 'success') {
-                              _cart.clearCart();
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: const Row(
-                                    children: [
-                                      Icon(Icons.check_circle, color: Color(0XFF0C831F), size: 28),
-                                      SizedBox(width: 8),
-                                      Text("Order Placed!"),
-                                    ],
-                                  ),
-                                  content: Text(
-                                    "Order #${response['order_number'] ?? 'SUCCESS'} (Cash on Delivery) has been placed successfully!\n\nPay cash when your delivery partner arrives.",
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        final String ordNum = response['order_number'] ?? 'SUCCESS';
-                                        final orderData = response['order'] ?? response;
-                                        Navigator.of(ctx).pop();
-                                        widget.onBackTap?.call();
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => OrderStatusScreen(
-                                              orderNumber: ordNum,
-                                              initialOrderData: orderData is Map<String, dynamic> ? orderData : null,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text("Track Order", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0XFF0C831F))),
-                                    )
-                                  ],
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("Order Failed: ${response['message'] ?? 'Error'}")),
-                              );
-                            }
-                          }
                         },
                         child: Container(
                           height: 46,
@@ -1720,6 +1819,184 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OrderPlacementProgressDialog extends StatefulWidget {
+  final bool isPickup;
+  final Future<Map<String, dynamic>> Function() onPlaceOrderAction;
+  final Function(String orderNumber, dynamic orderData) onOrderSuccess;
+
+  const _OrderPlacementProgressDialog({
+    required this.isPickup,
+    required this.onPlaceOrderAction,
+    required this.onOrderSuccess,
+  });
+
+  @override
+  State<_OrderPlacementProgressDialog> createState() => _OrderPlacementProgressDialogState();
+}
+
+class _OrderPlacementProgressDialogState extends State<_OrderPlacementProgressDialog> {
+  String _typedStatusText = "";
+  bool _isSuccess = false;
+  bool _isError = false;
+  String _errorMessage = "";
+  String _orderNumber = "";
+  dynamic _orderData;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPlacementFlow();
+  }
+
+  Future<void> _typeText(String targetText) async {
+    for (int i = 0; i <= targetText.length; i++) {
+      if (!mounted) return;
+      setState(() {
+        _typedStatusText = targetText.substring(0, i);
+      });
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+  }
+
+  Future<void> _startPlacementFlow() async {
+    await _typeText("Connecting to store...");
+    if (!mounted) return;
+
+    await Future.delayed(const Duration(milliseconds: 200));
+    _typeText(widget.isPickup ? "Scheduling Store Pickup order..." : "Placing Cash on Delivery order...");
+
+    try {
+      final response = await widget.onPlaceOrderAction();
+      if (!mounted) return;
+
+      if (response['status'] == 'success') {
+        _orderNumber = response['order_number'] ?? 'SUCCESS';
+        _orderData = response['order'] ?? response;
+
+        await _typeText("Order Placed Successfully! 🎉");
+        if (!mounted) return;
+
+        setState(() {
+          _isSuccess = true;
+        });
+      } else {
+        _errorMessage = response['message'] ?? 'Failed to place order';
+        await _typeText("Order Failed ❌");
+        if (!mounted) return;
+
+        setState(() {
+          _isError = true;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _errorMessage = e.toString();
+      await _typeText("Connection error occurred ❌");
+      setState(() {
+        _isError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      elevation: 10,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Pre-loaded Lottie Animation View (Zero Latency)
+            SizedBox(
+              width: 180,
+              height: 180,
+              child: DotLottieView(
+                sourceType: 'url',
+                source: 'https://lottie.host/e8eba8f2-b526-4cac-b154-847000f58171/8XQZX2jiXF.json',
+                autoplay: true,
+                loop: true,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Typing Status Animation Text
+            Container(
+              height: 48,
+              alignment: Alignment.center,
+              child: Text(
+                _typedStatusText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _isError ? Colors.redAccent : (_isSuccess ? const Color(0XFF0C831F) : Colors.black87),
+                ),
+              ),
+            ),
+
+            if (_isError && _errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            if (_isSuccess)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onOrderSuccess(_orderNumber, _orderData);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0XFF0C831F),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.location_searching_rounded, size: 20),
+                  label: const Text(
+                    "Track Order",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              )
+            else if (_isError)
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Close", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+                ),
+              )
+            else
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0XFF0C831F)),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

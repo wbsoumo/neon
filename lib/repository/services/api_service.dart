@@ -337,7 +337,7 @@ class ApiService {
         Uri.parse(ApiConstants.createOrder),
         headers: {"Content-Type": "application/json"},
         body: body,
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(const Duration(seconds: 25));
 
       final data = jsonDecode(response.body);
       return data;
@@ -657,7 +657,12 @@ class ApiService {
   static Future<void> registerFcmToken(String fcmToken) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final phone = prefs.getString('user_phone') ?? '8016222991';
+      final phone = prefs.getString('user_phone') ?? '';
+
+      if (phone.isEmpty) {
+        debugPrint("Skipping FCM registration: user is guest / not logged in.");
+        return;
+      }
 
       await http.post(
         Uri.parse(ApiConstants.registerFcmToken),
