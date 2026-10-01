@@ -5,10 +5,12 @@
     --neon-sidebar-bg: #0d1424;
     --neon-card-bg: #131b2e;
     --neon-card-hover: #17223b;
-    --neon-border: rgba(0, 242, 254, 0.15);
+    --neon-border: rgba(255, 0, 84, 0.2);
+    --neon-pink: #ff0054;
+    --neon-pink-gradient: linear-gradient(135deg, #ff0054 0%, #ff0077 100%);
     --neon-cyan: #00f2fe;
     --neon-blue: #4facfe;
-    --neon-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+    --neon-gradient: linear-gradient(135deg, #ff0054 0%, #ff0077 100%);
     --neon-text: #f8fafc;
     --neon-text-muted: #94a3b8;
     --neon-success: #10b981;
@@ -29,22 +31,22 @@ body, html {
 /* Header Navbar */
 .main-header.navbar {
     background-color: #090d16 !important;
-    border-bottom: 1px solid rgba(0, 242, 254, 0.2) !important;
+    border-bottom: 2px solid var(--neon-pink) !important;
 }
 .main-header.navbar .nav-link {
     color: #cbd5e1 !important;
 }
 .main-header.navbar .nav-link:hover {
-    color: var(--neon-cyan) !important;
+    color: var(--neon-pink) !important;
 }
 
 /* Sidebar */
 .main-sidebar {
     background-color: var(--neon-sidebar-bg) !important;
-    border-right: 1px solid rgba(0, 242, 254, 0.1) !important;
+    border-right: 1px solid rgba(255, 0, 84, 0.15) !important;
 }
 .brand-link {
-    border-bottom: 1px solid rgba(0, 242, 254, 0.2) !important;
+    border-bottom: 1px solid rgba(255, 0, 84, 0.2) !important;
     background-color: var(--neon-sidebar-bg) !important;
     display: flex;
     align-items: center;
@@ -60,21 +62,21 @@ body, html {
 
 /* Menu Items */
 .sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active {
-    background: var(--neon-gradient) !important;
-    color: #0b0f19 !important;
+    background: var(--neon-pink-gradient) !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
-    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 0, 84, 0.4);
     border-radius: 8px;
 }
 .sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active .nav-icon {
-    color: #0b0f19 !important;
+    color: #ffffff !important;
 }
 .sidebar a {
     color: #94a3b8 !important;
     font-weight: 500;
 }
 .sidebar a:hover {
-    color: var(--neon-cyan) !important;
+    color: var(--neon-pink) !important;
 }
 .nav-header {
     color: #64748b !important;
@@ -105,7 +107,7 @@ body, html {
 }
 .table thead th {
     border-bottom: 2px solid var(--neon-border) !important;
-    color: var(--neon-cyan) !important;
+    color: var(--neon-pink) !important;
     font-weight: 700;
     text-transform: uppercase;
     font-size: 0.75rem;
@@ -122,30 +124,31 @@ body, html {
 /* Forms & Inputs */
 .form-control, .custom-select, select {
     background-color: #080c14 !important;
-    border: 1px solid rgba(0, 242, 254, 0.25) !important;
+    border: 1px solid rgba(255, 0, 84, 0.25) !important;
     color: #ffffff !important;
     border-radius: 8px !important;
 }
 .form-control:focus {
-    border-color: var(--neon-cyan) !important;
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.3) !important;
+    border-color: var(--neon-pink) !important;
+    box-shadow: 0 0 10px rgba(255, 0, 84, 0.35) !important;
     background-color: #0c121f !important;
     color: #ffffff !important;
 }
 
 /* Buttons */
 .btn-primary {
-    background: var(--neon-gradient) !important;
+    background: var(--neon-pink-gradient) !important;
     border: none !important;
-    color: #0b0f19 !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
     border-radius: 8px !important;
-    box-shadow: 0 4px 12px rgba(0, 242, 254, 0.25);
+    box-shadow: 0 4px 15px rgba(255, 0, 84, 0.35);
     transition: all 0.2s ease;
 }
 .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 242, 254, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 0, 84, 0.5);
+    color: #ffffff !important;
 }
 .btn-success {
     background: linear-gradient(135deg, #10b981, #059669) !important;
@@ -166,8 +169,8 @@ body, html {
 
 /* Stat KPI boxes */
 .small-box.brand-navy {
-    background: linear-gradient(135deg, #0d1b3e, #13275c) !important;
-    border: 1px solid rgba(0, 242, 254, 0.2) !important;
+    background: linear-gradient(135deg, #ff0054 0%, #ff0077 100%) !important;
+    border: 1px solid rgba(255, 0, 84, 0.3) !important;
 }
 .small-box.brand-gold {
     background: linear-gradient(135deg, #d97706, #f59e0b) !important;
