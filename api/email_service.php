@@ -5,7 +5,10 @@
  */
 
 require_once __DIR__ . '/db_helper.php';
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+$autoload_file = dirname(__DIR__) . '/vendor/autoload.php';
+if (file_exists($autoload_file)) {
+    require_once $autoload_file;
+}
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -66,6 +69,13 @@ class EmailService {
             return [
                 'success' => false,
                 'message' => 'SMTP settings not found in database.'
+            ];
+        }
+
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            return [
+                'success' => false,
+                'message' => 'PHPMailer vendor library is not installed.'
             ];
         }
 
