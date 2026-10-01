@@ -416,10 +416,32 @@ function get_db_connection() {
             $pdo->exec("ALTER TABLE applications ADD COLUMN tx_failed_email_template TEXT NULL");
         }
 
+        // Ensure transactions table exists before running column check
+        $pdo->exec("CREATE TABLE IF NOT EXISTS transactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            transaction_id VARCHAR(50) UNIQUE NOT NULL,
+            sender_app_id VARCHAR(50) NOT NULL,
+            recipient_account VARCHAR(50) NOT NULL,
+            amount DECIMAL(15,2) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            utr_id VARCHAR(50) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(50) DEFAULT 'SUCCESS',
+            recipient_name VARCHAR(100) NULL,
+            ifsc_code VARCHAR(20) NULL,
+            provider VARCHAR(50) NULL,
+            status_details TEXT NULL,
+            remarks TEXT NULL,
+            INDEX idx_txn_sender (sender_app_id),
+            INDEX idx_txn_utr (utr_id)
+        ) ENGINE=InnoDB;");
+
         try {
             $pdo->query("SELECT remarks FROM transactions LIMIT 1");
         } catch (PDOException $e) {
-            $pdo->exec("ALTER TABLE transactions ADD COLUMN remarks TEXT NULL");
+            try {
+                $pdo->exec("ALTER TABLE transactions ADD COLUMN remarks TEXT NULL");
+            } catch (PDOException $ex) {}
         }
 
         return $pdo;
