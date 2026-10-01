@@ -6,7 +6,11 @@ import '../models/transaction_model.dart';
 class ApiService {
   static const String baseUrl = "http://neonfinswiss.world/api";
 
-  // Login with Email or Mobile + Password (Live Server API)
+  // ==========================================
+  // 1. AUTHENTICATION (STRICT LIVE API ONLY)
+  // ==========================================
+
+  // Login with Mobile/Email & Password against live MySQL database
   static Future<Map<String, dynamic>> loginWithCredentials(String identity, String password) async {
     try {
       final response = await http.post(
@@ -18,42 +22,109 @@ class ApiService {
           "username": identity,
           "password": password,
         },
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200 || response.statusCode == 401) {
-        final data = json.decode(response.body);
-        return data;
-      }
+      final data = json.decode(response.body);
+      return data;
     } catch (e) {
-      // Return error description if server un-reachable
+      return {
+        "success": false,
+        "message": "Failed to connect to backend server ($baseUrl). Please check internet."
+      };
     }
-
-    return {
-      "success": false,
-      "message": "Server connection error. Please check your internet connection."
-    };
   }
 
-  // Quick Mobile & MPIN Login
+  // Login with Mobile & 6-Digit MPIN
   static Future<Map<String, dynamic>> loginWithPin(String phone, String pin) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/login_with_pin.php"),
         body: {"phone": phone, "pin": pin},
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
-      final data = json.decode(response.body);
-      if (response.statusCode == 200) return data;
-      return data;
-    } catch (e) {}
-
-    return {
-      "success": false,
-      "message": "Connection error"
-    };
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Network error during MPIN verification."
+      };
+    }
   }
 
-  // Fetch Live Transactions History
+  // Register New Account
+  static Future<Map<String, dynamic>> registerUser({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String password,
+    required String address,
+    required String nationalId,
+    required String accountType,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/register.php"),
+        body: {
+          "full_name": fullName,
+          "email": email,
+          "phone": phone,
+          "password": password,
+          "address": address,
+          "national_id": nationalId,
+          "aadhaar_number": nationalId,
+          "account_type": accountType,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Server error while creating account."
+      };
+    }
+  }
+
+  // ==========================================
+  // 2. USER DETAILS & BALANCE (STRICT LIVE API)
+  // ==========================================
+
+  static Future<UserModel?> getUserDetails(String appId) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/get_user_details.php?app_id=$appId"),
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['user'] != null) {
+          return UserModel.fromJson(data['user']);
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // Update Profile Details
+  static Future<Map<String, dynamic>> updateProfile(String appId, Map<String, String> updateFields) async {
+    try {
+      final bodyMap = {"app_id": appId, ...updateFields};
+      final response = await http.post(
+        Uri.parse("$baseUrl/update_profile.php"),
+        body: bodyMap,
+      ).timeout(const Duration(seconds: 8));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to update profile details"};
+    }
+  }
+
+  // ==========================================
+  // 3. TRANSACTIONS & BENEFICIARIES (STRICT LIVE API)
+  // ==========================================
+
+  // Get Live Transactions from Database
   static Future<List<TransactionModel>> getTransactions(String appId) async {
     try {
       final response = await http.get(
@@ -68,11 +139,10 @@ class ApiService {
         }
       }
     } catch (e) {}
-
     return [];
   }
 
-  // Fetch Saved Beneficiaries List
+  // Get Live Beneficiaries List
   static Future<List<Map<String, dynamic>>> getBeneficiaries(String appId) async {
     try {
       final response = await http.get(
@@ -86,11 +156,10 @@ class ApiService {
         }
       }
     } catch (e) {}
-
     return [];
   }
 
-  // Add Beneficiary (Same Bank / Other Bank + IFSC)
+  // Add Beneficiary to Database
   static Future<Map<String, dynamic>> addBeneficiary({
     required String appId,
     required String name,
@@ -107,26 +176,26 @@ class ApiService {
         Uri.parse("$baseUrl/add_beneficiary.php"),
         body: {
           "app_id": appId,
+          "type": ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK",
           "beneficiary_name": name,
           "beneficiary_account_number": accountNumber,
           "ifsc_code": ifsc,
-          "bank_name": bankName,
-          "type": ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK",
           "nickname": nickname,
           "phone": phone,
           "email": email,
         },
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
       return json.decode(response.body);
-    } catch (e) {}
-    return {
-      "success": false,
-      "message": "Failed to connect to backend server.",
-    };
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Network error while saving beneficiary.",
+      };
+    }
   }
 
-  // Execute Instant P2P Transfer / Payout
+  // Execute P2P Transfer & Deduct Balance in Database
   static Future<Map<String, dynamic>> sendP2P({
     required String senderAppId,
     required String recipientAccount,
@@ -142,14 +211,41 @@ class ApiService {
           "amount": amount.toString(),
           "mpin": mpin,
         },
+      ).timeout(const Duration(seconds: 10));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Transfer error. Please check server status.",
+      };
+    }
+  }
+
+  // ==========================================
+  // 4. STATEMENTS & COMPLIANCE
+  // ==========================================
+
+  static Future<Map<String, dynamic>> requestStatement({
+    required String appId,
+    required String startDate,
+    required String endDate,
+    required String format,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/request_statement.php"),
+        body: {
+          "app_id": appId,
+          "start_date": startDate,
+          "end_date": endDate,
+          "format": format
+        },
       ).timeout(const Duration(seconds: 8));
 
       return json.decode(response.body);
-    } catch (e) {}
-
-    return {
-      "success": false,
-      "message": "Transfer failed. Server connection error.",
-    };
+    } catch (e) {
+      return {"success": false, "message": "Failed to request statement."};
+    }
   }
 }
