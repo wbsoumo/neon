@@ -888,14 +888,17 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         }
 
         function changeStep(delta) {
-            if (delta === 1 && !validateCurrentStep()) return;
+            if (delta === 1) {
+                if (!validateCurrentStep()) return;
+                if (currentStep === 4) {
+                    submitForm();
+                    return;
+                }
+            }
 
             currentStep += delta;
             if (currentStep < 1) currentStep = 1;
-            if (currentStep > 4) {
-                submitForm();
-                return;
-            }
+            if (currentStep > 4) currentStep = 4;
 
             // Update UI Sections
             document.querySelectorAll('.form-section').forEach((s, idx) => {
@@ -905,13 +908,20 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             // Update Stepper Nodes
             for (let i = 1; i <= 4; i++) {
                 const node = document.getElementById(`node${i}`);
-                if (i < currentStep) {
-                    node.className = 'step-node completed';
-                } else if (i === currentStep) {
-                    node.className = 'step-node active';
-                } else {
-                    node.className = 'step-node';
+                if (node) {
+                    if (i < currentStep) {
+                        node.className = 'step-node completed';
+                    } else if (i === currentStep) {
+                        node.className = 'step-node active';
+                    } else {
+                        node.className = 'step-node';
+                    }
                 }
+            }
+
+            // Ensure canvas has correct width when entering Step 4
+            if (currentStep === 4) {
+                setTimeout(resizeCanvas, 60);
             }
 
             // Update Footer Buttons
@@ -926,11 +936,58 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
 
         function validateCurrentStep() {
             const currentSection = document.getElementById(`section${currentStep}`);
+            if (!currentSection) return true;
+
+            // Dedicated validation for Step 4
+            if (currentStep === 4) {
+                const sig = document.getElementById('signature_data')?.value;
+                if (!sig || sig.trim() === '') {
+                    alert('Please draw your digital signature on the signature pad.');
+                    return false;
+                }
+                const terms = document.getElementById('termsCheck');
+                if (!terms || !terms.checked) {
+                    alert('Please accept the Terms of Service to proceed.');
+                    return false;
+                }
+                return true;
+            }
+
             const inputs = currentSection.querySelectorAll('input[required], select[required]');
             for (let input of inputs) {
+                if (input.type === 'hidden') {
+                    if (!input.value || input.value.trim() === '') {
+                        if (input.id === 'portrait_data') {
+                            alert('Please capture or upload your Live Selfie / Portrait Photo.');
+                        } else if (input.id === 'doc_pan_data') {
+                            alert('Please upload your National ID / Passport Document.');
+                        } else if (input.id === 'doc_aadhaar_data') {
+                            alert('Please upload your Proof of Address.');
+                        } else {
+                            alert('Please complete all required fields in this step.');
+                        }
+                        return false;
+                    }
+                    continue;
+                }
+
+                if (input.type === 'checkbox') {
+                    if (!input.checked) {
+                        alert('Please check the required agreement box.');
+                        return false;
+                    }
+                    continue;
+                }
+
                 if (!input.value || input.value.trim() === '') {
-                    input.focus();
-                    alert('Please complete the required field: ' + (input.labels[0]?.innerText || input.name));
+                    try { input.focus(); } catch (e) {}
+                    let label = '';
+                    if (input.labels && input.labels.length > 0) {
+                        label = input.labels[0].innerText.replace('*', '').trim();
+                    } else {
+                        label = input.getAttribute('placeholder') || input.name;
+                    }
+                    alert('Please complete the required field: ' + label);
                     return false;
                 }
             }
@@ -961,13 +1018,29 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         let drawing = false;
 
         function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
+            const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+            const targetWidth = parentWidth > 50 ? parentWidth : (window.innerWidth > 600 ? 580 : 320);
+
+            // Preserve canvas content across resize if already drawn
+            const prevData = canvas.toDataURL();
+            const hadDrawing = document.getElementById('signature_data').value !== '';
+
+            canvas.width = targetWidth;
             canvas.height = 140;
             ctx.lineWidth = 2.5;
             ctx.lineCap = 'round';
             ctx.strokeStyle = '#0f172a';
+
+            if (hadDrawing) {
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = prevData;
+            }
         }
         window.addEventListener('resize', resizeCanvas);
+        // Initial setup
         resizeCanvas();
 
         function getPos(e) {
@@ -980,8 +1053,8 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); });
         canvas.addEventListener('mousemove', (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); updateSigInput(); });
         canvas.addEventListener('mouseup', () => drawing = false);
-        canvas.addEventListener('touchstart', (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); });
-        canvas.addEventListener('touchmove', (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); updateSigInput(); });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); updateSigInput(); }, { passive: false });
         canvas.addEventListener('touchend', () => drawing = false);
 
         function updateSigInput() {
@@ -995,22 +1068,45 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
 
         // AJAX Form Submission
         function submitForm() {
-            if (!document.getElementById('termsCheck').checked) {
+            const terms = document.getElementById('termsCheck');
+            if (!terms || !terms.checked) {
                 alert('Please accept the Terms of Service to proceed.');
                 return;
             }
-            if (!document.getElementById('signature_data').value) {
-                alert('Please draw your signature before submitting.');
+            const sig = document.getElementById('signature_data')?.value;
+            if (!sig || sig.trim() === '') {
+                alert('Please draw your digital signature before submitting.');
                 return;
             }
 
-            const formData = new FormData(document.getElementById('neonOnboardForm'));
+            const btnNext = document.getElementById('btnNext');
+            if (btnNext) {
+                btnNext.disabled = true;
+                btnNext.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+            }
+
+            const form = document.getElementById('neonOnboardForm');
+            const formData = new FormData(form);
+
+            // Ensure national_id maps to aadhaar_number for backend compatibility
+            const nationalId = document.getElementById('national_id')?.value;
+            if (nationalId && !formData.get('aadhaar_number')) {
+                formData.append('aadhaar_number', nationalId);
+            }
 
             fetch('api/submit.php', {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.json())
+            .then(async res => {
+                const text = await res.text();
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Non-JSON response from server:', text);
+                    throw new Error('Server returned unexpected output: ' + text.substring(0, 100));
+                }
+            })
             .then(data => {
                 if (data.success || data.app_id) {
                     const appId = data.app_id || 'FR-' + Math.floor(100000 + Math.random() * 900000);
@@ -1018,14 +1114,19 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
                     document.getElementById('successModal').style.display = 'flex';
                 } else {
                     alert(data.message || 'Submission failed. Please check form details.');
+                    if (btnNext) {
+                        btnNext.disabled = false;
+                        btnNext.innerHTML = `<span>Submit Application</span> <i class="fa-solid fa-paper-plane"></i>`;
+                    }
                 }
             })
             .catch(err => {
-                console.error(err);
-                // Fallback display if mock API response succeeds
-                const appId = 'FR-' + Math.floor(100000 + Math.random() * 900000);
-                document.getElementById('modalAppId').innerText = appId;
-                document.getElementById('successModal').style.display = 'flex';
+                console.error('Submission error:', err);
+                alert('Submission could not be completed: ' + err.message);
+                if (btnNext) {
+                    btnNext.disabled = false;
+                    btnNext.innerHTML = `<span>Submit Application</span> <i class="fa-solid fa-paper-plane"></i>`;
+                }
             });
         }
     </script>

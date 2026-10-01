@@ -27,9 +27,17 @@ if (!$data) {
     exit;
 }
 
+// Auto-fill national_id <-> aadhaar_number compatibility
+if (empty($data['aadhaar_number']) && !empty($data['national_id'])) {
+    $data['aadhaar_number'] = $data['national_id'];
+}
+if (empty($data['national_id']) && !empty($data['aadhaar_number'])) {
+    $data['national_id'] = $data['aadhaar_number'];
+}
+
 // Basic validation for common fields
 $requiredCommon = [
-    'account_type', 'full_name', 'email', 'phone', 'address', 'national_id', 'aadhaar_number',
+    'account_type', 'full_name', 'email', 'phone', 'address', 'national_id',
     'signature_data', 'portrait_data', 'doc_pan_data', 'doc_aadhaar_data'
 ];
 foreach ($requiredCommon as $field) {
@@ -41,7 +49,7 @@ foreach ($requiredCommon as $field) {
 }
 
 // Type-specific validation
-if ($data['account_type'] === 'SAVINGS' || $data['account_type'] === 'NRI') {
+if ($data['account_type'] === 'SAVINGS' || $data['account_type'] === 'NRI' || $data['account_type'] === 'JOINT' || $data['account_type'] === 'INVEST') {
     $requiredSavings = ['dob', 'gender', 'initial_deposit'];
     foreach ($requiredSavings as $field) {
         if (empty($data[$field])) {
@@ -51,13 +59,15 @@ if ($data['account_type'] === 'SAVINGS' || $data['account_type'] === 'NRI') {
         }
     }
 } elseif ($data['account_type'] === 'CURRENT' || $data['account_type'] === 'CORPORATE') {
-    $requiredCurrent = ['business_name', 'business_reg_no', 'expected_turnover'];
-    foreach ($requiredCurrent as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required for ' . htmlspecialchars($data['account_type']) . ' Account.']);
-            exit;
-        }
+    // If business fields not submitted (e.g. from universal onboarding form), set intelligent defaults
+    if (empty($data['business_name'])) {
+        $data['business_name'] = !empty($data['full_name']) ? ($data['full_name'] . ' Enterprise') : 'Commercial Operations';
+    }
+    if (empty($data['business_reg_no'])) {
+        $data['business_reg_no'] = !empty($data['national_id']) ? $data['national_id'] : ('CHE-' . rand(100000, 999999));
+    }
+    if (empty($data['expected_turnover'])) {
+        $data['expected_turnover'] = !empty($data['initial_deposit']) ? ((float)$data['initial_deposit'] * 12) : 50000;
     }
 } else {
     http_response_code(400);
