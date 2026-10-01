@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "380807068961",
+    "project_id": "finance-ea819",
+    "storage_bucket": "finance-ea819.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380807068961:android:7e8e7e5cb609df3eddd260",
+        "android_client_info": {
+          "package_name": "com.my.deccanfinance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCENK98-JLJZdlCOSbdZVSXsxwSk9L7jho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

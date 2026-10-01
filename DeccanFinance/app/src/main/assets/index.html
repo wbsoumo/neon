@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deccan Finance Limited</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-dark: #0e1c36;
+            --navy-light: #1a365d;
+            --gold: #e6b800;
+            --white: #ffffff;
+            --green: #27c93f;
+            --gray: #f4f7f6;
+            --text-dark: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--gray);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            position: relative;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        /* 1. SPLASH SCREEN */
+        #splash-view {
+            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy-light) 100%);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .logo-container {
+            text-align: center;
+            animation: fadeIn 1.5s ease-in-out forwards;
+        }
+
+        .logo-img {
+            height: 80px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite ease-in-out 1.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* 2. LOGIN SCREEN */
+        #login-view {
+            background: linear-gradient(135deg, rgba(14, 28, 54, 0.8) 0%, rgba(26, 54, 93, 0.8) 100%), url('img/login_bg.jpg');
+            background-size: cover;
+            background-position: center;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: center;
+        }
+
+        .login-logo {
+            height: 45px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--navy-dark);
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--navy-light);
+        }
+
+        .primary-btn {
+            background-color: var(--gold);
+            color: var(--navy-dark);
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .primary-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .action-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--navy-light);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* 3. REGISTER SCREEN */
+        #register-view {
+            background-color: var(--white);
+            padding: 20px;
+        }
+
+        .step-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 0 10px;
+            position: relative;
+        }
+
+        .step-progress::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background: #eee;
+            z-index: 1;
+        }
+
+        .step-item {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 10px;
+            color: #888;
+            width: 60px;
+        }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            background: #eee;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #888;
+            transition: all 0.3s;
+        }
+
+        .step-item.active .step-circle {
+            background: var(--navy-light);
+            color: var(--gold);
+        }
+
+        .step-item.completed .step-circle {
+            background: var(--green);
+            color: white;
+        }
+
+        .register-step {
+            display: none;
+            flex-direction: column;
+            height: calc(100% - 120px);
+            overflow-y: auto;
+        }
+
+        .register-step.active {
+            display: flex;
+        }
+
+        .step-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--navy-dark);
+            margin-bottom: 20px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+
+        .secondary-btn {
+            background: #eee;
+            color: #333;
+            border: none;
+            padding: 12px;
+            flex: 1;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        /* Signature Canvas */
+        #signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            width: 100%;
+            height: 150px;
+            background: #fafafa;
+            touch-action: none;
+        }
+
+        /* Camera Feed */
+        .camera-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #camera-feed {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid var(--navy-light);
+            object-fit: cover;
+            background: #333;
+        }
+
+        /* 4. DASHBOARD */
+        #dashboard-view {
+            background-color: #f0f4f8;
+        }
+
+        .dash-header {
+            background: linear-gradient(to right, var(--navy-dark), var(--navy-light));
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .dash-header img { height: 35px; }
+
+        .dash-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 90px;
+        }
+
+        .welcome-section {
+            margin-bottom: 25px;
+        }
+
+        .welcome-section h2 {
+            color: var(--navy-dark);
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .welcome-section p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #1a365d 0%, #2d5a9e 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 20px rgba(26, 54, 93, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .balance-amount {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .status-pending { background: var(--gold); color: var(--navy-dark); }
+        .status-approved { background: var(--green); color: white; }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-icon {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            font-size: 20px;
+            color: var(--navy-light);
+        }
+
+        .action-label {
+            font-size: 11px;
+            color: var(--navy-dark);
+            font-weight: 500;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--navy-dark);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-all {
+            font-size: 12px;
+            color: var(--navy-light);
+            font-weight: normal;
+        }
+
+        .transaction-card {
+            background: white;
+            border-radius: 20px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .transaction-item:last-child { border-bottom: none; }
+
+        /* Footer Nav */
+        .footer-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            border-top: 1px solid #eee;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .nav-item.active {
+            color: var(--navy-light);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(14, 28, 54, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-direction: column;
+            z-index: 2000;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- 1. SPLASH SCREEN -->
+    <div id="splash-view" class="view active">
+        <div class="logo-container">
+            <img src="img/logo.png" alt="Deccan Finance" class="logo-img" onerror="this.src='https://via.placeholder.com/150?text=Deccan+Finance'">
+            <h1 style="color:white; font-size: 24px;">Deccan Finance</h1>
+        </div>
+    </div>
+
+    <!-- 2. LOGIN SCREEN -->
+    <div id="login-view" class="view">
+        <div class="glass-card">
+            <img src="img/logo.png" alt="Logo" class="login-logo" onerror="this.src='https://via.placeholder.com/150?text=Deccan+Finance'">
+            <div class="form-group">
+                <label>Mobile Number</label>
+                <input type="tel" id="login-mobile" placeholder="Enter 10 digit number" maxlength="10">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Enter password">
+            </div>
+            <button class="primary-btn" onclick="handleLogin()">LOGIN</button>
+            <div class="action-link" onclick="showView('register-view')">Don't have an account? Register / Open Account</div>
+        </div>
+    </div>
+
+    <!-- 3. REGISTER SCREEN -->
+    <div id="register-view" class="view">
+        <div class="step-progress">
+            <div class="step-item active" id="step-marker-1">
+                <div class="step-circle">1</div>
+                <span>Personal</span>
+            </div>
+            <div class="step-item" id="step-marker-2">
+                <div class="step-circle">2</div>
+                <span>Business</span>
+            </div>
+            <div class="step-item" id="step-marker-3">
+                <div class="step-circle">3</div>
+                <span>Final</span>
+            </div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div id="reg-step-1" class="register-step active">
+            <h2 class="step-title">Personal Details</h2>
+            <div class="form-group">
+                <label>Account Type</label>
+                <select id="reg-account-type" onchange="toggleBusinessFields()">
+                    <option value="Savings Account">Savings Account</option>
+                    <option value="Current Account">Current Account</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="reg-name" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="reg-email" placeholder="john@example.com">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="reg-phone" placeholder="10 digit number" maxlength="10">
+            </div>
+            <div class="btn-row">
+                <button class="secondary-btn" onclick="showView('login-view')">Back</button>
+                <button class="primary-btn" onclick="nextStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div id="reg-step-2" class="register-step">
+            <h2 class="step-title">KYC & Business</h2>
+            <div class="form-group">
+                <label>Residential Address</label>
+                <textarea id="reg-address" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>PAN Number</label>
+                <input type="text" id="reg-pan" placeholder="ABCDE1234F">
+            </div>
+            <div id="business-fields" style="display:none;">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" id="reg-biz-name">
+                </div>
+                <div class="form-group">
+                    <label>Expected Turnover</label>
+                    <input type="number" id="reg-biz-turnover">
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="secondary-btn" onclick="nextStep(1)">Back</button>
+                <button class="primary-btn" onclick="nextStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div id="reg-step-3" class="register-step">
+            <h2 class="step-title">Biometrics & Docs</h2>
+            <div class="camera-container">
+                <video id="camera-feed" autoplay playsinline></video>
+                <button class="secondary-btn" style="margin-top: 10px;" onclick="captureFace()">Capture Face</button>
+            </div>
+            <div class="form-group">
+                <label>Signature</label>
+                <canvas id="signature-pad"></canvas>
+                <button class="secondary-btn" style="margin-top: 5px; font-size: 12px; padding: 5px;" onclick="clearSignature()">Clear Signature</button>
+            </div>
+            <div class="form-group">
+                <label>PAN Card Image</label>
+                <input type="file" accept="image/*">
+            </div>
+            <div class="btn-row">
+                <button class="secondary-btn" onclick="nextStep(2)">Back</button>
+                <button class="primary-btn" onclick="handleRegister()">SUBMIT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. DASHBOARD -->
+    <div id="dashboard-view" class="view">
+        <header class="dash-header">
+            <img src="img/logo.png" alt="Logo" onerror="this.src='https://via.placeholder.com/150?text=DF'">
+            <div style="font-size: 20px;" onclick="showView('login-view')">🔔</div>
+        </header>
+        <div class="dash-content">
+            <div class="welcome-section">
+                <h2 id="dash-welcome">Hello, John!</h2>
+                <p>Ready to manage your finances?</p>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">Total Balance</div>
+                <div class="balance-amount">₹ 45,250.00</div>
+                <div style="font-size: 12px; margin-bottom: 15px; opacity: 0.8;">Account ID: <span id="dash-app-id">DF-782941</span></div>
+                <span class="status-badge status-approved" id="dash-status">Status: Approved</span>
+            </div>
+
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-actions">
+                <div class="action-item">
+                    <div class="action-icon">📤</div>
+                    <div class="action-label">Send</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon">📥</div>
+                    <div class="action-label">Receive</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon">📜</div>
+                    <div class="action-label">Bills</div>
+                </div>
+                <div class="action-item">
+                    <div class="action-icon">🏦</div>
+                    <div class="action-label">Loans</div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                Recent Transactions
+                <span class="view-all">View All</span>
+            </div>
+            <div class="transaction-card">
+                <div class="transaction-item">
+                    <div>
+                        <div style="font-weight: 500;">Amazon Prime</div>
+                        <div style="font-size: 12px; color: #888;">Subscription • Today</div>
+                    </div>
+                    <span style="color: #f44336; font-weight: bold;">-₹ 179.00</span>
+                </div>
+                <div class="transaction-item">
+                    <div>
+                        <div style="font-weight: 500;">Salary Credit</div>
+                        <div style="font-size: 12px; color: #888;">Monthly • Yesterday</div>
+                    </div>
+                    <span style="color: var(--green); font-weight: bold;">+₹ 42,000.00</span>
+                </div>
+            </div>
+        </div>
+        <nav class="footer-nav">
+            <div class="nav-item active">
+                <div class="nav-icon">🏠</div>
+                <span>Home</span>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">💰</div>
+                <span>Apply</span>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">📊</div>
+                <span>Calc</span>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">🎧</div>
+                <span>Support</span>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+</div>
+
+<script>
+    // NAVIGATION LOGIC
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+
+        // Custom logic for specific views
+        if(viewId === 'register-view') {
+            initSignature();
+            startCamera();
+        }
+    }
+
+    // SPLASH TRANSITION
+    setTimeout(() => {
+        showView('login-view');
+    }, 2500);
+
+    // REGISTER STEP LOGIC
+    function nextStep(step) {
+        document.querySelectorAll('.register-step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`reg-step-${step}`).classList.add('active');
+
+        // Update markers
+        for(let i=1; i<=3; i++) {
+            const marker = document.getElementById(`step-marker-${i}`);
+            if(i < step) {
+                marker.classList.add('completed');
+                marker.classList.remove('active');
+            } else if(i === step) {
+                marker.classList.add('active');
+                marker.classList.remove('completed');
+            } else {
+                marker.classList.remove('active', 'completed');
+            }
+        }
+    }
+
+    function toggleBusinessFields() {
+        const type = document.getElementById('reg-account-type').value;
+        document.getElementById('business-fields').style.display = (type === 'Current Account') ? 'block' : 'none';
+    }
+
+    // SIGNATURE PAD
+    let canvas, ctx, drawing = false;
+    function initSignature() {
+        canvas = document.getElementById('signature-pad');
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            startDraw({ clientX: touch.clientX, clientY: touch.clientY });
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            draw({ clientX: touch.clientX, clientY: touch.clientY });
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchend', stopDraw);
+    }
+
+    function startDraw(e) {
+        drawing = true;
+        ctx.beginPath();
+        const rect = canvas.getBoundingClientRect();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+    }
+
+    function stopDraw() { drawing = false; }
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+    // CAMERA
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById('camera-feed').srcObject = stream;
+        } catch (e) {
+            console.log("Camera error", e);
+        }
+    }
+
+    function captureFace() {
+        alert("Face Captured Successfully!");
+    }
+
+    // MOCK API
+    function mockLogin(mobile, pass) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({ success: true, name: "John Doe", status: "APPROVED" });
+            }, 1500);
+        });
+    }
+
+    function mockRegister(data) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({ success: true, appId: "DF-" + Math.floor(Math.random()*900000 + 100000) });
+            }, 2000);
+        });
+    }
+
+    async function handleLogin() {
+        const mobile = document.getElementById('login-mobile').value;
+        if(mobile.length < 10) { alert("Invalid Mobile"); return; }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        const res = await mockLogin(mobile, "pass");
+        document.getElementById('loading-overlay').style.display = 'none';
+
+        if(res.success) {
+            document.getElementById('dash-welcome').innerText = "Hello, " + res.name + "!";
+            document.getElementById('dash-status').innerText = "Status: APPROVED";
+            document.getElementById('dash-status').className = "status-badge status-approved";
+            document.getElementById('dash-app-id').innerText = "DF-982341";
+            showView('dashboard-view');
+        }
+    }
+
+    async function handleRegister() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+        const name = document.getElementById('reg-name').value;
+        const res = await mockRegister({});
+        document.getElementById('loading-overlay').style.display = 'none';
+
+        if(res.success) {
+            document.getElementById('dash-welcome').innerText = "Hello, " + name + "!";
+            document.getElementById('dash-status').innerText = "Status: PENDING";
+            document.getElementById('dash-status').className = "status-badge status-pending";
+            document.getElementById('dash-app-id').innerText = res.appId;
+            showView('dashboard-view');
+        }
+    }
+
+</script>
+</body>
+</html>

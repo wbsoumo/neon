@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=9" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="author" content="Deccan Finance Limited" />
+        <meta type="Website" content="india" />
+        <title>Contact - Deccan Finance</title>
+        
+        <!-- Original Stylesheets for identical presentation -->
+        <link rel="stylesheet" href="https://assets.rmb.co.za/css/firstrand.toolkit.min.css" type="text/css">
+        <link rel="stylesheet" href="https://assets.rmb.co.za/fonts/fonts.css" type="text/css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css" type="text/css">
+        
+        <!-- Custom Overrides -->
+        <link rel="stylesheet" href="custom.css" type="text/css">
+        
+        <!-- Favicons -->
+        <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+        
+        <meta name="description" content="Contact Deccan Finance Limited for any enquiries."/>
+        <meta name="keywords" content="Deccan Finance, Deccan Finance, Investment Bank, Contact"/>
+    </head>
+    
+    <body class="has-header">
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay"></div>
+        
+        <!-- Header -->
+        <header class="header inverted">
+            <div class="container unpadded-top unpadded-bottom">
+                <div class="row">
+                    <div class="col-l-12">
+                        <a href="index.html">
+                            <img src="logo.png" alt="Deccan Finance Logo" class="logo">
+                            <img src="logo.png" alt="Deccan Finance Logo" class="logo promo-logo">
+                        </a>
+                        <section class="nav-wrapper">
+                            <!-- Mobile Nav Hamburger -->
+                            <div class="toggle-primary-nav">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            
+                            <!-- Search Navigation Trigger -->
+                            <nav class="nav primary search">
+                                <form action="/search" class="search-form">
+                                    <ul>
+                                        <li><a class="icon ion-ios-search-strong btn-search"></a></li>
+                                    </ul>
+                                    <div action="search" class="form-control search">
+                                        <span class="icon ion-android-close close-search search-full"></span>
+                                        <label for="filter-categories">What are you looking for?</label>
+                                        <input name="query" placeholder="What are you looking for?" id="filter-categories" class="white-background" required>
+                                        <span class="helper-text"></span>
+                                    </div>
+                                </form>
+                            </nav>
+                            
+                            <!-- Primary Menu -->
+                            <nav class="nav primary centered">
+                                <ul>
+                                    <li><a href="about.html">About</a></li>
+                                    <li><a class="toggle-dropdown" data-target="teams-dropdown">Teams</a></li>
+                                    <li><a href="contact.html">Contact</a></li>
+                                </ul>
+                            </nav>
+
+                            <!-- Teams Dropdown Menu -->
+                            <nav class="nav dropdown dropdown-relative" id="teams-dropdown">
+                                <div class="col-l-0 col-m-12 unpadded-left unpadded-right close-dropdown">
+                                    <h3 class="ion-android-arrow-back"></h3>
+                                </div>
+                                <div class="panel-group">
+                                    <div class="panel">
+                                        <ul>
+                                            <li><a href="teams.html">Management Team</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </nav>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+        </header>
+            
+        <!-- Full-screen Search Modal -->
+        <form class="modal modal-full modal-dark" id="search-full">
+            <section class="container">
+                <div class="form-control inverse">
+                    <label>Search term</label>
+                    <input data-error="This is the error text" type="text" placeholder="Search term">
+                    <span class="helper-text"></span>	
+                </div>
+            </section>
+        </form>
+            
+        <!-- Main Section -->
+        <section role="main" class="main">
+            
+            <!-- Banner Section -->
+            <section class="container-full">
+                <div class="banner banner-s text-center">
+                    <div class="banner-image center-right">
+                        <img src="https://assets.rmb.co.za/images/banners/preload/s-generic-contact-center.jpg" class="progressive-image" alt="Contact Deccan Finance">
+                    </div>
+                    <div class="container banner-content">
+                        <div class="row">
+                            <div>
+                                <h1>Contact</h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Flat Form layout for Inquiries -->
+            <form id="general-contact" class="last" style="padding: 4rem 0;">
+                <div class="container contact-form-inner">
+                    <div class="form">
+                        <div class="row">
+                            <div class="col-l-1 col-m-1 col-s-12"></div>
+                            
+                            <!-- Left Column (Form Fields) -->
+                            <div class="col-l-6 col-m-6 col-s-12">
+                                <div class="form-control select">
+                                    <label>Who are you looking for?</label>
+                                    <select class="load-form" name="subject">
+                                        <option value="firstrand-enquiries">General enquiries</option>
+                                    </select>
+                                    <span class="helper-text">Select from a list of business units</span>
+                                </div>
+                                <input type="hidden" name="id" value="379">
+                                
+                                <div class="form-control multiline">
+                                    <label>Message</label>
+                                    <textarea name="message"></textarea>
+                                    <span class="helper-text">Optional</span>
+                                </div>
+                                
+                                <div id="contact-form">
+                                    <input name="formID" type="hidden" value="Generic contact form">
+                                    <input name="message-from-website" type="hidden" value="Deccan Finance">
+                                    <div class="form-control">
+                                        <label>Full name</label>
+                                        <input required name="full-name" type="text" placeholder="Full name">
+                                        <span class="helper-text">Required</span>
+                                    </div>
+                                    <div class="form-control">
+                                        <label>Email</label>
+                                        <input required name="email" type="email" placeholder="Email">
+                                        <span class="helper-text">Required</span>
+                                    </div>
+                                    <div class="form-control">
+                                        <label>Company</label>
+                                        <input required name="company" type="text" placeholder="Company">
+                                        <span class="helper-text">Required</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert-container"></div>
+                                
+                                <div class="right-aligned" style="margin-top: 1.5rem;">
+                                    <div class="btn-group">
+                                        <input type="submit" value="Send Message" class="btn btn-inline btn-secondary send-message">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column (Contact Details) -->
+                            <div class="col-m-4 col-s-12" style="border-left: 1px solid #ddd; padding-left: 2rem;">
+                                <h4>Deccan Finance Limited</h4>
+                                <ul class="icon" style="list-style: none; padding-left: 0; line-height: 2rem;">
+                                    <li id="region-address" class="ion-ios-home" style="margin-bottom: 1.5rem;">
+                                        <strong>Effective 1 November 2025,<br>our office address will be:</strong><br>
+                                        1st Floor, Trent House,<br/> G Block, Plot. No. C-60,<br/> Bandra East, Mumbai 400051
+                                    </li>
+                                    <li id="region-tel" class="ion-android-call" style="margin-bottom: 1.5rem;">
+                                        <a href="tel:+91 22 4569 8784" style="color: inherit; text-decoration: none;">+91 22 4569 8784</a>
+                                    </li>
+                                    <li id="region-email" class="ion-email" style="margin-bottom: 1.5rem;">
+                                        <a href="mailto:info@deccanfinltd.com" style="color: inherit; text-decoration: none;">info@deccanfinltd.com</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </section>
+            
+        <!-- Footer -->
+        <footer class="footer primary">
+            <div class="container">
+                <div class="row footer-legal">
+                    <nav class="col-l-12 footer-nav">
+                        <h5><a href="https://www.deccanfinltd.com/page/regulatory-disclosure" target="_blank">Regulatory disclosure</a></h5>
+                        <h5><a href="https://www.deccanfinltd.com/page/rates-and-charges" target="_blank">Rates and Charges</a></h5>
+                        <h5><a href="https://www.deccanfinltd.com/page/rbi-press-release" target="_blank">RBI Press release</a></h5>
+                        <h5><a href="https://firstrand.frontify.com/share/3NdwXg9kivac4AQqX3zo" target="_blank">Cookies</a></h5>
+                        <h5><a href="https://www.deccanfinltd.com/page/disclaimer" target="_blank">Disclaimer</a></h5>
+                        <h5><a href="https://firstrand.frontify.com/share/o2Y7odo5MLT4LdKaubNt" target="_blank">Customer Privacy</a></h5>
+                        <h5><a href="https://firstrand.frontify.com/share/5SSjXWx1LK9KaSuvWwXM" target="_blank">Supplier and Vendor Privacy</a></h5>
+                    </nav>
+                    <div class="col-l-12">
+                        <p class="last">Copyright &copy; Deccan Finance Limited 2026. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        
+        <!-- Scripts -->
+        <script src="https://assets.rmb.co.za/js/firstrand.bundle.js"></script>
+        
+        <!-- Local fallback to force page display -->
+        <script>
+            window.addEventListener('load', function() {
+                document.body.classList.add('loaded');
+                var o = document.querySelector('.loading-overlay');
+                if (o) o.classList.add('loaded');
+            });
+            setTimeout(function() {
+                document.body.classList.add('loaded');
+                var o = document.querySelector('.loading-overlay');
+                if (o) o.classList.add('loaded');
+            }, 1500);
+        </script>
+    </body>
+</html>

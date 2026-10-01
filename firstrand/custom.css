@@ -1,0 +1,49 @@
+/* Custom CSS for Deccan Finance Clone */
+
+/* Ensure nice margins and layout fixes */
+.alert-fixed {
+    position: relative !important;
+    margin-bottom: 0 !important;
+}
+
+/* Ensure progressive image transitions are smooth */
+.progressive-image {
+    transition: filter 0.5s ease;
+}
+.progressive-image.blur {
+    filter: blur(10px);
+}
+
+/* Styled Account Option CTA Buttons */
+.btn-account-cta {
+    display: inline-block !important;
+    background-color: #031f73 !important;
+    color: #ffffff !important;
+    padding: 0.8rem 2.2rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    border-radius: 4px !important;
+    border: 2px solid #031f73 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 6px rgba(3, 31, 115, 0.15) !important;
+    margin-top: 0.5rem !important;
+}
+
+.btn-account-cta:hover {
+    background-color: #fecb00 !important;
+    color: #031f73 !important;
+    border-color: #fecb00 !important;
+    box-shadow: 0 6px 12px rgba(254, 203, 0, 0.3) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-account-cta:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 4px rgba(3, 31, 115, 0.15) !important;
+}
+

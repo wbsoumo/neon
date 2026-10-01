@@ -1,0 +1,8 @@
+.DS_Store
+*.log
+scratch/
+.gradle/
+build/
+app/build/
+.idea/
+.kotlin/
