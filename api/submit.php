@@ -40,26 +40,9 @@ foreach ($requiredCommon as $field) {
     }
 }
 
-// Type-specific validation
-if ($data['account_type'] === 'SAVINGS') {
-    $requiredSavings = ['dob', 'gender', 'initial_deposit'];
-    foreach ($requiredSavings as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required for Savings Account.']);
-            exit;
-        }
-    }
-} elseif ($data['account_type'] === 'CURRENT') {
-    $requiredCurrent = ['business_name', 'business_reg_no', 'expected_turnover'];
-    foreach ($requiredCurrent as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required for Current Account.']);
-            exit;
-        }
-    }
-} else {
+// Type-specific validation for Neon Finance
+$allowedTypes = ['CURRENT', 'SAVINGS', 'JOINT', 'INVEST', 'VEHICLE', 'HOME'];
+if (!in_array(strtoupper($data['account_type']), $allowedTypes)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid account type selected.']);
     exit;
