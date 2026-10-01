@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 import '../services/api_service.dart';
+import 'add_beneficiary_screen.dart';
+import 'payment_processing_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -361,12 +363,60 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         title: const Text("Payments & Transfers", style: TextStyle(fontWeight: FontWeight.w800)),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Beneficiary Header Action Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.neonPink.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.neonPink),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Add Beneficiary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text("Save new recipient account or IBAN", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AddBeneficiaryScreen(user: _user)),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.neonPink,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text("Add"),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             const Text(
               "Send Money Instantly",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
@@ -386,7 +436,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   TextField(
                     controller: recipientController,
                     decoration: InputDecoration(
-                      labelText: "Recipient Account Number / App ID",
+                      labelText: "Recipient Account Number / IBAN",
                       prefixIcon: const Icon(Icons.person_outline_rounded),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -421,8 +471,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           mpin: "123456",
                         );
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(res['message'] ?? 'Transfer Processed')),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PaymentProcessingScreen(responseData: res),
+                            ),
                           );
                         }
                       },
