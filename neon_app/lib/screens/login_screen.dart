@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../services/api_service.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
 import 'main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,219 +12,341 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController(text: "8016222991");
-  String _pin = "";
+  bool _isPasswordMode = true; // Toggle between Password & MPIN login
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
-  void _onKeyPress(String value) {
-    if (_pin.length < 6) {
-      setState(() {
-        _pin += value;
-      });
-      if (_pin.length == 6) {
-        _attemptLogin();
-      }
-    }
+  // Controllers
+  final TextEditingController _identityController = TextEditingController(); // Email or Mobile
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
+
+  @override
+  void dispose() {
+    _identityController.dispose();
+    _passwordController.dispose();
+    _pinController.dispose();
+    super.dispose();
   }
 
-  void _onBackspace() {
-    if (_pin.isNotEmpty) {
-      setState(() {
-        _pin = _pin.substring(0, _pin.length - 1);
-      });
+  Future<void> _handleLogin() async {
+    final identity = _identityController.text.trim();
+    if (identity.isEmpty) {
+      _showSnackBar("Please enter your Mobile Number or Email Address");
+      return;
     }
-  }
 
-  Future<void> _attemptLogin() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    final res = await ApiService.loginWithPin(_phoneController.text, _pin);
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (res['success'] == true && res['user'] != null) {
-      final user = UserModel.fromJson(res['user']);
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => MainNavigationScreen(user: user)),
-          (route) => false,
-        );
+    Map<String, dynamic> response;
+    if (_isPasswordMode) {
+      if (_passwordController.text.isEmpty) {
+        _showSnackBar("Please enter your password");
+        setState(() => _isLoading = false);
+        return;
       }
+      response = await ApiService.loginWithCredentials(identity, _passwordController.text);
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Login failed. Please check your PIN.'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
+      if (_pinController.text.length < 4) {
+        _showSnackBar("Please enter your 6-digit MPIN");
+        setState(() => _isLoading = false);
+        return;
+      }
+      response = await ApiService.loginWithPin(identity, _pinController.text);
+    }
+
+    setState(() => _isLoading = false);
+
+    if (mounted) {
+      if (response['success'] == true && response['user'] != null) {
+        final user = UserModel.fromJson(response['user']);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainNavigationScreen(user: user)),
         );
-        setState(() {
-          _pin = "";
-        });
+      } else {
+        _showSnackBar(response['message'] ?? "Login failed. Please check credentials.");
       }
     }
+  }
+
+  void _showSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Sign In",
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              // Brand Icon
-              Container(
-                width: 60,
-                height: 60,
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.pinkGradient,
-                  shape: BoxShape.circle,
+              // Brand Logo Header
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.neonPink, AppTheme.neonCyan],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "neon",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Neon Finance",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Secure Indian Digital Banking",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Center(
-                  child: Text(
-                    "neon",
+              ),
+
+              const SizedBox(height: 40),
+
+              // Login Type Switcher Pills
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isPasswordMode = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _isPasswordMode ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _isPasswordMode
+                                ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)]
+                                : [],
+                          ),
+                          child: Text(
+                            "Password Login",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: _isPasswordMode ? AppTheme.neonPink : AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isPasswordMode = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: !_isPasswordMode ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: !_isPasswordMode
+                                ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)]
+                                : [],
+                          ),
+                          child: Text(
+                            "Fast MPIN Login",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: !_isPasswordMode ? AppTheme.neonPink : AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Form Input Fields
+              Text(
+                "Mobile Number or Email",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _identityController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: "Enter registered Email / Mobile",
+                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.neonPink),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.neonPink, width: 2),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              if (_isPasswordMode) ...[
+                Text(
+                  "Account Password",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    hintText: "Enter account password",
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.neonPink),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.neonPink, width: 2),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  "6-Digit Security MPIN",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _pinController,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    hintText: "Enter 6-digit MPIN",
+                    prefixIcon: const Icon(Icons.dialpad_rounded, color: AppTheme.neonPink),
+                    counterText: "",
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.neonPink, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              // Submit Login Button
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.neonPink,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Verify & Login",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Center(
+                child: TextButton(
+                  onPressed: () {},
+                  child: const Text(
+                    "Forgot Password or MPIN?",
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
+                      color: AppTheme.neonPink,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                "Welcome to Neon Finance",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                "Enter your 6-digit Security PIN to proceed",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // PIN Indicator Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (index) {
-                  final isFilled = index < _pin.length;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isFilled ? AppTheme.neonPink : Colors.grey[300],
-                      border: Border.all(
-                        color: isFilled ? AppTheme.neonPink : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-
-              const Spacer(),
-
-              if (_isLoading)
-                const CircularProgressIndicator(color: AppTheme.neonPink)
-              else
-                // Keypad
-                Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: ["1", "2", "3"].map((n) => _buildKey(n)).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: ["4", "5", "6"].map((n) => _buildKey(n)).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: ["7", "8", "9"].map((n) => _buildKey(n)).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // Biometric icon
-                        IconButton(
-                          icon: const Icon(Icons.fingerprint, size: 36, color: AppTheme.neonPink),
-                          onPressed: () => _attemptLogin(),
-                        ),
-                        _buildKey("0"),
-                        // Backspace icon
-                        IconButton(
-                          icon: const Icon(Icons.backspace_outlined, size: 28, color: AppTheme.textPrimary),
-                          onPressed: _onBackspace,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 20),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKey(String value) {
-    return InkWell(
-      onTap: () => _onKeyPress(value),
-      borderRadius: BorderRadius.circular(40),
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
-            ),
           ),
         ),
       ),
