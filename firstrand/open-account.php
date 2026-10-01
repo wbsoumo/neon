@@ -870,7 +870,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             
             <div class="app-ref-box" id="modalAppId">FR-000000</div>
             
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 24px;">Our verification team will review your KYC documents within 10 minutes. You can download the <strong>Neon Finance Mobile App</strong> to sign in once approved.</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 24px;">Our verification team will review your KYC documents within 72 hrs. You can download the <strong>Neon Finance Mobile App</strong> to sign in once approved.</p>
             
             <a href="index.php" class="btn btn-primary" style="width: 100%; justify-content: center;">Done & Return Home</a>
         </div>
