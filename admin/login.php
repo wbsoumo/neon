@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance - Secure Admin Login
+ * Neon Finance - Secure Admin Login
  * Authenticates admin credentials and initiates session authorization
  */
 
@@ -49,58 +49,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Deccan Finance - Admin Login</title>
+    <title>Neon Finance - Admin Login</title>
 
-    <!-- Google Font: Source Sans Pro -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=fallback">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <!-- Theme style -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="../assets/img/favicon.png">
+    <link rel="stylesheet" href="admin_neon.css">
 
     <style>
         body.login-page {
-            background-color: #02144a !important; /* Brand Dark Navy */
+            background-color: #0b0f19 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .login-box {
+            width: 400px;
+        }
+        .login-logo img {
+            height: 42px;
+            margin-bottom: 12px;
         }
         .login-logo a {
             color: #ffffff !important;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: 800;
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
         }
         .login-card-body {
-            border-top: 4px solid #fecb00 !important; /* Brand Gold top border */
-            border-radius: 4px;
+            background-color: #131b2e !important;
+            border: 1px solid rgba(0, 242, 254, 0.2) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+            padding: 32px !important;
         }
-        .btn-primary {
-            background-color: #031f73 !important;
-            border-color: #031f73 !important;
-            font-weight: 700;
-        }
-        .btn-primary:hover {
-            background-color: #02144a !important;
-            border-color: #02144a !important;
+        .login-box-msg {
+            color: #94a3b8 !important;
+            font-size: 0.95rem;
+            margin-bottom: 24px;
         }
         .input-group-text {
-            color: #031f73;
+            background-color: #080c14 !important;
+            border: 1px solid rgba(0, 242, 254, 0.25) !important;
+            border-left: none !important;
+            color: #00f2fe !important;
+        }
+        .form-control {
+            border-right: none !important;
         }
     </style>
 </head>
 <body class="hold-transition login-page">
 <div class="login-box">
-    <div class="login-logo mb-3">
-        <a href="#"><b>Deccan Finance</b> Console</a>
+    <div class="login-logo text-center mb-4">
+        <a href="#" class="d-flex align-items-center justify-content-center gap-2">
+            <img src="../assets/7PzcYdFs3fE3HNk64pDrpdmsSOk.svg" alt="Neon Logo" onerror="this.src='../logo.png';">
+            <span><span style="color: #00f2fe;">neon</span> admin</span>
+        </a>
     </div>
     <!-- /.login-logo -->
     <div class="card">
         <div class="card-body login-card-body">
-            <p class="login-box-msg">Sign in to start your administrator session</p>
+            <p class="login-box-msg text-center">Sign in to start your administrator session</p>
 
             <?php if (!empty($error)): ?>
-                <div class="alert alert-danger alert-dismissible">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-                    <i class="icon fas fa-ban"></i> <?= htmlspecialchars($error) ?>
+                <div class="alert alert-danger alert-dismissible" style="background-color: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5;">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true" style="color:#ffffff;">&times;</button>
+                    <i class="icon fas fa-ban mr-1"></i> <?= htmlspecialchars($error) ?>
                 </div>
             <?php endif; ?>
 
@@ -113,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                 </div>
-                <div class="input-group mb-3">
+                <div class="input-group mb-4">
                     <input type="password" name="password" class="form-control" placeholder="Password" required>
                     <div class="input-group-append">
                         <div class="input-group-text">
@@ -122,11 +141,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
                 <div class="row align-items-center mt-4">
-                    <div class="col-7">
-                        <a href="register.php" class="text-center small font-weight-bold" style="color: #031f73;">Create an account</a>
+                    <div class="col-6">
+                        <a href="register.php" class="small font-weight-bold" style="color: #00f2fe;">Register Admin</a>
                     </div>
                     <!-- /.col -->
-                    <div class="col-5">
+                    <div class="col-6">
                         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
                     </div>
                     <!-- /.col -->
