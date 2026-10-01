@@ -176,7 +176,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       const Text(
-                        "Balance CHF ",
+                        "Account Balance ",
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 15,
@@ -184,15 +184,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         ),
                       ),
                       Text(
-                        _selectedAccountTier == "Joint account" ? "1'500.00" : "8'730.40",
+                        _selectedAccountTier == "Joint account" ? "₹ 1,50,000.00" : "₹ 8,73,040.00",
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 34,
+                          fontSize: 32,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "A/C: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730'} • IFSC: NEON0001",
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 20),
 
@@ -200,10 +205,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildHeaderShortcut(Icons.credit_card_rounded, "Karte"),
-                      _buildHeaderShortcut(Icons.add_rounded, "Einzahlen"),
-                      _buildHeaderShortcut(Icons.bar_chart_rounded, "Statistiken"),
+                      _buildHeaderShortcut(Icons.send_rounded, "Transfer"),
+                      _buildHeaderShortcut(Icons.qr_code_2_rounded, "Scan UPI"),
+                      _buildHeaderShortcut(Icons.account_balance_outlined, "Passbook"),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Promotional Loan Banners Section
+          SliverToBoxAdapter(
+            child: Container(
+              height: 140,
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              child: PageView(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: const DecorationImage(
+                        image: AssetImage("assets/images/loan1.png"),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: const DecorationImage(
+                        image: AssetImage("assets/images/loan2.png"),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ],
               ),
