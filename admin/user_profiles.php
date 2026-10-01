@@ -300,48 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
     <link rel="stylesheet" href="admin_neon.css">
 
     <style>
-        /* BRAND COLOR OVERRIDES */
-        .main-header.navbar {
-            background-color: #031f73 !important;
-            border-bottom: 4px solid #fecb00 !important;
-        }
-        .main-header.navbar .nav-link,
-        .main-header.navbar .navbar-brand {
-            color: #ffffff !important;
-        }
-        .main-header.navbar .nav-link:hover {
-            color: #fecb00 !important;
-        }
-        .main-sidebar {
-            background-color: #02144a !important;
-        }
-        .sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active {
-            background-color: #fecb00 !important;
-            color: #031f73 !important;
-            font-weight: 700;
-        }
-        .brand-link {
-            border-bottom: 1px solid #fecb00 !important;
-            background-color: #02144a !important;
-        }
-        .brand-link .brand-text {
-            color: #ffffff !important;
-            font-weight: 700;
-        }
-        .sidebar a {
-            color: rgba(255, 255, 255, 0.8) !important;
-        }
-        .sidebar a:hover, .sidebar .nav-link.active a {
-            color: #ffffff !important;
-        }
-        .sidebar-dark-primary .nav-sidebar>.nav-item>.nav-link.active .nav-icon {
-            color: #031f73 !important;
-        }
-        .card-navy-brand:not(.card-outline) > .card-header {
-            background-color: #031f73 !important;
-            color: #ffffff !important;
-            border-bottom: 2px solid #fecb00;
-        }
+    <style>
         .search-results-box {
             position: absolute;
             width: 100%;
@@ -368,7 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
 <div class="wrapper">
 
     <!-- Top Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-dark">
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
         <ul class="navbar-nav">
             <li class="nav-item">
                 <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
@@ -391,7 +350,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
     </nav>
 
     <!-- Main Sidebar Container -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <aside class="main-sidebar sidebar-light-primary elevation-4">
         <a href="dashboard.php" class="brand-link">
             <img src="../assets/7PzcYdFs3fE3HNk64pDrpdmsSOk.svg" alt="Neon Logo" onerror="this.src='../logo.png';" style="height: 32px; width: auto;">
             <span class="brand-text" style="font-weight: 800; color: #ffffff;"><span style="color: #00f2fe;">neon</span> finance</span>

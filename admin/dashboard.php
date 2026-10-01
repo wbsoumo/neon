@@ -805,87 +805,6 @@ if ($filter === 'SAVINGS') {
     <link rel="stylesheet" href="admin_neon.css">
 
     <style>
-        /* BRAND COLOR OVERRIDES */
-        
-        /* Navy Blue Top Navbar */
-        .main-header.navbar {
-            background-color: #031f73 !important;
-            border-bottom: 4px solid #fecb00 !important;
-        }
-        .main-header.navbar .nav-link,
-        .main-header.navbar .navbar-brand {
-            color: #ffffff !important;
-        }
-        .main-header.navbar .nav-link:hover {
-            color: #fecb00 !important;
-        }
-
-        /* Navy Blue Sidebar Container */
-        .main-sidebar {
-            background-color: #02144a !important;
-        }
-        .sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active,
-        .sidebar-light-primary .nav-sidebar > .nav-item > .nav-link.active {
-            background-color: #fecb00 !important;
-            color: #031f73 !important;
-            font-weight: 700;
-        }
-        .brand-link {
-            border-bottom: 1px solid #fecb00 !important;
-            background-color: #02144a !important;
-        }
-        .brand-link .brand-text {
-            color: #ffffff !important;
-            font-weight: 700;
-        }
-        .sidebar a {
-            color: rgba(255, 255, 255, 0.8) !important;
-        }
-        .sidebar a:hover, .sidebar .nav-link.active a {
-            color: #ffffff !important;
-        }
-        .sidebar-dark-primary .nav-sidebar>.nav-item>.nav-link.active .nav-icon {
-            color: #031f73 !important;
-        }
-        
-        /* Custom KPI Boxes in Brand Colors */
-        .small-box.brand-navy {
-            background-color: #031f73 !important;
-            color: #ffffff !important;
-        }
-        .small-box.brand-gold {
-            background-color: #fecb00 !important;
-            color: #031f73 !important;
-        }
-        .small-box.brand-gold h3, .small-box.brand-gold p {
-            color: #031f73 !important;
-        }
-        
-        /* Card Headers matching Navy Theme */
-        .card-navy-brand:not(.card-outline) > .card-header {
-            background-color: #031f73 !important;
-            color: #ffffff !important;
-            border-bottom: 2px solid #fecb00;
-        }
-        
-        /* Modal Style Overrides */
-        .modal-header-brand {
-            background-color: #031f73 !important;
-            color: #ffffff !important;
-            border-bottom: 4px solid #fecb00 !important;
-        }
-        .modal-header-brand .modal-title {
-            color: #ffffff !important;
-        }
-        .modal-header-brand .close {
-            color: #ffffff !important;
-            opacity: 0.8;
-        }
-        .modal-header-brand .close:hover {
-            color: #fecb00 !important;
-            opacity: 1;
-        }
-        
         /* Table styles */
         .table-middle td, .table-middle th {
             vertical-align: middle !important;
@@ -905,7 +824,7 @@ if ($filter === 'SAVINGS') {
 <div class="wrapper">
 
     <!-- Top Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-dark">
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
         <!-- Left navbar links -->
         <ul class="navbar-nav">
             <li class="nav-item">
@@ -931,7 +850,7 @@ if ($filter === 'SAVINGS') {
     <!-- /.navbar -->
 
     <!-- Main Sidebar Container -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <aside class="main-sidebar sidebar-light-primary elevation-4">
         <!-- Brand Logo -->
         <a href="#" class="brand-link">
             <img src="../assets/7PzcYdFs3fE3HNk64pDrpdmsSOk.svg" alt="Neon Logo" onerror="this.src='../logo.png';" style="height: 32px; width: auto;">
