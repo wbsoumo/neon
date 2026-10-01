@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance Limited Onboarding - Rate Limit API
+ * FirstRand Bank Onboarding - Rate Limit API
  * Verifies client IP rate of requests
  */
 

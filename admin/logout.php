@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance Limited Onboarding - Secure Admin Logout
+ * Deccan Finance - Secure Admin Logout
  * Destroys the admin session and redirects to the login screen
  */
 

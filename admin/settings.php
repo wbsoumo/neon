@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance Limited Onboarding - Admin Settings & Security Console
+ * Deccan Finance - Admin Settings & Security Console
  * Handles IP Whitelisting additions/deletions and logs activity audits.
  */
 
@@ -57,6 +57,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $error = 'Failed to remove IP address.';
             }
         }
+    } elseif ($action === 'UPDATE_FIREBASE_CREDENTIALS') {
+        $jsonStr = isset($_POST['firebase_json']) ? trim($_POST['firebase_json']) : '';
+        if (empty($jsonStr)) {
+            $error = 'Credentials JSON cannot be empty.';
+        } else {
+            $data = json_decode($jsonStr, true);
+            if (!$data || empty($data['project_id']) || empty($data['private_key']) || empty($data['client_email'])) {
+                $error = 'Invalid Service Account JSON. Must contain project_id, private_key, and client_email.';
+            } else {
+                $configDir = '../api/config/';
+                if (!is_dir($configDir)) {
+                    mkdir($configDir, 0777, true);
+                }
+                $res = file_put_contents($configDir . 'firebase_service_account.json', $jsonStr);
+                if ($res !== false) {
+                    log_admin_activity($username, 'UPDATE_FIREBASE_CREDENTIALS', 'Updated Firebase Service Account Credentials');
+                    $success_msg = 'Firebase Service Account Credentials updated successfully.';
+                } else {
+                    $error = 'Failed to write credentials file. Check permissions of api/config/ directory.';
+                }
+            }
+        }
+    } elseif ($action === 'UPDATE_PAYOUT_CREDENTIALS') {
+        $mid = isset($_POST['bharat_mid']) ? trim($_POST['bharat_mid']) : '';
+        $key = isset($_POST['bharat_key']) ? trim($_POST['bharat_key']) : '';
+        if (empty($mid) || empty($key)) {
+            $error = 'Both Merchant ID and Merchant Key are required.';
+        } else {
+            $res = save_payout_credentials($mid, $key);
+            if ($res) {
+                log_admin_activity($username, 'UPDATE_PAYOUT_CREDENTIALS', 'Updated Bharat4u Payout API credentials');
+                $success_msg = 'Bharat4u Payout credentials updated successfully.';
+            } else {
+                $error = 'Failed to write credentials file. Check permissions of api/config/ directory.';
+            }
+        }
+    } elseif ($action === 'UPDATE_ACTIVE_PAYOUT_PROVIDER') {
+        $provider = isset($_POST['active_provider']) ? trim($_POST['active_provider']) : 'bharat4u';
+        if ($provider !== 'bharat4u' && $provider !== 'jiopay') {
+            $error = 'Invalid payout provider selected.';
+        } else {
+            $res = save_active_payout_provider($provider);
+            if ($res) {
+                log_admin_activity($username, 'UPDATE_ACTIVE_PAYOUT_PROVIDER', 'Updated active payout provider to: ' . $provider);
+                $success_msg = 'Active payout provider updated to ' . ($provider === 'jiopay' ? 'JioPay' : 'Bharat4u') . ' successfully.';
+            } else {
+                $error = 'Failed to save active provider setting.';
+            }
+        }
+    } elseif ($action === 'UPDATE_MAINTENANCE_MODE') {
+        $enabled = isset($_POST['maintenance_mode']) ? (int)$_POST['maintenance_mode'] : 0;
+        $res = save_maintenance_mode($enabled);
+        if ($res !== false) {
+            log_admin_activity($username, 'UPDATE_MAINTENANCE_MODE', 'Updated front page display status. Maintenance Mode: ' . ($enabled ? 'ON (Show 404)' : 'OFF (Show Front Page)'));
+            $success_msg = 'Homepage display status updated successfully.';
+        } else {
+            $error = 'Failed to update homepage display status.';
+        }
+    } elseif ($action === 'UPDATE_JIOPAY_CREDENTIALS') {
+        $mid = isset($_POST['jiopay_mid']) ? trim($_POST['jiopay_mid']) : '';
+        $key = isset($_POST['jiopay_key']) ? trim($_POST['jiopay_key']) : '';
+        $entityId = isset($_POST['jiopay_entity_id']) ? trim($_POST['jiopay_entity_id']) : '';
+        $customerId = isset($_POST['jiopay_customer_id']) ? trim($_POST['jiopay_customer_id']) : '';
+        if (empty($mid) || empty($key) || empty($entityId) || empty($customerId)) {
+            $error = 'All fields (Merchant ID, Merchant Key, Entity ID, and Customer ID) are required for JioPay.';
+        } else {
+            $res = save_jiopay_credentials($mid, $key, $entityId, $customerId);
+            if ($res) {
+                log_admin_activity($username, 'UPDATE_JIOPAY_CREDENTIALS', 'Updated JioPay Payout API credentials');
+                $success_msg = 'JioPay Payout credentials updated successfully.';
+            } else {
+                $error = 'Failed to write credentials file. Check permissions of api/config/ directory.';
+            }
+        }
     }
 }
 
@@ -70,7 +144,7 @@ $myIp = get_client_ip();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Deccan Finance Limited - Security Settings</title>
+    <title>Deccan Finance - Security Settings</title>
 
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -81,7 +155,7 @@ $myIp = get_client_ip();
     <!-- AdminLTE Theme style -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <!-- Brand Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 
     <style>
         /* BRAND COLOR OVERRIDES */
@@ -161,8 +235,8 @@ $myIp = get_client_ip();
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
         <a href="#" class="brand-link">
-            <img src="favicon.png" alt="Deccan Finance" class="brand-image img-circle elevation-3" style="opacity: .8">
-            <span class="brand-text font-weight-light">Deccan Finance Console</span>
+            <img src="../assets/img/favicon.png" alt="Deccan Finance" class="brand-image img-circle elevation-3" style="opacity: .8">
+            <span class="brand-text font-weight-light">Deccan Finance</span>
         </a>
 
         <div class="sidebar">
@@ -186,9 +260,89 @@ $myIp = get_client_ip();
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="user_profiles.php" class="nav-link">
+                            <i class="nav-icon fas fa-users-cog"></i>
+                            <p>User Profiles</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="transactions.php" class="nav-link">
+                            <i class="nav-icon fas fa-exchange-alt"></i>
+                            <p>All Transactions</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="settings.php" class="nav-link active">
                             <i class="nav-icon fas fa-shield-alt"></i>
                             <p>Security Settings</p>
+                        </a>
+                    </li>
+                    <li class="nav-header">APPLICATIONS</li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?filter=all" class="nav-link">
+                            <i class="nav-icon fas fa-list-ul"></i>
+                            <p>All Applications</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?filter=savings" class="nav-link">
+                            <i class="nav-icon fas fa-user-shield"></i>
+                            <p>Savings Account</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?filter=current" class="nav-link">
+                            <i class="nav-icon fas fa-briefcase"></i>
+                            <p>Current Account</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?filter=nri" class="nav-link">
+                            <i class="nav-icon fas fa-globe"></i>
+                            <p>NRI Account</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?filter=corporate" class="nav-link">
+                            <i class="nav-icon fas fa-building"></i>
+                            <p>Corporate Account</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?page=beneficiary_approvals" class="nav-link">
+                            <i class="nav-icon fas fa-user-check"></i>
+                            <p>Beneficiary Approvals</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?page=failed_payouts" class="nav-link">
+                            <i class="nav-icon fas fa-exclamation-triangle"></i>
+                            <p>Failed Payouts Queue</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="notifications.php" class="nav-link">
+                            <i class="nav-icon fas fa-bell"></i>
+                            <p>Send Notifications</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="compliance.php" class="nav-link">
+                            <i class="nav-icon fas fa-file-contract"></i>
+                            <p>Compliance Manager</p>
+                        </a>
+                    </li>
+                    <li class="nav-header">TESTING</li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?page=p2p_test" class="nav-link">
+                            <i class="nav-icon fas fa-exchange-alt"></i>
+                            <p>P2P Transfer Test</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="dashboard.php?page=payout_test" class="nav-link">
+                            <i class="nav-icon fas fa-wallet"></i>
+                            <p>Payout Transfer Test</p>
                         </a>
                     </li>
                     <li class="nav-header">SESSION</li>
@@ -290,6 +444,207 @@ $myIp = get_client_ip();
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Firebase Configuration Card -->
+                        <div class="card card-default mt-4">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-key mr-2"></i> Firebase Credentials Configuration</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <?php
+                                $creds = get_firebase_credentials();
+                                if ($creds):
+                                ?>
+                                    <div class="alert alert-success p-2 small">
+                                        <i class="fas fa-check-circle mr-1"></i> Configured: <strong><?= htmlspecialchars($creds['project_id']) ?></strong>
+                                        <br><span class="text-muted">Client Email: <?= htmlspecialchars($creds['client_email']) ?></span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-warning p-2 small text-dark">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Not Configured. Dispatches will default to simulation mode.
+                                    </div>
+                                <?php endif; ?>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_FIREBASE_CREDENTIALS">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Firebase Service Account Private Key JSON</label>
+                                        <textarea name="firebase_json" class="form-control text-monospace" rows="8" placeholder='{ "type": "service_account", ... }' required style="font-size: 90%;"><?= $creds ? htmlspecialchars(json_encode($creds, JSON_PRETTY_PRINT)) : '' ?></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Save Service Account Credentials
+                                    </button>
+                                </form>
+                                <p class="small text-muted mt-2 mb-0" style="font-size: 85%;">
+                                    Generate a new key JSON from: <strong>Firebase Console > Project Settings > Service Accounts > Generate New Private Key</strong>. Paste the entire JSON file contents here.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Bharat4u Payout Configuration Card -->
+                        <div class="card card-default mt-4">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-wallet mr-2"></i> Bharat4u Payout Credentials</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <?php
+                                $payoutCreds = get_payout_credentials();
+                                if (!empty($payoutCreds['bharat_mid']) && !empty($payoutCreds['bharat_key'])):
+                                ?>
+                                    <div class="alert alert-success p-2 small mb-3">
+                                        <i class="fas fa-check-circle mr-1"></i> Configured Mid: <strong><?= htmlspecialchars($payoutCreds['bharat_mid']) ?></strong>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-warning p-2 small text-dark mb-3">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Not Configured. Payouts will default to simulation mode.
+                                    </div>
+                                <?php endif; ?>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_PAYOUT_CREDENTIALS">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Merchant ID (Mid)</label>
+                                        <input type="text" name="bharat_mid" class="form-control" value="<?= htmlspecialchars($payoutCreds['bharat_mid']) ?>" placeholder="e.g. BHARAT507571014" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Merchant Key</label>
+                                        <input type="text" name="bharat_key" class="form-control" value="<?= htmlspecialchars($payoutCreds['bharat_key']) ?>" placeholder="e.g. 8749ed748061" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Save Payout Credentials
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Active Payout Method Selection Card -->
+                        <div class="card card-default mt-4">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-toggle-on mr-2"></i> Active Payout Method</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <?php
+                                $activeProvider = get_active_payout_provider();
+                                ?>
+                                <div class="alert alert-info p-2 small mb-3">
+                                    Currently Routing Payouts via: <strong><?= $activeProvider === 'jiopay' ? 'JioPay Payout' : 'Bharat4u Payout' ?></strong>
+                                </div>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_ACTIVE_PAYOUT_PROVIDER">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Select Active Payout Method</label>
+                                        <select name="active_provider" class="form-control" required>
+                                            <option value="bharat4u" <?= $activeProvider === 'bharat4u' ? 'selected' : '' ?>>Bharat4u Payout</option>
+                                            <option value="jiopay" <?= $activeProvider === 'jiopay' ? 'selected' : '' ?>>JioPay Payout</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Switch Payout Method
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Front Page Display Mode Card -->
+                        <div class="card card-default mt-4">
+                            <div class="card-header bg-navy text-white" style="background-color: #031f73 !important; border-bottom: 2px solid #fecb00;">
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-power-off mr-2"></i> Front Page Display Mode</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool text-white" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <?php
+                                $maintenanceMode = get_maintenance_mode();
+                                ?>
+                                <div class="alert alert-<?= $maintenanceMode ? 'warning' : 'success' ?> p-2 small mb-3">
+                                    Current Status: <strong><?= $maintenanceMode ? '404 Maintenance Mode (Homepage returns 404 error)' : 'Live / Normal (Homepage shows normal index.html)' ?></strong>
+                                </div>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_MAINTENANCE_MODE">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Select Homepage Mode</label>
+                                        <select name="maintenance_mode" class="form-control" required>
+                                            <option value="0" <?= !$maintenanceMode ? 'selected' : '' ?>>Normal (Show Front Page)</option>
+                                            <option value="1" <?= $maintenanceMode ? 'selected' : '' ?>>Maintenance (Show 404 Error)</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Save Homepage Status
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- JioPay Payout Configuration Card -->
+                        <div class="card card-default mt-4">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-wallet mr-2"></i> JioPay Payout Credentials</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <?php
+                                $jioCreds = get_jiopay_credentials();
+                                if (!empty($jioCreds['jiopay_mid']) && !empty($jioCreds['jiopay_key']) && !empty($jioCreds['entity_id']) && !empty($jioCreds['customer_id'])):
+                                ?>
+                                    <div class="alert alert-success p-2 small mb-3">
+                                        <i class="fas fa-check-circle mr-1"></i> Configured Mid: <strong><?= htmlspecialchars($jioCreds['jiopay_mid']) ?></strong>
+                                        <br><span class="text-muted">Entity ID: <?= htmlspecialchars($jioCreds['entity_id']) ?></span>
+                                        <br><span class="text-muted">Customer ID: <?= htmlspecialchars($jioCreds['customer_id']) ?></span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="alert alert-warning p-2 small text-dark mb-3">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Not Fully Configured. Payouts will default to simulation mode.
+                                    </div>
+                                <?php endif; ?>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_JIOPAY_CREDENTIALS">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Merchant ID (Mid)</label>
+                                        <input type="text" name="jiopay_mid" class="form-control" value="<?= htmlspecialchars($jioCreds['jiopay_mid']) ?>" placeholder="e.g. JIOPAY507571014" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Merchant Key</label>
+                                        <input type="text" name="jiopay_key" class="form-control" value="<?= htmlspecialchars($jioCreds['jiopay_key']) ?>" placeholder="e.g. 9849ed748062" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Entity ID</label>
+                                        <input type="text" name="jiopay_entity_id" class="form-control" value="<?= htmlspecialchars($jioCreds['entity_id'] ?? '') ?>" placeholder="e.g. 3173ad0e-xxxx-xxxxxx-9c57830b2d07" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Customer ID</label>
+                                        <input type="text" name="jiopay_customer_id" class="form-control" value="<?= htmlspecialchars($jioCreds['customer_id'] ?? '') ?>" placeholder="e.g. CUST10001" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Save Payout Credentials
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Logs Card -->
@@ -352,7 +707,7 @@ $myIp = get_client_ip();
         <div class="float-right d-none d-sm-inline">
             Deccan Finance Limited
         </div>
-        <strong>Copyright &copy; 2026 Deccan Finance Limited.</strong> All rights reserved.
+        <strong>Copyright &copy; 2026 Deccan Finance.</strong> All rights reserved.
     </footer>
 </div>
 

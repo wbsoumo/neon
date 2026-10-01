@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance Limited Onboarding - Admin Home Redirection
+ * Deccan Finance - Admin Home Redirection
  * Routes users to login or dashboard based on session, protected by IP Whitelisting
  */
 

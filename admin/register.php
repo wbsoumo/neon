@@ -1,6 +1,6 @@
 <?php
 /**
- * Deccan Finance Limited Onboarding - Admin Registration
+ * Deccan Finance - Admin Registration
  * Securely registers an admin user inside the SQLite database
  */
 
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Theme style -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 
     <style>
         body.register-page {

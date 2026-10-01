@@ -1,0 +1,1 @@
+<?php echo getcwd() . PHP_EOL; echo realpath('../api/db_helper.php') . PHP_EOL;

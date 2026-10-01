@@ -1,7 +1,7 @@
 <?php
 /**
- * FirstRand Bank Onboarding - Submit Application API
- * Receives form POST, decodes and saves base64 captures, and saves database record
+ * Deccan Finance - Register Application API
+ * Receives form POST, decodes and saves base64 captures, hashes the password, and saves database record
  */
 
 header('Content-Type: application/json');
@@ -30,7 +30,7 @@ if (!$data) {
 // Basic validation for common fields
 $requiredCommon = [
     'account_type', 'full_name', 'email', 'phone', 'address', 'national_id', 'aadhaar_number',
-    'signature_data', 'portrait_data', 'doc_pan_data', 'doc_aadhaar_data'
+    'password', 'signature_data', 'portrait_data', 'doc_pan_data', 'doc_aadhaar_data'
 ];
 foreach ($requiredCommon as $field) {
     if (empty($data[$field])) {
@@ -65,6 +65,16 @@ if ($data['account_type'] === 'SAVINGS' || $data['account_type'] === 'NRI') {
     exit;
 }
 
+// Check if phone/mobile already registered
+$pdo = get_db_connection();
+$stmt = $pdo->prepare("SELECT COUNT(*) as count FROM applications WHERE phone = :phone");
+$stmt->execute([':phone' => $data['phone']]);
+if ($stmt->fetch()['count'] > 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'An account is already registered with this mobile number.']);
+    exit;
+}
+
 // Helper to decode and save base64 images to server files
 function save_base64_image($base64String, $filename) {
     if (empty($base64String)) return null;
@@ -88,7 +98,7 @@ function save_base64_image($base64String, $filename) {
 }
 
 try {
-    // Generate a temporary unique application ID to prefix saved filenames
+    // Generate a unique application ID
     $appId = 'FR-' . str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
 
     // Save images
@@ -103,13 +113,14 @@ try {
         exit;
     }
 
-    // Attach paths to database model
+    // Attach paths and store plaintext password to database model
     $dbData = $data;
-    $dbData['app_id'] = $appId; // Override / force generated ID
+    $dbData['app_id'] = $appId;
     $dbData['signature_path'] = $sigPath;
     $dbData['photo_path'] = $photoPath;
     $dbData['doc_pan_path'] = $panPath;
     $dbData['doc_aadhaar_path'] = $aadhaarPath;
+    $dbData['password_hash'] = $data['password'];
 
     // Save to DB
     $savedAppId = save_application($dbData);
@@ -126,12 +137,12 @@ try {
     echo json_encode([
         'success' => true,
         'app_id' => $savedAppId,
-        'message' => 'Your application has been received and is currently in review. Please save your application ID.'
+        'message' => 'Your account has been registered and is currently in review. Please save your application ID.'
     ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'An error occurred while saving your application: ' . $e->getMessage()
+        'message' => 'An error occurred while registering your account: ' . $e->getMessage()
     ]);
 }
