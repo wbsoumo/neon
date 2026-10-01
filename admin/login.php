@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <style>
         body.login-page {
-            background-color: #0b0f19 !important;
+            background-color: #f1f5f9 !important;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -75,28 +75,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 12px;
         }
         .login-logo a {
-            color: #ffffff !important;
+            color: #0f172a !important;
             font-weight: 800;
             font-size: 1.8rem;
             letter-spacing: -0.5px;
         }
         .login-card-body {
-            background-color: #131b2e !important;
-            border: 1px solid rgba(0, 242, 254, 0.2) !important;
+            background-color: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
             border-radius: 16px !important;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
             padding: 32px !important;
         }
         .login-box-msg {
-            color: #94a3b8 !important;
+            color: #64748b !important;
             font-size: 0.95rem;
             margin-bottom: 24px;
         }
         .input-group-text {
-            background-color: #080c14 !important;
-            border: 1px solid rgba(0, 242, 254, 0.25) !important;
+            background-color: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
             border-left: none !important;
-            color: #00f2fe !important;
+            color: #ff0054 !important;
         }
         .form-control {
             border-right: none !important;
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-logo text-center mb-4">
         <a href="#" class="d-flex align-items-center justify-content-center gap-2">
             <img src="../assets/7PzcYdFs3fE3HNk64pDrpdmsSOk.svg" alt="Neon Logo" onerror="this.src='../logo.png';">
-            <span><span style="color: #00f2fe;">neon</span> admin</span>
+            <span><span style="color: #ff0054;">neon</span> admin</span>
         </a>
     </div>
     <!-- /.login-logo -->
