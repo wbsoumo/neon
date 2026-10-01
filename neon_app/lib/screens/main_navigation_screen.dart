@@ -32,9 +32,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _fetchData() async {
+    final liveUser = await ApiService.getUserDetails(_user.appId);
     final list = await ApiService.getTransactions(_user.appId);
     if (mounted) {
       setState(() {
+        if (liveUser != null) {
+          _user = liveUser;
+        }
         _transactions = list;
         _isLoadingTxn = false;
       });
@@ -184,7 +188,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         ),
                       ),
                       Text(
-                        _selectedAccountTier == "Joint account" ? "₹ 1,50,000.00" : "₹ 8,73,040.00",
+                        "₹ ${_user.balance.toStringAsFixed(2)}",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
