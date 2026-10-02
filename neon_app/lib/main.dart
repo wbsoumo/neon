@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import 'theme/app_theme.dart';
+import 'models/user_model.dart';
+import 'services/api_service.dart';
+import 'screens/main_navigation_screen.dart';
 import 'screens/splash_screen.dart';
+import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const NeonFinanceApp());
+  final savedUser = await ApiService.getSavedUserSession();
+  runApp(NeonFinanceApp(initialUser: savedUser));
 }
 
 class NeonFinanceApp extends StatelessWidget {
-  const NeonFinanceApp({super.key});
+  final UserModel? initialUser;
+  const NeonFinanceApp({super.key, this.initialUser});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +21,9 @@ class NeonFinanceApp extends StatelessWidget {
       title: 'Neon Finance',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
+      home: (initialUser != null && initialUser!.appId.isNotEmpty)
+          ? MainNavigationScreen(user: initialUser!)
+          : const SplashScreen(),
     );
   }
 }
