@@ -162,14 +162,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ),
                         ),
                       ),
-                      // QR scanner icon
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                      // Logout / Session Control icon
+                      GestureDetector(
+                        onTap: () async {
+                          await ApiService.clearUserSession();
+                          if (mounted) {
+                            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
                       ),
                     ],
                   ),

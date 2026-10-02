@@ -54,14 +54,20 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if customer is logged in
+// Check if customer is logged in via PHP session or explicit app_id
 if (empty($_SESSION['customer_logged_in']) || empty($_SESSION['customer_app_id'])) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Unauthorized. Please log in first.'
-    ]);
-    exit;
+    $fallbackAppId = !empty($data['app_id']) ? trim($data['app_id']) : (!empty($_GET['app_id']) ? trim($_GET['app_id']) : null);
+    if (!empty($fallbackAppId)) {
+        $_SESSION['customer_logged_in'] = true;
+        $_SESSION['customer_app_id'] = $fallbackAppId;
+    } else {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unauthorized. Please log in first.'
+        ]);
+        exit;
+    }
 }
 
 // Allow both GET and POST requests

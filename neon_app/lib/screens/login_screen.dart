@@ -59,11 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       if (response['success'] == true && response['user'] != null) {
-        final user = UserModel.fromJson(response['user']);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => MainNavigationScreen(user: user)),
-        );
+        final sessionId = response['session_id'] ?? '';
+        final user = UserModel.fromJson(response['user'], sessionId: sessionId);
+        await ApiService.saveUserSession(user, sessionId);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => MainNavigationScreen(user: user)),
+          );
+        }
       } else {
         _showSnackBar(response['message'] ?? "Login failed. Please check credentials.");
       }

@@ -3,8 +3,36 @@ import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
-class SplashScreen extends StatelessWidget {
+import '../services/api_service.dart';
+import 'main_navigation_screen.dart';
+
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    final savedUser = await ApiService.getSavedUserSession();
+    if (savedUser != null && savedUser.appId.isNotEmpty) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainNavigationScreen(user: savedUser),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

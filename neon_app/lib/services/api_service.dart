@@ -1,10 +1,54 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 
 class ApiService {
   static const String baseUrl = "http://neonfinswiss.world/api";
+  static const String _userKey = "saved_neon_user";
+  static const String _sessionKey = "saved_session_id";
+
+  // Session persistence helpers
+  static Future<void> saveUserSession(UserModel user, String sessionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userWithSession = UserModel(
+      appId: user.appId,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      accountType: user.accountType,
+      balance: user.balance,
+      accountNumber: user.accountNumber,
+      status: user.status,
+      sessionId: sessionId,
+    );
+    await prefs.setString(_userKey, json.encode(userWithSession.toJson()));
+    if (sessionId.isNotEmpty) {
+      await prefs.setString(_sessionKey, sessionId);
+    }
+  }
+
+  static Future<UserModel?> getSavedUserSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userStr = prefs.getString(_userKey);
+    final savedSessionId = prefs.getString(_sessionKey) ?? '';
+    if (userStr != null && userStr.isNotEmpty) {
+      try {
+        final Map<String, dynamic> jsonMap = json.decode(userStr);
+        return UserModel.fromJson(jsonMap, sessionId: savedSessionId);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  static Future<void> clearUserSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_userKey);
+    await prefs.remove(_sessionKey);
+  }
 
   // ==========================================
   // 1. AUTHENTICATION (STRICT LIVE API ONLY)
@@ -172,10 +216,21 @@ class ApiService {
     required String email,
   }) async {
     try {
+      final savedUser = await getSavedUserSession();
+      final sessionId = savedUser?.sessionId ?? '';
+
+      final Map<String, String> headers = {};
+      if (sessionId.isNotEmpty) {
+        headers["X-Session-ID"] = sessionId;
+        headers["Authorization"] = "Bearer $sessionId";
+      }
+
       final response = await http.post(
         Uri.parse("$baseUrl/add_beneficiary.php"),
+        headers: headers,
         body: {
           "app_id": appId,
+          "session_id": sessionId,
           "type": ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK",
           "beneficiary_name": name,
           "beneficiary_account_number": accountNumber,
