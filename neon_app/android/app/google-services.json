@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "368739331938",
+    "project_id": "neon-8e509",
+    "storage_bucket": "neon-8e509.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368739331938:android:39544c4e8a5988f057c63b",
+        "android_client_info": {
+          "package_name": "com.neon.finance.neon_finance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAKO_xwXeweMJQHPF5zd-r1U8oaYCUWJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
