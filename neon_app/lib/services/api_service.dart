@@ -271,10 +271,23 @@ class ApiService {
     required String mpin,
   }) async {
     try {
+      final savedUser = await getSavedUserSession();
+      final sessionId = savedUser?.sessionId ?? '';
+
+      final Map<String, String> headers = {};
+      if (sessionId.isNotEmpty) {
+        headers["X-Session-ID"] = sessionId;
+        headers["Authorization"] = "Bearer $sessionId";
+      }
+
       final response = await http.post(
-        Uri.parse("$baseUrl/transfer_payout.php"),
+        Uri.parse("$baseUrl/transfer_p2p.php"),
+        headers: headers,
         body: {
+          "app_id": senderAppId,
           "sender_app_id": senderAppId,
+          "session_id": sessionId,
+          "recipient_account_number": recipientAccount,
           "recipient_account": recipientAccount,
           "amount": amount.toString(),
           "mpin": mpin,
