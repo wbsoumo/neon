@@ -470,7 +470,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Option 1: P2P Wallet to Wallet Transfer
+              // Option 1: Neon Wallet Transfer
               GestureDetector(
                 onTap: () {
                   Navigator.pop(context);
@@ -504,7 +504,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           children: [
                             Row(
                               children: [
-                                const Text("Neon Wallet (P2P)", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                                const Flexible(
+                                  child: Text(
+                                    "Neon Wallet",
+                                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -521,6 +527,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 6),
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.textMuted),
                     ],
                   ),
@@ -528,7 +535,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Option 2: P2B External Bank Payout Transfer
+              // Option 2: External Bank Transfer
               GestureDetector(
                 onTap: () {
                   Navigator.pop(context);
@@ -562,7 +569,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           children: [
                             Row(
                               children: [
-                                const Text("Other Bank (P2B Payout)", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                                const Flexible(
+                                  child: Text(
+                                    "Other Bank",
+                                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -579,6 +592,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 6),
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.textMuted),
                     ],
                   ),
@@ -635,7 +649,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    mode == "P2P" ? "Verify P2P Wallet Transfer" : "Verify P2B Bank Payout",
+                    mode == "P2P" ? "Verify Neon Wallet Transfer" : "Verify Bank Transfer",
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                   ),
                   const SizedBox(height: 4),
@@ -809,7 +823,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         title: Text(
-          _paymentMode == "P2P" ? "Neon Wallet Transfer (P2P)" : "Other Bank Payout (P2B)",
+          _paymentMode == "P2P" ? "Neon Wallet Transfer" : "Other Bank Transfer",
           style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
         elevation: 0,
@@ -1074,7 +1088,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
             // Active Transfer Form Section
             Text(
-              _paymentMode == "P2P" ? "Send Money (Neon P2P Wallet)" : "Send Money (Other Bank P2B Payout)",
+              _paymentMode == "P2P" ? "Send Money (Neon Wallet)" : "Send Money (Other Bank)",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 14),
