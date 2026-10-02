@@ -19,10 +19,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   late UserModel _user;
   List<TransactionModel> _transactions = [];
+  List<Map<String, dynamic>> _beneficiaries = [];
   bool _isLoadingTxn = true;
-
-  // Selected Account Pill
   String _selectedAccountTier = "Main account";
+  final TextEditingController _paymentRecipientController = TextEditingController();
+  final TextEditingController _paymentAmountController = TextEditingController();
 
   @override
   void initState() {
@@ -31,15 +32,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _fetchData();
   }
 
+  @override
+  void dispose() {
+    _paymentRecipientController.dispose();
+    _paymentAmountController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchData() async {
     final liveUser = await ApiService.getUserDetails(_user.appId);
     final list = await ApiService.getTransactions(_user.appId);
+    final benList = await ApiService.getBeneficiaries(_user.appId);
     if (mounted) {
       setState(() {
         if (liveUser != null) {
           _user = liveUser;
         }
         _transactions = list;
+        _beneficiaries = benList;
         _isLoadingTxn = false;
       });
     }
@@ -405,14 +415,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // TAB 2: PAYMENTS / ZAHLUNGEN
   // ==========================================
   Widget _buildPaymentsTab() {
-    final TextEditingController recipientController = TextEditingController();
-    final TextEditingController amountController = TextEditingController();
-
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text("Payments & Transfers", style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text("Payments & Transfers", style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
         elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -424,98 +432,211 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12)],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.neonPink.withOpacity(0.1),
+                      color: AppTheme.neonPink.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.neonPink),
+                    child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.neonPink, size: 24),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Add Beneficiary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text("Add Beneficiary", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
+                        SizedBox(height: 2),
                         Text("Save new recipient account or IBAN", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                       ],
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final updated = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => AddBeneficiaryScreen(user: _user)),
                       );
+                      if (updated == true) {
+                        _fetchData();
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.neonPink,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     ),
-                    child: const Text("Add"),
+                    child: const Text("Add", style: TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
+            // Saved Beneficiaries Quick Bar
+            if (_beneficiaries.isNotEmpty) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Quick Select Recipient", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                  Text("${_beneficiaries.length} Saved", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 72,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _beneficiaries.length,
+                  itemBuilder: (context, idx) {
+                    final b = _beneficiaries[idx];
+                    final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
+                    final acc = b['beneficiary_account_number'] ?? '';
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _paymentRecipientController.text = acc;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Selected $name ($acc)")),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6)],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: AppTheme.neonPink.withValues(alpha: 0.15),
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : 'B',
+                                style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
+                                Text(acc, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
             const Text(
               "Send Money Instantly",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 14)
                 ],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: recipientController,
-                    decoration: InputDecoration(
-                      labelText: "Recipient Account Number / IBAN",
-                      prefixIcon: const Icon(Icons.person_outline_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  // Recipient Account Input Box
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey[200]!, width: 1.2),
+                    ),
+                    child: TextField(
+                      controller: _paymentRecipientController,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: "Recipient Account Number / IBAN",
+                        labelStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                        hintText: "Enter 11-digit Account Number or IBAN",
+                        prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.neonPink, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppTheme.neonPink, width: 1.5),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: "Amount (CHF)",
-                      prefixIcon: const Icon(Icons.attach_money_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 16),
+
+                  // Transfer Amount Input Box
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey[200]!, width: 1.2),
+                    ),
+                    child: TextField(
+                      controller: _paymentAmountController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: "Transfer Amount (₹ / CHF)",
+                        labelStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                        hintText: "0.00",
+                        prefixIcon: const Icon(Icons.payments_outlined, color: AppTheme.neonPink, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppTheme.neonPink, width: 1.5),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (recipientController.text.isEmpty || amountController.text.isEmpty) {
+                        if (_paymentRecipientController.text.trim().isEmpty || _paymentAmountController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Please fill all transfer fields")),
+                            const SnackBar(content: Text("Please enter recipient account and transfer amount.")),
                           );
                           return;
                         }
-                        final amount = double.tryParse(amountController.text) ?? 0.0;
+                        final amount = double.tryParse(_paymentAmountController.text.trim()) ?? 0.0;
+                        if (amount <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Please enter a valid transfer amount.")),
+                          );
+                          return;
+                        }
                         final res = await ApiService.sendP2P(
                           senderAppId: _user.appId,
-                          recipientAccount: recipientController.text,
+                          recipientAccount: _paymentRecipientController.text.trim(),
                           amount: amount,
                           mpin: "123456",
                         );
@@ -532,6 +653,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         backgroundColor: AppTheme.neonPink,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
                       ),
                       child: const Text("Confirm Transfer", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     ),

@@ -221,6 +221,8 @@ class ApiService {
     required String nickname,
     required String phone,
     required String email,
+    double dailyLimit = 50000.0,
+    String type = "OTHER_BANK",
   }) async {
     try {
       final savedUser = await getSavedUserSession();
@@ -232,17 +234,21 @@ class ApiService {
         headers["Authorization"] = "Bearer $sessionId";
       }
 
+      final String resolvedType = type.isNotEmpty ? type : (ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK");
+      final String resolvedNickname = nickname.isNotEmpty ? nickname : (bankName.isNotEmpty ? bankName : "Beneficiary");
+
       final response = await http.post(
         Uri.parse("$baseUrl/add_beneficiary.php"),
         headers: headers,
         body: {
           "app_id": appId,
           "session_id": sessionId,
-          "type": ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK",
+          "type": resolvedType,
           "beneficiary_name": name,
           "beneficiary_account_number": accountNumber,
           "ifsc_code": ifsc,
-          "nickname": nickname,
+          "nickname": resolvedNickname,
+          "daily_limit": dailyLimit.toStringAsFixed(2),
           "phone": phone,
           "email": email,
         },
