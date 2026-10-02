@@ -373,7 +373,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final txn = _transactions[index];
-                  final isCredit = txn.type == "CREDIT";
+                  final isCredit = txn.isCredit;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     padding: const EdgeInsets.all(14),

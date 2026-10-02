@@ -24,15 +24,15 @@ class _PassbookScreenState extends State<PassbookScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredTxns = widget.transactions.where((txn) {
-      if (_filterType == "CREDIT") return txn.type == "CREDIT";
-      if (_filterType == "DEBIT") return txn.type != "CREDIT";
+      if (_filterType == "CREDIT") return txn.isCredit;
+      if (_filterType == "DEBIT") return !txn.isCredit;
       return true;
     }).toList();
 
     double totalCredit = 0.0;
     double totalDebit = 0.0;
     for (var txn in widget.transactions) {
-      if (txn.type == "CREDIT") {
+      if (txn.isCredit) {
         totalCredit += txn.amount;
       } else {
         totalDebit += txn.amount;
@@ -180,7 +180,7 @@ class _PassbookScreenState extends State<PassbookScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final txn = filteredTxns[index];
-                  final isCredit = txn.type == "CREDIT";
+                  final isCredit = txn.isCredit;
 
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
