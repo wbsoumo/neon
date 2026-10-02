@@ -93,7 +93,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.neonPink, // Signature Neon Pink Canvas
+      backgroundColor: Colors.white, // Clean White Canvas
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -105,22 +105,25 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Animated Glowing White & Pink Wordmark Badge
+                    // Animated Glowing Brand Wordmark Badge on White Canvas
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+                        border: Border.all(
+                          color: AppTheme.neonPink.withValues(alpha: 0.2),
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: AppTheme.neonPink.withValues(alpha: 0.18),
                             blurRadius: _glowAnimation.value,
                             spreadRadius: _glowAnimation.value / 4,
                           ),
                           BoxShadow(
-                            color: AppTheme.neonBurgundy.withValues(alpha: 0.25),
-                            blurRadius: _glowAnimation.value * 1.2,
+                            color: AppTheme.neonCyan.withValues(alpha: 0.12),
+                            blurRadius: _glowAnimation.value * 1.5,
                             spreadRadius: 1,
                           ),
                         ],
@@ -132,7 +135,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                             width: 46,
                             height: 46,
                             decoration: const BoxDecoration(
-                              color: Colors.white,
+                              color: AppTheme.neonPink,
                               shape: BoxShape.circle,
                             ),
                             child: const Center(
@@ -140,7 +143,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                                 "e\no",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: AppTheme.neonPink,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
                                   height: 0.95,
@@ -159,13 +162,13 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                               children: [
                                 TextSpan(
                                   text: "neon",
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: AppTheme.textPrimary),
                                 ),
                                 TextSpan(
                                   text: " finance",
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.neonPink,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -175,23 +178,23 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                       ),
                     ),
                     const SizedBox(height: 36),
-                    // Subtitle with Glowing Pulse Indicator
+                    // Subtitle with Brand Neon Pink Indicator
                     Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
+                      children: const [
                         SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.9)),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.neonPink),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        const Text(
+                        SizedBox(width: 10),
+                        Text(
                           "SWISS DIGITAL BANKING",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppTheme.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2.0,
