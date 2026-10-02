@@ -54,21 +54,31 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if customer is logged in via PHP session or explicit app_id
-if (empty($_SESSION['customer_logged_in']) || empty($_SESSION['customer_app_id'])) {
-    $fallbackAppId = !empty($data['app_id']) ? trim($data['app_id']) : (!empty($_GET['app_id']) ? trim($_GET['app_id']) : null);
-    if (!empty($fallbackAppId)) {
-        $_SESSION['customer_logged_in'] = true;
-        $_SESSION['customer_app_id'] = $fallbackAppId;
-    } else {
-        http_response_code(401);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Unauthorized. Please log in first.'
-        ]);
-        exit;
-    }
+// 2. Resolve customer app_id directly from request or session
+$customerAppId = null;
+
+if (!empty($data['app_id'])) {
+    $customerAppId = trim($data['app_id']);
+} elseif (!empty($_GET['app_id'])) {
+    $customerAppId = trim($_GET['app_id']);
 }
+
+if (empty($customerAppId) && (!empty($_SESSION['customer_logged_in']) && !empty($_SESSION['customer_app_id']))) {
+    $customerAppId = $_SESSION['customer_app_id'];
+}
+
+// Check if customer app_id is resolved
+if (empty($customerAppId)) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Unauthorized. Please log in first.'
+    ]);
+    exit;
+}
+
+$_SESSION['customer_logged_in'] = true;
+$_SESSION['customer_app_id'] = $customerAppId;
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
