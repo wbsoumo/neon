@@ -24,6 +24,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   String _selectedAccountTier = "Main account";
   final TextEditingController _paymentRecipientController = TextEditingController();
   final TextEditingController _paymentAmountController = TextEditingController();
+  String _selectedBeneficiaryName = "";
+  String _selectedBeneficiaryBank = "";
 
   @override
   void initState() {
@@ -411,6 +413,185 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  // MPIN Verification Bottom Sheet Modal
+  void _showMpinVerificationModal(String recipientAccount, String recipientName, double amount) {
+    final TextEditingController mpinController = TextEditingController();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Verify Security MPIN",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Enter your 6-digit MPIN to authorize transfer",
+                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Transfer Details Summary Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                recipientName.isNotEmpty ? recipientName : "Recipient",
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text("A/C: $recipientAccount", style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "₹ ${amount.toStringAsFixed(2)}",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.neonPink),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextField(
+                    controller: mpinController,
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 8),
+                    decoration: InputDecoration(
+                      counterText: "",
+                      hintText: "******",
+                      hintStyle: TextStyle(color: Colors.grey[300], letterSpacing: 8),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppTheme.neonPink, width: 2),
+                      ),
+                    ),
+                  ),
+
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: AppTheme.dangerRed, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final mpin = mpinController.text.trim();
+                              if (mpin.isEmpty) {
+                                setModalState(() => errorMessage = "Please enter your MPIN");
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSubmitting = true;
+                                errorMessage = null;
+                              });
+
+                              final res = await ApiService.sendP2P(
+                                senderAppId: _user.appId,
+                                recipientAccount: recipientAccount,
+                                amount: amount,
+                                mpin: mpin,
+                              );
+
+                              setModalState(() => isSubmitting = false);
+
+                              if (mounted) {
+                                if (res['success'] == true || res['status'] == 'success') {
+                                  Navigator.pop(context); // Close bottom sheet
+                                  _fetchData(); // Refresh user balance & transactions
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PaymentProcessingScreen(responseData: res),
+                                    ),
+                                  );
+                                } else {
+                                  setModalState(() {
+                                    errorMessage = res['message'] ?? "Invalid MPIN. Please try again.";
+                                  });
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonPink,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          : const Text("Verify & Pay", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ==========================================
   // TAB 2: PAYMENTS / ZAHLUNGEN
   // ==========================================
@@ -491,7 +672,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 72,
+                height: 80,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _beneficiaries.length,
@@ -499,32 +680,52 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     final b = _beneficiaries[idx];
                     final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
                     final acc = b['beneficiary_account_number'] ?? '';
+                    final bankName = b['bank_name'] ?? b['nickname'] ?? (b['type'] == 'SELF_BANK' ? 'Neon Finance' : 'Bank Account');
+                    final statusStr = (b['status'] ?? 'APPROVED').toString().toUpperCase();
+                    final isApproved = statusStr == 'APPROVED' || statusStr == 'DONE';
+
                     return GestureDetector(
                       onTap: () {
+                        if (!isApproved) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Beneficiary approval is pending. Transfers will be enabled once approved."),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
                         setState(() {
                           _paymentRecipientController.text = acc;
+                          _selectedBeneficiaryName = name;
+                          _selectedBeneficiaryBank = bankName;
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Selected $name ($acc)")),
+                          SnackBar(content: Text("Selected $name ($bankName)")),
                         );
                       },
                       child: Container(
                         margin: const EdgeInsets.only(right: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isApproved ? Colors.white : Colors.grey[100],
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6)],
+                          border: Border.all(
+                            color: isApproved ? AppTheme.neonPink.withValues(alpha: 0.25) : Colors.grey[300]!,
+                          ),
+                          boxShadow: isApproved ? [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6)] : [],
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 18,
-                              backgroundColor: AppTheme.neonPink.withValues(alpha: 0.15),
+                              radius: 20,
+                              backgroundColor: isApproved ? AppTheme.neonPink.withValues(alpha: 0.15) : Colors.grey[300],
                               child: Text(
                                 name.isNotEmpty ? name[0].toUpperCase() : 'B',
-                                style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: isApproved ? AppTheme.neonPink : Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -532,8 +733,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
-                                Text(acc, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                                Row(
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: isApproved ? AppTheme.textPrimary : AppTheme.textMuted,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    // Status Badge (APPROVED vs PENDING)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isApproved ? AppTheme.successGreen.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        isApproved ? "APPROVED" : "PENDING",
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: isApproved ? AppTheme.successGreen : Colors.orange[800],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(bankName, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                Text(acc, style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
                               ],
                             ),
                           ],
@@ -563,6 +794,47 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Selected Beneficiary Banner Card
+                  if (_selectedBeneficiaryName.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.neonPink.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_pin_circle_rounded, color: AppTheme.neonPink, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Recipient: $_selectedBeneficiaryName",
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                                ),
+                                Text("Bank: $_selectedBeneficiaryBank", style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedBeneficiaryName = "";
+                                _selectedBeneficiaryBank = "";
+                                _paymentRecipientController.clear();
+                              });
+                            },
+                            child: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Recipient Account Input Box
                   Container(
                     decoration: BoxDecoration(
@@ -614,6 +886,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 10),
+
+                  // Available Account Balance Info
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Available Balance:", style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w500)),
+                        Text(
+                          "₹ ${_user.balance.toStringAsFixed(2)}",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
 
                   SizedBox(
@@ -621,33 +910,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (_paymentRecipientController.text.trim().isEmpty || _paymentAmountController.text.trim().isEmpty) {
+                        final recipientAcc = _paymentRecipientController.text.trim();
+                        final amountText = _paymentAmountController.text.trim();
+
+                        if (recipientAcc.isEmpty || amountText.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Please enter recipient account and transfer amount.")),
                           );
                           return;
                         }
-                        final amount = double.tryParse(_paymentAmountController.text.trim()) ?? 0.0;
+                        final amount = double.tryParse(amountText) ?? 0.0;
                         if (amount <= 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Please enter a valid transfer amount.")),
                           );
                           return;
                         }
-                        final res = await ApiService.sendP2P(
-                          senderAppId: _user.appId,
-                          recipientAccount: _paymentRecipientController.text.trim(),
-                          amount: amount,
-                          mpin: "123456",
-                        );
-                        if (mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PaymentProcessingScreen(responseData: res),
+
+                        // 1. Balance Check Validation
+                        if (_user.balance < amount) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Insufficient account balance! Available: ₹ ${_user.balance.toStringAsFixed(2)}, Requested: ₹ ${amount.toStringAsFixed(2)}",
+                              ),
+                              backgroundColor: AppTheme.dangerRed,
                             ),
                           );
+                          return;
                         }
+
+                        // 2. Open MPIN Security Bottom Sheet
+                        _showMpinVerificationModal(recipientAcc, _selectedBeneficiaryName, amount);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.neonPink,
