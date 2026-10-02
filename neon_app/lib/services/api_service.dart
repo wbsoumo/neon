@@ -376,4 +376,67 @@ class ApiService {
       return {"success": false, "message": "Failed to request statement."};
     }
   }
+
+  // ==========================================
+  // 5. LIVE OPEN SOURCE CURRENCY & INVEST API
+  // ==========================================
+
+  /// Fetch live exchange rate from INR to CHF via Frankfurter Open Source API
+  static Future<double> getInrToChfRate() async {
+    try {
+      final res = await http
+          .get(Uri.parse("https://api.frankfurter.app/latest?from=INR&to=CHF"))
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final rate = (data['rates']?['CHF'] as num?)?.toDouble();
+        if (rate != null && rate > 0) {
+          return rate;
+        }
+      }
+    } catch (e) {
+      debugPrint("Currency API error: $e");
+    }
+    // Fallback rate: 1 INR ≈ 0.0105 CHF
+    return 0.0105;
+  }
+
+  /// Fetch historical EUR/CHF rates for stock graph visualization
+  static Future<List<double>> getStockHistoryData(String period) async {
+    try {
+      String startDateStr;
+      final now = DateTime.now();
+      if (period == "1d" || period == "1w") {
+        final past = now.subtract(const Duration(days: 7));
+        startDateStr = "${past.year}-${past.month.toString().padLeft(2, '0')}-${past.day.toString().padLeft(2, '0')}";
+      } else if (period == "1m") {
+        final past = now.subtract(const Duration(days: 30));
+        startDateStr = "${past.year}-${past.month.toString().padLeft(2, '0')}-${past.day.toString().padLeft(2, '0')}";
+      } else {
+        final past = now.subtract(const Duration(days: 365));
+        startDateStr = "${past.year}-${past.month.toString().padLeft(2, '0')}-${past.day.toString().padLeft(2, '0')}";
+      }
+
+      final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final url = "https://api.frankfurter.app/$startDateStr..$todayStr?from=EUR&to=CHF";
+      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 6));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final ratesObj = data['rates'] as Map<String, dynamic>?;
+        if (ratesObj != null && ratesObj.isNotEmpty) {
+          final List<double> values = [];
+          ratesObj.forEach((date, map) {
+            if (map['CHF'] != null) {
+              values.add((map['CHF'] as num).toDouble());
+            }
+          });
+          if (values.isNotEmpty) return values;
+        }
+      }
+    } catch (e) {
+      debugPrint("Stock history API error: $e");
+    }
+    // Fallback graph points if network unavailable
+    return [0.932, 0.935, 0.941, 0.938, 0.945, 0.949, 0.952];
+  }
 }

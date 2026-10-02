@@ -36,11 +36,44 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final TextEditingController _p2bIfscController = TextEditingController();
   final TextEditingController _p2bAmountController = TextEditingController();
 
+  // Live Exchange Rate & Stock Chart State
+  double _inrToChfRate = 0.0105;
+  String _selectedStockPeriod = "1y";
+  List<double> _stockSpots = [0.932, 0.935, 0.941, 0.938, 0.945, 0.949, 0.952];
+  bool _isLoadingStockData = false;
+
   @override
   void initState() {
     super.initState();
     _user = widget.user;
     _fetchData();
+    _fetchExchangeRatesAndStockData();
+  }
+
+  Future<void> _fetchExchangeRatesAndStockData() async {
+    final rate = await ApiService.getInrToChfRate();
+    final spots = await ApiService.getStockHistoryData(_selectedStockPeriod);
+    if (mounted) {
+      setState(() {
+        _inrToChfRate = rate;
+        _stockSpots = spots;
+        _isLoadingStockData = false;
+      });
+    }
+  }
+
+  Future<void> _onPeriodChanged(String period) async {
+    setState(() {
+      _selectedStockPeriod = period;
+      _isLoadingStockData = true;
+    });
+    final spots = await ApiService.getStockHistoryData(period);
+    if (mounted) {
+      setState(() {
+        _stockSpots = spots;
+        _isLoadingStockData = false;
+      });
+    }
   }
 
   @override
@@ -1440,6 +1473,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // TAB 3: INVEST (Screenshot #3)
   // ==========================================
   Widget _buildInvestTab() {
+    final balanceChf = _user.balance * _inrToChfRate;
+    final gainChf = balanceChf * 0.1667;
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -1453,19 +1489,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Live Currency Converter Badge
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.neonPink.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.currency_exchange_rounded, color: AppTheme.neonPink, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Live Rate: 1 INR = ${_inrToChfRate.toStringAsFixed(4)} CHF (Frankfurter API)",
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+
             // Performance Text
             const Text("Performance", style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Row(
-              children: const [
-                Text("5.67 CHF", style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-                SizedBox(width: 8),
-                Text("+0.81 CHF (+16.67%)", style: TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w700, fontSize: 13)),
+              children: [
+                Text(
+                  "${balanceChf.toStringAsFixed(2)} CHF",
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
+                  style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w700, fontSize: 13),
+                ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Performance Chart Card
+            // Dynamic Performance Chart Card (Using fl_chart)
             Container(
               height: 200,
               padding: const EdgeInsets.all(16),
@@ -1476,49 +1539,51 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
                 ],
               ),
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(show: false),
-                  titlesData: FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [
-                        const FlSpot(0, 3),
-                        const FlSpot(1, 4),
-                        const FlSpot(2, 3.5),
-                        const FlSpot(3, 5),
-                        const FlSpot(4, 4.8),
-                        const FlSpot(5, 5.67),
-                      ],
-                      isCurved: true,
-                      color: AppTheme.successGreen,
-                      barWidth: 3,
-                      dotData: FlDotData(show: false),
+              child: _isLoadingStockData
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.successGreen))
+                  : LineChart(
+                      LineChartData(
+                        gridData: FlGridData(show: false),
+                        titlesData: FlTitlesData(show: false),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: List.generate(_stockSpots.length, (i) => FlSpot(i.toDouble(), _stockSpots[i])),
+                            isCurved: true,
+                            color: AppTheme.successGreen,
+                            barWidth: 3,
+                            dotData: FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: AppTheme.successGreen.withValues(alpha: 0.12),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
             ),
             const SizedBox(height: 16),
 
-            // Time filters (1d, 1w, 1m, 1y, Max)
+            // Interactive Time filters (1d, 1w, 1m, 1y, Max)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ["1d", "1w", "1m", "1y", "Max"].map((label) {
-                final isSelected = label == "1y";
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.black : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+                final isSelected = label == _selectedStockPeriod;
+                return GestureDetector(
+                  onTap: () => _onPeriodChanged(label),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.black : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 );
@@ -1563,6 +1628,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // TAB 4: SPACES & CARDS (Screenshot #1 & #4)
   // ==========================================
   Widget _buildSpacesTab() {
+    final holidaysChf = (_user.balance * 0.4) * _inrToChfRate;
+    final taxesChf = (_user.balance * 0.1) * _inrToChfRate;
+    final mainAccChf = _user.balance * _inrToChfRate;
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -1573,13 +1642,47 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Main Account Live Conversion Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppTheme.neonPink, AppTheme.neonBurgundy]),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: AppTheme.neonPink.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Main Account Balance", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(
+                    "₹ ${_user.balance.toStringAsFixed(2)}",
+                    style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.currency_exchange, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        "≈ ${mainAccChf.toStringAsFixed(2)} CHF (Live Converter)",
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
             const Text("Your Savings Spaces", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 14),
             Row(
               children: [
-                Expanded(child: _buildSpaceCard("Holidays", "2'400.00 CHF", Icons.flight_takeoff_rounded, Colors.orange[400]!)),
+                Expanded(child: _buildSpaceCard("Holidays (40%)", "${holidaysChf.toStringAsFixed(2)} CHF", Icons.flight_takeoff_rounded, Colors.orange[400]!)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildSpaceCard("Taxes", "600.00 CHF", Icons.account_balance_rounded, Colors.brown[300]!)),
+                Expanded(child: _buildSpaceCard("Taxes (10%)", "${taxesChf.toStringAsFixed(2)} CHF", Icons.account_balance_rounded, Colors.brown[300]!)),
               ],
             ),
             const SizedBox(height: 12),
@@ -1633,6 +1736,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // TAB 5: STATISTICS (Screenshot #2)
   // ==========================================
   Widget _buildStatisticsTab() {
+    final spentChf = (_user.balance * 0.25) * _inrToChfRate;
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -1660,16 +1765,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       PieChartData(
                         sections: [
                           PieChartSectionData(color: AppTheme.neonCyan, value: 50, radius: 24, showTitle: false),
-                          PieChartSectionData(color: AppTheme.successGreen, value: 20, radius: 24, showTitle: false),
-                          PieChartSectionData(color: AppTheme.neonPink, value: 10, radius: 24, showTitle: false),
+                          PieChartSectionData(color: AppTheme.successGreen, value: 30, radius: 24, showTitle: false),
+                          PieChartSectionData(color: AppTheme.neonPink, value: 20, radius: 24, showTitle: false),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text("CHF spent", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-                  const Text("1'000.00", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                  const Text("This month", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                  const Text("CHF spent (Converted from INR)", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                  Text("${spentChf.toStringAsFixed(2)} CHF", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                  Text("Equivalent to ₹ ${(_user.balance * 0.25).toStringAsFixed(2)} INR", style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                 ],
               ),
             ),
