@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -145,7 +146,9 @@ class ApiService {
           return UserModel.fromJson(data['user']);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint("getUserDetails error: $e");
+    }
     return null;
   }
 
@@ -182,7 +185,9 @@ class ApiService {
           return list.map((item) => TransactionModel.fromJson(item)).toList();
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint("getTransactions error: $e");
+    }
     return [];
   }
 
@@ -199,7 +204,9 @@ class ApiService {
           return List<Map<String, dynamic>>.from(data['beneficiaries']);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint("getBeneficiaries error: $e");
+    }
     return [];
   }
 
