@@ -93,7 +93,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Sleek Neon Dark Canvas
+      backgroundColor: AppTheme.neonPink, // Signature Neon Pink Canvas
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -105,23 +105,23 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Animated Glowing Neon Wordmark Badge
+                    // Animated Glowing White & Pink Wordmark Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppTheme.neonPink, width: 2),
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.neonPink.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: 0.3),
                             blurRadius: _glowAnimation.value,
-                            spreadRadius: _glowAnimation.value / 3,
+                            spreadRadius: _glowAnimation.value / 4,
                           ),
                           BoxShadow(
-                            color: AppTheme.neonCyan.withOpacity(0.4),
-                            blurRadius: _glowAnimation.value * 1.5,
-                            spreadRadius: 2,
+                            color: AppTheme.neonBurgundy.withValues(alpha: 0.25),
+                            blurRadius: _glowAnimation.value * 1.2,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
@@ -129,10 +129,10 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: 46,
+                            height: 46,
                             decoration: const BoxDecoration(
-                              color: AppTheme.neonPink,
+                              color: Colors.white,
                               shape: BoxShape.circle,
                             ),
                             child: const Center(
@@ -140,19 +140,19 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                                 "e\no",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppTheme.neonPink,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  height: 0.9,
+                                  height: 0.95,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 14),
                           RichText(
                             text: const TextSpan(
                               style: TextStyle(
-                                fontSize: 36,
+                                fontSize: 34,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -1.0,
                               ),
@@ -163,7 +163,10 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                                 ),
                                 TextSpan(
                                   text: " finance",
-                                  style: TextStyle(color: AppTheme.neonPink),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w400,
+                                  ),
                                 ),
                               ],
                             ),
@@ -175,20 +178,20 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
                     // Subtitle with Glowing Pulse Indicator
                     Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.neonPink),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withValues(alpha: 0.9)),
                           ),
                         ),
-                        SizedBox(width: 10),
-                        Text(
+                        const SizedBox(width: 10),
+                        const Text(
                           "SWISS DIGITAL BANKING",
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2.0,
