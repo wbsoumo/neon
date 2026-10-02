@@ -29,7 +29,6 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
   final TextEditingController _emailController = TextEditingController();
 
   String _accountType = "Savings Account";
-  String _purpose = "Personal Transfer";
 
   @override
   void initState() {

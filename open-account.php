@@ -753,18 +753,31 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
                             </div>
 
                             <div class="form-group">
-                                <label for="national_id">National ID / Passport Number *</label>
+                                <label for="nationality">Country / Nationality *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-regular fa-id-card"></i>
-                                    <input type="text" id="national_id" name="national_id" class="form-control" placeholder="e.g. S12345678" required>
+                                    <i class="fa-solid fa-globe"></i>
+                                    <select id="nationality" name="nationality" class="form-control" onchange="onCountryChange(this.value)" required>
+                                        <option value="Switzerland" selected>Switzerland 🇨🇭</option>
+                                        <option value="India">India 🇮🇳</option>
+                                        <option value="United States">United States 🇺🇸</option>
+                                        <option value="United Kingdom">United Kingdom 🇬🇧</option>
+                                        <option value="Germany">Germany 🇩🇪</option>
+                                        <option value="France">France 🇫🇷</option>
+                                        <option value="United Arab Emirates">United Arab Emirates 🇦🇪</option>
+                                        <option value="Singapore">Singapore 🇸🇬</option>
+                                        <option value="Canada">Canada 🇨🇦</option>
+                                        <option value="Australia">Australia 🇦🇺</option>
+                                        <option value="Japan">Japan 🇯🇵</option>
+                                        <option value="Other">Other Country</option>
+                                    </select>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="nationality">Nationality / Country *</label>
+                                <label for="national_id" id="lbl_national_id">National ID / Passport Number *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-solid fa-globe"></i>
-                                    <input type="text" id="nationality" name="nationality" class="form-control" placeholder="Switzerland" value="Switzerland" required>
+                                    <i class="fa-regular fa-id-card"></i>
+                                    <input type="text" id="national_id" name="national_id" class="form-control" placeholder="e.g. S12345678" required>
                                 </div>
                             </div>
                         </div>
@@ -791,11 +804,11 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
                             </div>
 
                             <div class="form-group">
-                                <label>National ID / Passport Document *</label>
+                                <label id="lbl_doc_id_title">National ID / Passport Document *</label>
                                 <div class="upload-card" onclick="triggerFileInput('fileIdDoc')">
                                     <i class="fa-solid fa-passport upload-icon"></i>
-                                    <div class="upload-title">Upload Passport / ID Card</div>
-                                    <div class="upload-sub">Front side image of ID card</div>
+                                    <div class="upload-title" id="lbl_doc_id_head">Upload Passport / ID Card</div>
+                                    <div class="upload-sub" id="lbl_doc_id_sub">Front side image of ID card</div>
                                     <img id="prevIdDoc" class="upload-preview" alt="ID Preview">
                                 </div>
                                 <input type="file" id="fileIdDoc" accept="image/*" style="display:none" onchange="handleFile(this, 'doc_pan_data', 'prevIdDoc')">
@@ -934,6 +947,28 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             }
         }
 
+        function onCountryChange(country) {
+            const lbl = document.getElementById('lbl_national_id');
+            const input = document.getElementById('national_id');
+            const docTitle = document.getElementById('lbl_doc_id_title');
+            const docHead = document.getElementById('lbl_doc_id_head');
+            const docSub = document.getElementById('lbl_doc_id_sub');
+
+            if (country === 'India') {
+                if (lbl) lbl.innerText = 'Aadhaar Card Number / National ID *';
+                if (input) input.placeholder = 'e.g. 1234 5678 9012';
+                if (docTitle) docTitle.innerText = 'Aadhaar Card / Government ID *';
+                if (docHead) docHead.innerText = 'Upload Aadhaar Card / ID';
+                if (docSub) docSub.innerText = 'Front side image of Aadhaar Card or National ID';
+            } else {
+                if (lbl) lbl.innerText = 'National ID / Passport Number *';
+                if (input) input.placeholder = 'e.g. S12345678';
+                if (docTitle) docTitle.innerText = 'National ID / Passport Document *';
+                if (docHead) docHead.innerText = 'Upload Passport / ID Card';
+                if (docSub) docSub.innerText = 'Front side image of Passport or Government ID';
+            }
+        }
+
         function validateCurrentStep() {
             const currentSection = document.getElementById(`section${currentStep}`);
             if (!currentSection) return true;
@@ -960,7 +995,8 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
                         if (input.id === 'portrait_data') {
                             alert('Please capture or upload your Live Selfie / Portrait Photo.');
                         } else if (input.id === 'doc_pan_data') {
-                            alert('Please upload your National ID / Passport Document.');
+                            const country = document.getElementById('nationality')?.value;
+                            alert(country === 'India' ? 'Please upload your Aadhaar Card / ID Document.' : 'Please upload your National ID / Passport Document.');
                         } else if (input.id === 'doc_aadhaar_data') {
                             alert('Please upload your Proof of Address.');
                         } else {
@@ -982,10 +1018,17 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
                 if (!input.value || input.value.trim() === '') {
                     try { input.focus(); } catch (e) {}
                     let label = '';
-                    if (input.labels && input.labels.length > 0) {
+                    if (input.id) {
+                        const associatedLabel = document.querySelector(`label[for="${input.id}"]`);
+                        if (associatedLabel) {
+                            label = associatedLabel.innerText.replace('*', '').trim();
+                        }
+                    }
+                    if (!label && input.labels && input.labels.length > 0) {
                         label = input.labels[0].innerText.replace('*', '').trim();
-                    } else {
-                        label = input.getAttribute('placeholder') || input.name;
+                    }
+                    if (!label) {
+                        label = input.getAttribute('placeholder') || input.name || 'Required field';
                     }
                     alert('Please complete the required field: ' + label);
                     return false;

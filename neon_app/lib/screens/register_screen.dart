@@ -17,6 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _nationalIdController = TextEditingController();
 
+  String _selectedCountry = "Switzerland";
   String _accountType = "SAVINGS";
   bool _isLoading = false;
 
@@ -145,10 +146,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
             const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCountry,
+              decoration: InputDecoration(
+                labelText: "Country / Nationality",
+                prefixIcon: const Icon(Icons.public_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              items: const [
+                DropdownMenuItem(value: "Switzerland", child: Text("Switzerland 🇨🇭")),
+                DropdownMenuItem(value: "India", child: Text("India 🇮🇳")),
+                DropdownMenuItem(value: "United States", child: Text("United States 🇺🇸")),
+                DropdownMenuItem(value: "United Kingdom", child: Text("United Kingdom 🇬🇧")),
+                DropdownMenuItem(value: "Germany", child: Text("Germany 🇩🇪")),
+                DropdownMenuItem(value: "France", child: Text("France 🇫🇷")),
+                DropdownMenuItem(value: "United Arab Emirates", child: Text("United Arab Emirates 🇦🇪")),
+                DropdownMenuItem(value: "Singapore", child: Text("Singapore 🇸🇬")),
+                DropdownMenuItem(value: "Canada", child: Text("Canada 🇨🇦")),
+                DropdownMenuItem(value: "Australia", child: Text("Australia 🇦🇺")),
+                DropdownMenuItem(value: "Other", child: Text("Other Country")),
+              ],
+              onChanged: (val) => setState(() => _selectedCountry = val!),
+            ),
+            const SizedBox(height: 14),
             TextField(
               controller: _nationalIdController,
               decoration: InputDecoration(
-                labelText: "Aadhaar / National ID Number",
+                labelText: _selectedCountry == "India" ? "Aadhaar Card Number / National ID *" : "National ID / Passport Number *",
+                hintText: _selectedCountry == "India" ? "e.g. 1234 5678 9012" : "e.g. S12345678",
                 prefixIcon: const Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -165,7 +190,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 20),
 
             DropdownButtonFormField<String>(
-              value: _accountType,
+              initialValue: _accountType,
               decoration: InputDecoration(
                 labelText: "Account Type",
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

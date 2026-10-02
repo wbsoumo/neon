@@ -40,7 +40,6 @@ class AppTheme {
         primary: neonPink,
         secondary: neonCyan,
         surface: cardLight,
-        background: bgLight,
       ),
       textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
         displayLarge: GoogleFonts.plusJakartaSans(
