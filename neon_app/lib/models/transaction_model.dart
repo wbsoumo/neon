@@ -34,16 +34,20 @@ class TransactionModel {
 
     return TransactionModel(
       id: json['id']?.toString() ?? '',
-      transactionId: json['transaction_id'] ?? '',
-      senderAppId: json['sender_app_id'] ?? '',
-      recipientAccount: json['recipient_account'] ?? '',
-      recipientName: json['recipient_name'] ?? json['recipient_account'] ?? 'Recipient',
+      transactionId: json['transaction_id']?.toString() ?? '',
+      senderAppId: json['sender_app_id']?.toString() ?? '',
+      recipientAccount: json['recipient_account']?.toString() ?? '',
+      recipientName: (json['recipient_name'] != null && json['recipient_name'].toString().isNotEmpty)
+          ? json['recipient_name'].toString()
+          : ((json['recipient_account'] != null && json['recipient_account'].toString().isNotEmpty)
+              ? json['recipient_account'].toString()
+              : 'Recipient'),
       amount: (json['amount'] != null) ? double.tryParse(json['amount'].toString()) ?? 0.0 : 0.0,
       type: rawType,
       flowType: resolvedFlow,
-      utrId: json['utr_id'] ?? '',
-      date: json['created_at'] ?? '',
-      status: json['status'] ?? 'SUCCESS',
+      utrId: json['utr_id']?.toString() ?? '',
+      date: json['created_at']?.toString() ?? json['date']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'SUCCESS',
     );
   }
 }
