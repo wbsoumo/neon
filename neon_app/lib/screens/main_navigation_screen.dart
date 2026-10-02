@@ -342,73 +342,93 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 (context, index) {
                   final txn = _transactions[index];
                   final isCredit = txn.isCredit;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: isCredit ? Colors.green[50] : Colors.grey[100],
-                            shape: BoxShape.circle,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PaymentProcessingScreen(
+                            responseData: {
+                              'transaction_id': txn.transactionId,
+                              'utr_id': txn.utrId,
+                              'recipient_name': txn.recipientName,
+                              'recipient_account': txn.recipientAccount,
+                              'amount': txn.amount,
+                              'status': txn.status,
+                              'created_at': txn.date,
+                            },
                           ),
-                          child: Center(
-                            child: Text(
-                              txn.recipientName.isNotEmpty ? txn.recipientName[0] : "N",
-                              style: TextStyle(
-                                color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: isCredit ? Colors.green[50] : Colors.grey[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                txn.recipientName.isNotEmpty ? txn.recipientName[0] : "N",
+                                style: TextStyle(
+                                  color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                txn.recipientName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: AppTheme.textPrimary,
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  txn.recipientName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: AppTheme.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                txn.date,
-                                style: const TextStyle(
-                                  color: AppTheme.textMuted,
-                                  fontSize: 12,
+                                const SizedBox(height: 2),
+                                Text(
+                                  txn.date,
+                                  style: const TextStyle(
+                                    color: AppTheme.textMuted,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          "${isCredit ? '+' : '-'}${txn.amount.toStringAsFixed(2)}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
+                          Text(
+                            "${isCredit ? '+' : '-'}${txn.amount.toStringAsFixed(2)}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/transaction_model.dart';
+import 'payment_processing_screen.dart';
 
 class PassbookScreen extends StatefulWidget {
   final String accountNumber;
@@ -187,84 +188,104 @@ class _PassbookScreenState extends State<PassbookScreen> {
                   final txn = filteredTxns[index];
                   final isCredit = txn.isCredit;
 
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isCredit ? AppTheme.successGreen.withValues(alpha: 0.12) : AppTheme.dangerRed.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isCredit ? Icons.south_west_rounded : Icons.north_east_rounded,
-                            color: isCredit ? AppTheme.successGreen : AppTheme.dangerRed,
-                            size: 22,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PaymentProcessingScreen(
+                            responseData: {
+                              'transaction_id': txn.transactionId,
+                              'utr_id': txn.utrId,
+                              'recipient_name': txn.recipientName,
+                              'recipient_account': txn.recipientAccount,
+                              'amount': txn.amount,
+                              'status': txn.status,
+                              'created_at': txn.date,
+                            },
                           ),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isCredit ? AppTheme.successGreen.withValues(alpha: 0.12) : AppTheme.dangerRed.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isCredit ? Icons.south_west_rounded : Icons.north_east_rounded,
+                              color: isCredit ? AppTheme.successGreen : AppTheme.dangerRed,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  txn.recipientName.isNotEmpty ? txn.recipientName : (isCredit ? "Deposit Received" : "Money Transferred"),
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  txn.date,
+                                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                txn.recipientName.isNotEmpty ? txn.recipientName : (isCredit ? "Deposit Received" : "Money Transferred"),
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                "${isCredit ? '+' : '-'} ₹ ${txn.amount.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
+                                ),
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                txn.date,
-                                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: (isCredit ? AppTheme.successGreen : AppTheme.neonPink).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  isCredit ? "CREDIT" : "DEBIT",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: isCredit ? AppTheme.successGreen : AppTheme.neonPink,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              "${isCredit ? '+' : '-'} ₹ ${txn.amount.toStringAsFixed(2)}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                                color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: (isCredit ? AppTheme.successGreen : AppTheme.neonPink).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                isCredit ? "CREDIT" : "DEBIT",
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: isCredit ? AppTheme.successGreen : AppTheme.neonPink,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
