@@ -527,7 +527,7 @@ $myIp = get_client_ip();
                                 $maintenanceMode = get_maintenance_mode();
                                 ?>
                                 <div class="alert alert-<?= $maintenanceMode ? 'warning' : 'success' ?> p-2 small mb-3">
-                                    Current Status: <strong><?= $maintenanceMode ? '404 Maintenance Mode (Homepage returns 404 error)' : 'Live / Normal (Homepage shows normal index.html)' ?></strong>
+                                    Current Status: <strong><?= $maintenanceMode ? 'Maintenance Mode Active (Homepage displays Maintenance Mode screen)' : 'Live / Normal (Homepage active)' ?></strong>
                                 </div>
 
                                 <form action="settings.php" method="post">
@@ -535,8 +535,8 @@ $myIp = get_client_ip();
                                     <div class="form-group">
                                         <label class="font-weight-bold">Select Homepage Mode</label>
                                         <select name="maintenance_mode" class="form-control" required>
-                                            <option value="0" <?= !$maintenanceMode ? 'selected' : '' ?>>Normal (Show Front Page)</option>
-                                            <option value="1" <?= $maintenanceMode ? 'selected' : '' ?>>Maintenance (Show 404 Error)</option>
+                                            <option value="0" <?= !$maintenanceMode ? 'selected' : '' ?>>Normal (Show Live Homepage)</option>
+                                            <option value="1" <?= $maintenanceMode ? 'selected' : '' ?>>Maintenance Mode (Show Maintenance Screen)</option>
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary font-weight-bold">

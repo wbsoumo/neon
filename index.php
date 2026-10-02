@@ -1,3 +1,198 @@
+<?php
+require_once __DIR__ . '/api/db_helper.php';
+if (get_maintenance_mode() === 1) {
+    header('HTTP/1.1 503 Service Temporarily Unavailable');
+    header('Retry-After: 3600');
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Under Maintenance | neon - Digital Swiss Account</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background-color: #0b0f19;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .bg-glow-1 {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(232, 62, 140, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+            top: -100px;
+            left: -100px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .bg-glow-2 {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+            bottom: -150px;
+            right: -150px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            padding: 48px 40px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        .logo-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #e83e8c, #00e5ff);
+            border-radius: 24px;
+            margin-bottom: 28px;
+            box-shadow: 0 12px 30px rgba(232, 62, 140, 0.35);
+        }
+        .logo-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 193, 7, 0.12);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ffc107;
+            border-radius: 50%;
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, #ffffff 0%, #a0aec0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.25;
+        }
+        p {
+            font-size: 16px;
+            color: #a0aec0;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .gear-icon {
+            margin: 20px auto;
+            width: 64px;
+            height: 64px;
+            color: #00e5ff;
+            animation: rotateGear 12s linear infinite;
+        }
+        @keyframes rotateGear {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-refresh {
+            background: linear-gradient(135deg, #e83e8c, #d63384);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 20px rgba(232, 62, 140, 0.3);
+        }
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(232, 62, 140, 0.45);
+        }
+        .footer-text {
+            margin-top: 32px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+    <div class="container">
+        <div class="logo-wrapper">
+            <img src="logo.webp" alt="neon" class="logo-img" onerror="this.onerror=null; this.src='logo.png';">
+        </div>
+        <div>
+            <span class="badge"><span class="badge-dot"></span> System Maintenance</span>
+        </div>
+        <svg class="gear-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <h1>We'll Be Back Shortly!</h1>
+        <p>Our main website is currently undergoing scheduled maintenance and performance upgrades. We're working hard to get everything ready as fast as possible.</p>
+        <div class="actions">
+            <button onclick="window.location.reload();" class="btn-refresh">Check System Status</button>
+        </div>
+        <div class="footer-text">
+            &copy; <?= date('Y') ?> neon. All rights reserved. Swiss Digital Banking Platform.
+        </div>
+    </div>
+</body>
+</html>
+<?php
+    exit;
+}
+?>
 <html lang="en" class="lenis lenis-smooth" style=""><head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
