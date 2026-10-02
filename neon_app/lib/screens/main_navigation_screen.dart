@@ -6,6 +6,7 @@ import '../models/transaction_model.dart';
 import '../services/api_service.dart';
 import 'add_beneficiary_screen.dart';
 import 'payment_processing_screen.dart';
+import 'passbook_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -113,7 +114,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           _buildPaymentsTab(),
           _buildInvestTab(),
           _buildSpacesTab(),
-          _buildStatisticsTab(),
+          _buildProfileTab(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -157,9 +158,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               label: "Spaces",
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.pie_chart_outline_rounded),
-              activeIcon: Icon(Icons.pie_chart_outline_rounded, color: AppTheme.neonPink),
-              label: "Statistics",
+              icon: Icon(Icons.person_outline_rounded),
+              activeIcon: Icon(Icons.person_rounded, color: AppTheme.neonPink),
+              label: "Profile",
             ),
           ],
         ),
@@ -277,13 +278,31 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Quick Action Cards Bar (Card, Deposit, Statistics)
+                  // Quick Action Cards Bar (Transfer & Passbook)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildHeaderShortcut(Icons.send_rounded, "Transfer"),
-                      _buildHeaderShortcut(Icons.qr_code_2_rounded, "Scan UPI"),
-                      _buildHeaderShortcut(Icons.account_balance_outlined, "Passbook"),
+                      GestureDetector(
+                        onTap: () {
+                          _showTransferTypePickerModal();
+                        },
+                        child: _buildHeaderShortcut(Icons.send_rounded, "Transfer"),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PassbookScreen(
+                                accountNumber: _user.accountNumber,
+                                balance: _user.balance,
+                                transactions: _transactions,
+                              ),
+                            ),
+                          );
+                        },
+                        child: _buildHeaderShortcut(Icons.account_balance_outlined, "Passbook"),
+                      ),
                     ],
                   ),
                 ],
@@ -1733,54 +1752,161 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   // ==========================================
-  // TAB 5: STATISTICS (Screenshot #2)
+  // TAB 5: PROFILE SCREEN (Neon Theme)
   // ==========================================
-  Widget _buildStatisticsTab() {
-    final spentChf = (_user.balance * 0.25) * _inrToChfRate;
-
+  Widget _buildProfileTab() {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text("Statistics", style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text("My Account Profile", style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Donut Chart Container
+            // User Header Profile Card
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppTheme.neonPink, AppTheme.neonBurgundy]),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(color: AppTheme.neonPink.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      _user.fullName.isNotEmpty ? _user.fullName[0].toUpperCase() : 'N',
+                      style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.w900, fontSize: 26),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _user.fullName,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _user.email,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            "A/C: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : '38351908737'}",
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Profile Details Section
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
-                ],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    height: 180,
-                    child: PieChart(
-                      PieChartData(
-                        sections: [
-                          PieChartSectionData(color: AppTheme.neonCyan, value: 50, radius: 24, showTitle: false),
-                          PieChartSectionData(color: AppTheme.successGreen, value: 30, radius: 24, showTitle: false),
-                          PieChartSectionData(color: AppTheme.neonPink, value: 20, radius: 24, showTitle: false),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text("CHF spent (Converted from INR)", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-                  Text("${spentChf.toStringAsFixed(2)} CHF", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                  Text("Equivalent to ₹ ${(_user.balance * 0.25).toStringAsFixed(2)} INR", style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                  const Text("ACCOUNT INFORMATION", style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+                  const SizedBox(height: 16),
+                  _buildProfileRow(Icons.badge_outlined, "App ID", _user.appId),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.person_outline_rounded, "Full Name", _user.fullName),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.email_outlined, "Email Address", _user.email),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.phone_outlined, "Phone Number", _user.phone),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.account_balance_outlined, "Account Number", _user.accountNumber),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.business_rounded, "IFSC Code", "NEON0001"),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.account_tree_outlined, "Account Tier", _user.accountType.isNotEmpty ? _user.accountType : "Neon Personal"),
+                  const Divider(height: 24),
+                  _buildProfileRow(Icons.verified_user_outlined, "KYC Status", _user.status.isNotEmpty ? _user.status.toUpperCase() : "VERIFIED"),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // Logout Action Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await ApiService.clearUserSession();
+                  if (mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                label: const Text("Log Out of Session", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.dangerRed,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileRow(IconData icon, String title, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.neonPink.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppTheme.neonPink, size: 20),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
