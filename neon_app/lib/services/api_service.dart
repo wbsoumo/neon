@@ -303,6 +303,53 @@ class ApiService {
     }
   }
 
+  // Execute P2B Payout to Real External Bank
+  static Future<Map<String, dynamic>> sendPayout({
+    required String senderAppId,
+    required String beneficiaryName,
+    required String beneficiaryAccount,
+    required String ifscCode,
+    required double amount,
+    required String mpin,
+    String provider = "jiopay",
+  }) async {
+    try {
+      final savedUser = await getSavedUserSession();
+      final sessionId = savedUser?.sessionId ?? '';
+
+      final Map<String, String> headers = {};
+      if (sessionId.isNotEmpty) {
+        headers["X-Session-ID"] = sessionId;
+        headers["Authorization"] = "Bearer $sessionId";
+      }
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/transfer_payout.php"),
+        headers: headers,
+        body: {
+          "app_id": senderAppId,
+          "sender_app_id": senderAppId,
+          "session_id": sessionId,
+          "provider": provider,
+          "beneficiary_name": beneficiaryName,
+          "beneficiary_account": beneficiaryAccount,
+          "beneficiary_account_number": beneficiaryAccount,
+          "ifsc_code": ifscCode,
+          "ifsc": ifscCode,
+          "amount": amount.toString(),
+          "mpin": mpin,
+        },
+      ).timeout(const Duration(seconds: 12));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Payout error. Please check network connection.",
+      };
+    }
+  }
+
   // ==========================================
   // 4. STATEMENTS & COMPLIANCE
   // ==========================================
