@@ -310,47 +310,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
           ),
 
-          // Promotional Loan Banners Section
-          SliverToBoxAdapter(
-            child: Container(
-              height: 140,
-              margin: const EdgeInsets.symmetric(vertical: 16),
-              child: PageView(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: const DecorationImage(
-                        image: AssetImage("assets/images/loan1.png"),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: const DecorationImage(
-                        image: AssetImage("assets/images/loan2.png"),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Transactions Header
+          // Transactions Section Header
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Text(
-                "MARCH",
+                "Transactions",
                 style: TextStyle(
                   color: AppTheme.textMuted,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
                 ),
@@ -1547,34 +1515,79 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Dynamic Performance Chart Card (Using fl_chart)
-            Container(
-              height: 200,
-              padding: const EdgeInsets.all(16),
+            // Dynamic Performance Chart Card (Using fl_chart with smooth animations)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+              height: 220,
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
+                  BoxShadow(color: AppTheme.successGreen.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10),
                 ],
               ),
               child: _isLoadingStockData
                   ? const Center(child: CircularProgressIndicator(color: AppTheme.successGreen))
                   : LineChart(
                       LineChartData(
-                        gridData: FlGridData(show: false),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 0.01,
+                          getDrawingHorizontalLine: (value) => FlLine(
+                            color: Colors.grey[100]!,
+                            strokeWidth: 1,
+                            dashArray: [5, 5],
+                          ),
+                        ),
                         titlesData: FlTitlesData(show: false),
                         borderData: FlBorderData(show: false),
+                        lineTouchData: LineTouchData(
+                          enabled: true,
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (touchedSpots) {
+                              return touchedSpots.map((spot) {
+                                return LineTooltipItem(
+                                  "${spot.y.toStringAsFixed(4)} CHF",
+                                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                );
+                              }).toList();
+                            },
+                          ),
+                        ),
                         lineBarsData: [
                           LineChartBarData(
                             spots: List.generate(_stockSpots.length, (i) => FlSpot(i.toDouble(), _stockSpots[i])),
                             isCurved: true,
-                            color: AppTheme.successGreen,
-                            barWidth: 3,
-                            dotData: FlDotData(show: false),
+                            curveSmoothness: 0.35,
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.successGreen, AppTheme.neonCyan],
+                            ),
+                            barWidth: 4,
+                            isStrokeCapRound: true,
+                            dotData: FlDotData(
+                              show: true,
+                              getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                                radius: 3.5,
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                                strokeColor: AppTheme.successGreen,
+                              ),
+                            ),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.successGreen.withValues(alpha: 0.12),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppTheme.successGreen.withValues(alpha: 0.35),
+                                  AppTheme.neonCyan.withValues(alpha: 0.05),
+                                  Colors.transparent,
+                                ],
+                              ),
                             ),
                           ),
                         ],

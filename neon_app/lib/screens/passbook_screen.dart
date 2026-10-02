@@ -95,6 +95,11 @@ class _PassbookScreenState extends State<PassbookScreen> {
                     "A/C: ${widget.accountNumber.isNotEmpty ? widget.accountNumber : 'CH8900008730'} • IFSC: NEON0001",
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "SWIFT / BIC: UBSWCHZH80A",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 20),
                   Divider(color: Colors.white.withValues(alpha: 0.2), height: 1),
                   const SizedBox(height: 16),
