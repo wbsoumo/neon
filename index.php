@@ -9,8 +9,7 @@ if (get_maintenance_mode() === 1) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Under Maintenance | neon - Digital Swiss Account</title>
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <title>Under Maintenance</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
@@ -20,8 +19,8 @@ if (get_maintenance_mode() === 1) {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         body {
-            background-color: #0b0f19;
-            color: #ffffff;
+            background-color: #0d1117;
+            color: #c9d1d9;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -34,7 +33,7 @@ if (get_maintenance_mode() === 1) {
             position: absolute;
             width: 450px;
             height: 450px;
-            background: radial-gradient(circle, rgba(232, 62, 140, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+            background: radial-gradient(circle, rgba(58, 110, 240, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
             top: -100px;
             left: -100px;
             border-radius: 50%;
@@ -44,50 +43,33 @@ if (get_maintenance_mode() === 1) {
             position: absolute;
             width: 500px;
             height: 500px;
-            background: radial-gradient(circle, rgba(0, 229, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
             bottom: -150px;
             right: -150px;
             border-radius: 50%;
             pointer-events: none;
         }
         .container {
-            max-width: 600px;
+            max-width: 540px;
             width: 100%;
-            background: rgba(18, 24, 38, 0.75);
+            background: rgba(22, 27, 34, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 28px;
-            padding: 48px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 48px 36px;
             text-align: center;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             position: relative;
             z-index: 10;
-        }
-        .logo-wrapper {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #e83e8c, #00e5ff);
-            border-radius: 24px;
-            margin-bottom: 28px;
-            box-shadow: 0 12px 30px rgba(232, 62, 140, 0.35);
-        }
-        .logo-img {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-            border-radius: 12px;
         }
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(255, 193, 7, 0.12);
-            color: #ffc107;
-            border: 1px solid rgba(255, 193, 7, 0.3);
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.25);
             padding: 6px 16px;
             border-radius: 50px;
             font-size: 13px;
@@ -99,35 +81,33 @@ if (get_maintenance_mode() === 1) {
         .badge-dot {
             width: 8px;
             height: 8px;
-            background-color: #ffc107;
+            background-color: #fbbf24;
             border-radius: 50%;
             animation: pulse 1.8s infinite;
         }
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
         }
         h1 {
-            font-size: 32px;
+            font-size: 30px;
             font-weight: 800;
             margin-bottom: 14px;
-            background: linear-gradient(135deg, #ffffff 0%, #a0aec0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #f0f6fc;
             line-height: 1.25;
         }
         p {
-            font-size: 16px;
-            color: #a0aec0;
+            font-size: 15px;
+            color: #8b949e;
             line-height: 1.6;
             margin-bottom: 32px;
         }
         .gear-icon {
-            margin: 20px auto;
-            width: 64px;
-            height: 64px;
-            color: #00e5ff;
+            margin: 10px auto 24px auto;
+            width: 60px;
+            height: 60px;
+            color: #6366f1;
             animation: rotateGear 12s linear infinite;
         }
         @keyframes rotateGear {
@@ -141,26 +121,26 @@ if (get_maintenance_mode() === 1) {
             flex-wrap: wrap;
         }
         .btn-refresh {
-            background: linear-gradient(135deg, #e83e8c, #d63384);
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
             color: #ffffff;
             text-decoration: none;
-            padding: 14px 28px;
-            border-radius: 14px;
+            padding: 12px 28px;
+            border-radius: 12px;
             font-weight: 700;
-            font-size: 15px;
+            font-size: 14px;
             border: none;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 8px 20px rgba(232, 62, 140, 0.3);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
         }
         .btn-refresh:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(232, 62, 140, 0.45);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
         }
         .footer-text {
             margin-top: 32px;
             font-size: 13px;
-            color: #4a5568;
+            color: #484f58;
         }
     </style>
 </head>
@@ -168,23 +148,20 @@ if (get_maintenance_mode() === 1) {
     <div class="bg-glow-1"></div>
     <div class="bg-glow-2"></div>
     <div class="container">
-        <div class="logo-wrapper">
-            <img src="logo.webp" alt="neon" class="logo-img" onerror="this.onerror=null; this.src='logo.png';">
-        </div>
         <div>
-            <span class="badge"><span class="badge-dot"></span> System Maintenance</span>
+            <span class="badge"><span class="badge-dot"></span> Maintenance Mode</span>
         </div>
         <svg class="gear-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <h1>We'll Be Back Shortly!</h1>
-        <p>Our main website is currently undergoing scheduled maintenance and performance upgrades. We're working hard to get everything ready as fast as possible.</p>
+        <h1>Under Maintenance</h1>
+        <p>The system is currently undergoing scheduled maintenance and updates. We apologize for the inconvenience and appreciate your patience.</p>
         <div class="actions">
-            <button onclick="window.location.reload();" class="btn-refresh">Check System Status</button>
+            <button onclick="window.location.reload();" class="btn-refresh">Refresh Page</button>
         </div>
         <div class="footer-text">
-            &copy; <?= date('Y') ?> neon. All rights reserved. Swiss Digital Banking Platform.
+            &copy; <?= date('Y') ?> All Rights Reserved.
         </div>
     </div>
 </body>
