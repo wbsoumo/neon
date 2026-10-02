@@ -63,9 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
         final user = UserModel.fromJson(response['user'], sessionId: sessionId);
         await ApiService.saveUserSession(user, sessionId);
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => MainNavigationScreen(user: user)),
+            (route) => false,
           );
         }
       } else {
