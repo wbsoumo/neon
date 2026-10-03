@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'add_beneficiary_screen.dart';
+import 'create_mpin_screen.dart';
 
 class BankingProfileCenterScreen extends StatefulWidget {
   final UserModel user;
@@ -294,148 +295,17 @@ class _BankingProfileCenterScreenState extends State<BankingProfileCenterScreen>
     );
   }
 
-  void _openCreateMpinModalInternal() {
-    final pinCtrl = TextEditingController();
-    final confirmPinCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? errorMessage;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            top: 24,
-            left: 20,
-            right: 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _currentUser.hasMpin ? "Change Transaction MPIN" : "Create Transaction MPIN",
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
-                    ),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "Enter a 6-digit Security MPIN for authorizing payments and payouts.",
-                  style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                ),
-                const SizedBox(height: 20),
-
-                const Text("New 6-Digit MPIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: pinCtrl,
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 8),
-                  decoration: InputDecoration(
-                    counterText: "",
-                    hintText: "••••••",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                const Text("Confirm 6-Digit MPIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: confirmPinCtrl,
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 8),
-                  decoration: InputDecoration(
-                    counterText: "",
-                    hintText: "••••••",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-
-                if (errorMessage != null) ...[
-                  const SizedBox(height: 10),
-                  Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-                ],
-
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.darkNavy,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: isSubmitting
-                        ? null
-                        : () async {
-                            final p1 = pinCtrl.text.trim();
-                            final p2 = confirmPinCtrl.text.trim();
-
-                            if (p1.length < 6 || !RegExp(r'^\d{6}$').hasMatch(p1)) {
-                              setModalState(() => errorMessage = "MPIN must be exactly 6 numeric digits.");
-                              return;
-                            }
-                            if (p1 != p2) {
-                              setModalState(() => errorMessage = "MPINs do not match. Please re-enter.");
-                              return;
-                            }
-
-                            setModalState(() {
-                              isSubmitting = true;
-                              errorMessage = null;
-                            });
-
-                            final res = await ApiService.createMpin(
-                              mpin: p1,
-                              sessionId: _currentUser.sessionId,
-                              appId: _currentUser.appId,
-                            );
-
-                            setModalState(() => isSubmitting = false);
-
-                            if (res['success'] == true) {
-                              Navigator.pop(ctx);
-                              await _refreshProfile();
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Transaction MPIN Created ✓ Your transaction security is enabled."),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            } else {
-                              setModalState(() => errorMessage = res['message'] ?? "Failed to set MPIN.");
-                            }
-                          },
-                    child: isSubmitting
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text("Save Transaction MPIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+  Future<void> _openCreateMpinModalInternal() async {
+    final res = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateMpinScreen(user: _currentUser),
       ),
     );
+    if (res == true) {
+      await _refreshProfile();
+    }
+  }
   }
 
   // Section 5: Generic Display Sheet for Tax, Security, Legal, Support, Settings, Documents
