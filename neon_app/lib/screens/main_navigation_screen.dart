@@ -97,14 +97,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _user = widget.user;
-    _fetchData();
+    _initDataAndCheckMpin();
     _fetchExchangeRatesAndStockData();
     _fetchSpaces();
     _fetchRecentNeonRecipients();
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  Future<void> _initDataAndCheckMpin() async {
+    await _fetchData();
+    if (mounted) {
       _checkMpinStatusAndPrompt();
-    });
+    }
   }
 
   Future<void> _fetchRecentNeonRecipients() async {
