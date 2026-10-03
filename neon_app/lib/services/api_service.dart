@@ -162,9 +162,10 @@ class ApiService {
       "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
       "Accept": "application/json",
     };
-    if (sessionId.isNotEmpty) {
-      headers["X-Session-ID"] = sessionId;
-      headers["Authorization"] = "Bearer $sessionId";
+    final trimmedSession = sessionId.trim();
+    if (trimmedSession.isNotEmpty) {
+      headers["X-Session-ID"] = trimmedSession;
+      headers["Authorization"] = "Bearer $trimmedSession";
     }
     return headers;
   }
@@ -202,16 +203,22 @@ class ApiService {
 
       final headers = _buildHeaders(effectiveSessionId);
 
-      debugPrint("POSTing createMpin with appId=$effectiveAppId, sessionId=$effectiveSessionId");
+      final bodyParams = <String, String>{
+        "mpin": mpin,
+      };
+      if (effectiveSessionId.trim().isNotEmpty) {
+        bodyParams["session_id"] = effectiveSessionId.trim();
+      }
+      if (effectiveAppId.trim().isNotEmpty) {
+        bodyParams["app_id"] = effectiveAppId.trim();
+      }
+
+      debugPrint("POSTing createMpin with params=$bodyParams");
 
       final response = await http.post(
         Uri.parse("$baseUrl/create_mpin.php"),
         headers: headers,
-        body: {
-          "mpin": mpin,
-          "session_id": effectiveSessionId,
-          "app_id": effectiveAppId,
-        },
+        body: bodyParams,
       ).timeout(const Duration(seconds: 10));
 
       debugPrint("createMpin statusCode: ${response.statusCode}");
@@ -249,14 +256,20 @@ class ApiService {
 
       final headers = _buildHeaders(effectiveSessionId);
 
+      final bodyParams = <String, String>{
+        "mpin": mpin,
+      };
+      if (effectiveSessionId.trim().isNotEmpty) {
+        bodyParams["session_id"] = effectiveSessionId.trim();
+      }
+      if (effectiveAppId.trim().isNotEmpty) {
+        bodyParams["app_id"] = effectiveAppId.trim();
+      }
+
       final response = await http.post(
         Uri.parse("$baseUrl/verify_mpin.php"),
         headers: headers,
-        body: {
-          "mpin": mpin,
-          "session_id": effectiveSessionId,
-          "app_id": effectiveAppId,
-        },
+        body: bodyParams,
       ).timeout(const Duration(seconds: 10));
 
       return _safeParseJson(response.body, defaultErrorMessage: "Failed to verify MPIN. Please try again.");
