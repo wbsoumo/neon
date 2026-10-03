@@ -159,7 +159,7 @@ class ApiService {
 
   static Map<String, String> _buildHeaders([String sessionId = '']) {
     final headers = <String, String>{
-      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+      "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
       "Accept": "application/json",
     };
     if (sessionId.isNotEmpty) {
@@ -202,6 +202,8 @@ class ApiService {
 
       final headers = _buildHeaders(effectiveSessionId);
 
+      debugPrint("POSTing createMpin with appId=$effectiveAppId, sessionId=$effectiveSessionId");
+
       final response = await http.post(
         Uri.parse("$baseUrl/create_mpin.php"),
         headers: headers,
@@ -212,8 +214,21 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 10));
 
+      debugPrint("createMpin statusCode: ${response.statusCode}");
+      debugPrint("createMpin body: ${response.body}");
+
+      final trimmed = response.body.trim();
+      if (trimmed.startsWith('<')) {
+        final snippet = trimmed.length > 150 ? trimmed.substring(0, 150) : trimmed;
+        return {
+          "success": false,
+          "message": "HTTP ${response.statusCode}: $snippet"
+        };
+      }
+
       return _safeParseJson(response.body, defaultErrorMessage: "Failed to set MPIN. Please try again.");
     } catch (e) {
+      debugPrint("createMpin catch: $e");
       return {
         "success": false,
         "message": "Error creating MPIN: ${e.toString()}"
