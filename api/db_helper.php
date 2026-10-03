@@ -416,6 +416,36 @@ function get_db_connection() {
             $pdo->exec("ALTER TABLE applications ADD COLUMN tx_failed_email_template TEXT NULL");
         }
 
+        // Onboarding On Demand Auto-Migrations
+        $newColumns = [
+            'nationality' => 'VARCHAR(100) NULL',
+            'residency_country' => 'VARCHAR(100) NULL',
+            'employment_status' => 'VARCHAR(100) NULL',
+            'employer_name' => 'VARCHAR(150) NULL',
+            'income_range' => 'VARCHAR(100) NULL',
+            'source_of_funds' => 'VARCHAR(100) NULL',
+            'account_purpose' => 'VARCHAR(100) NULL',
+            'tax_residency' => 'VARCHAR(100) NULL',
+            'tax_id_no' => 'VARCHAR(100) NULL',
+            'passport_no' => 'VARCHAR(100) NULL',
+            'doc_proof_address_path' => 'VARCHAR(255) NULL',
+            'nominee_name' => 'VARCHAR(150) NULL',
+            'nominee_relation' => 'VARCHAR(100) NULL',
+            'nominee_phone' => 'VARCHAR(50) NULL',
+            'pep_declaration' => 'VARCHAR(10) NULL',
+            'consent_agreed_at' => 'DATETIME NULL',
+            'consent_ip' => 'VARCHAR(50) NULL'
+        ];
+        foreach ($newColumns as $col => $typeDef) {
+            try {
+                $pdo->query("SELECT $col FROM applications LIMIT 1");
+            } catch (PDOException $e) {
+                try {
+                    $pdo->exec("ALTER TABLE applications ADD COLUMN $col $typeDef");
+                } catch (PDOException $ex) {}
+            }
+        }
+
         // Ensure transactions table exists before running column check
         $pdo->exec("CREATE TABLE IF NOT EXISTS transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -547,11 +577,17 @@ function save_application($data) {
     $sql = "INSERT INTO applications (
         app_id, account_type, full_name, email, phone, dob, gender, address, 
         national_id, aadhaar_number, initial_deposit, balance, business_name, business_reg_no, expected_turnover,
-        password_hash, signature_path, photo_path, doc_pan_path, doc_aadhaar_path
+        password_hash, signature_path, photo_path, doc_pan_path, doc_aadhaar_path,
+        nationality, residency_country, employment_status, employer_name, income_range, source_of_funds,
+        account_purpose, tax_residency, tax_id_no, passport_no, doc_proof_address_path, nominee_name,
+        nominee_relation, nominee_phone, pep_declaration, consent_agreed_at, consent_ip
     ) VALUES (
         :app_id, :account_type, :full_name, :email, :phone, :dob, :gender, :address, 
         :national_id, :aadhaar_number, :initial_deposit, :balance, :business_name, :business_reg_no, :expected_turnover,
-        :password_hash, :signature_path, :photo_path, :doc_pan_path, :doc_aadhaar_path
+        :password_hash, :signature_path, :photo_path, :doc_pan_path, :doc_aadhaar_path,
+        :nationality, :residency_country, :employment_status, :employer_name, :income_range, :source_of_funds,
+        :account_purpose, :tax_residency, :tax_id_no, :passport_no, :doc_proof_address_path, :nominee_name,
+        :nominee_relation, :nominee_phone, :pep_declaration, :consent_agreed_at, :consent_ip
     )";
 
     $stmt = $pdo->prepare($sql);
@@ -564,7 +600,7 @@ function save_application($data) {
         ':dob' => isset($data['dob']) ? $data['dob'] : null,
         ':gender' => isset($data['gender']) ? $data['gender'] : null,
         ':address' => $data['address'],
-        ':national_id' => $data['national_id'],
+        ':national_id' => isset($data['national_id']) ? $data['national_id'] : 'NOT_REQUIRED',
         ':aadhaar_number' => isset($data['aadhaar_number']) ? $data['aadhaar_number'] : null,
         ':initial_deposit' => isset($data['initial_deposit']) ? (float)$data['initial_deposit'] : 0.00,
         ':balance' => 0.00,
@@ -576,6 +612,23 @@ function save_application($data) {
         ':photo_path' => isset($data['photo_path']) ? $data['photo_path'] : null,
         ':doc_pan_path' => isset($data['doc_pan_path']) ? $data['doc_pan_path'] : null,
         ':doc_aadhaar_path' => isset($data['doc_aadhaar_path']) ? $data['doc_aadhaar_path'] : null,
+        ':nationality' => isset($data['nationality']) ? $data['nationality'] : null,
+        ':residency_country' => isset($data['residency_country']) ? $data['residency_country'] : null,
+        ':employment_status' => isset($data['employment_status']) ? $data['employment_status'] : null,
+        ':employer_name' => isset($data['employer_name']) ? $data['employer_name'] : null,
+        ':income_range' => isset($data['income_range']) ? $data['income_range'] : null,
+        ':source_of_funds' => isset($data['source_of_funds']) ? $data['source_of_funds'] : null,
+        ':account_purpose' => isset($data['account_purpose']) ? $data['account_purpose'] : null,
+        ':tax_residency' => isset($data['tax_residency']) ? $data['tax_residency'] : null,
+        ':tax_id_no' => isset($data['tax_id_no']) ? $data['tax_id_no'] : null,
+        ':passport_no' => isset($data['passport_no']) ? $data['passport_no'] : null,
+        ':doc_proof_address_path' => isset($data['doc_proof_address_path']) ? $data['doc_proof_address_path'] : null,
+        ':nominee_name' => isset($data['nominee_name']) ? $data['nominee_name'] : null,
+        ':nominee_relation' => isset($data['nominee_relation']) ? $data['nominee_relation'] : null,
+        ':nominee_phone' => isset($data['nominee_phone']) ? $data['nominee_phone'] : null,
+        ':pep_declaration' => isset($data['pep_declaration']) ? $data['pep_declaration'] : 'NO',
+        ':consent_agreed_at' => isset($data['consent_agreed_at']) ? $data['consent_agreed_at'] : date('Y-m-d H:i:s'),
+        ':consent_ip' => isset($data['consent_ip']) ? $data['consent_ip'] : get_client_ip()
     ]);
 
     return $appId;

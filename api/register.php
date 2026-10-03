@@ -27,42 +27,14 @@ if (!$data) {
     exit;
 }
 
-// Basic validation for common fields
-$requiredCommon = [
-    'account_type', 'full_name', 'email', 'phone', 'address', 'national_id', 'aadhaar_number',
-    'password', 'signature_data', 'portrait_data', 'doc_pan_data', 'doc_aadhaar_data'
-];
+// Basic validation for mandatory credentials
+$requiredCommon = ['account_type', 'full_name', 'email', 'phone', 'password'];
 foreach ($requiredCommon as $field) {
     if (empty($data[$field])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required.']);
         exit;
     }
-}
-
-// Type-specific validation
-if ($data['account_type'] === 'SAVINGS' || $data['account_type'] === 'NRI') {
-    $requiredSavings = ['dob', 'gender', 'initial_deposit'];
-    foreach ($requiredSavings as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required for ' . htmlspecialchars($data['account_type']) . ' Account.']);
-            exit;
-        }
-    }
-} elseif ($data['account_type'] === 'CURRENT' || $data['account_type'] === 'CORPORATE') {
-    $requiredCurrent = ['business_name', 'business_reg_no', 'expected_turnover'];
-    foreach ($requiredCurrent as $field) {
-        if (empty($data[$field])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required for ' . htmlspecialchars($data['account_type']) . ' Account.']);
-            exit;
-        }
-    }
-} else {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid account type selected.']);
-    exit;
 }
 
 // Check if phone/mobile already registered
@@ -101,25 +73,21 @@ try {
     // Generate a unique application ID
     $appId = 'FR-' . str_pad(mt_rand(100000, 999999), 6, '0', STR_PAD_LEFT);
 
-    // Save images
-    $sigPath = save_base64_image($data['signature_data'], 'sig_' . $appId . '.png');
-    $photoPath = save_base64_image($data['portrait_data'], 'portrait_' . $appId . '.jpg');
-    $panPath = save_base64_image($data['doc_pan_data'], 'pan_' . $appId . '.jpg');
-    $aadhaarPath = save_base64_image($data['doc_aadhaar_data'], 'aadhaar_' . $appId . '.jpg');
+    // Save images dynamically based on provided fields
+    $sigPath = !empty($data['signature_data']) ? save_base64_image($data['signature_data'], 'sig_' . $appId . '.png') : null;
+    $photoPath = !empty($data['portrait_data']) ? save_base64_image($data['portrait_data'], 'portrait_' . $appId . '.jpg') : null;
+    $panPath = !empty($data['doc_pan_data']) ? save_base64_image($data['doc_pan_data'], 'doc_id_' . $appId . '.jpg') : null;
+    $aadhaarPath = !empty($data['doc_aadhaar_data']) ? save_base64_image($data['doc_aadhaar_data'], 'doc_addr_' . $appId . '.jpg') : null;
+    $proofAddrPath = !empty($data['doc_proof_address_data']) ? save_base64_image($data['doc_proof_address_data'], 'proof_addr_' . $appId . '.jpg') : null;
 
-    if (!$sigPath || !$photoPath || !$panPath || !$aadhaarPath) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Failed to process biometric captures. Please try retaking them.']);
-        exit;
-    }
-
-    // Attach paths and store plaintext password to database model
+    // Attach paths to data
     $dbData = $data;
     $dbData['app_id'] = $appId;
     $dbData['signature_path'] = $sigPath;
     $dbData['photo_path'] = $photoPath;
     $dbData['doc_pan_path'] = $panPath;
     $dbData['doc_aadhaar_path'] = $aadhaarPath;
+    $dbData['doc_proof_address_path'] = $proofAddrPath;
     $dbData['password_hash'] = $data['password'];
 
     // Save to DB

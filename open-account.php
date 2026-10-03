@@ -1,13 +1,13 @@
 <?php
 /**
- * Neon Finance Onboarding - Open Account Page
- * Premium, state-of-the-art multi-step onboarding application
+ * Neon Bank Onboarding - Premium International Account Opening Flow
+ * Multi-Step Architecture: Nationality -> Residency -> Terms -> Personal -> Contact -> Address -> Employment -> Financial -> Tax -> ID Verification -> Documents -> Nominee -> Review -> Submit
  */
 
 require_once "api/db_helper.php";
 
 $ip = get_client_ip();
-if (is_rate_limited($ip, 5, 10)) {
+if (is_rate_limited($ip, 10, 10)) {
     header("Location: choose-account.php");
     exit;
 }
@@ -26,22 +26,22 @@ $typeMap = [
 $type = isset($typeMap[$rawType]) ? $typeMap[$rawType] : "CURRENT";
 
 $accountTitles = [
-    "CURRENT" => "Everyday Current Account",
-    "SAVINGS" => "High-Yield Savings Account",
-    "JOINT" => "Joint Account for Duos",
-    "INVEST" => "Stocks & ETFs Investment Account",
+    "CURRENT" => "Everyday International Current Account",
+    "SAVINGS" => "High-Yield Swiss Franc Savings Account",
+    "JOINT" => "Joint Account for International Duos",
+    "INVEST" => "Global Equities & ETFs Investment Account",
     "VEHICLE" => "Vehicle Financing Account",
     "HOME" => "Home & Property Account"
 ];
 
-$accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Digital Account";
+$accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Bank Account";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Open <?= htmlspecialchars($accountTitle) ?> - Neon Finance</title>
+    <title>Open <?= htmlspecialchars($accountTitle) ?> - Neon Bank</title>
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,15 +57,15 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             --neon-cyan: #1fa9b2;
             --neon-teal: #179096;
             --neon-dark: #0f172a;
-            --neon-card-bg: rgba(255, 255, 255, 0.95);
+            --neon-card-bg: rgba(255, 255, 255, 0.98);
             --neon-border: #e2e8f0;
-            --text-primary: #1e293b;
+            --text-primary: #0f172a;
             --text-secondary: #64748b;
-            --radius-lg: 20px;
-            --radius-md: 14px;
-            --radius-sm: 8px;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
             --shadow-glow: 0 20px 40px -15px rgba(255, 0, 84, 0.15);
-            --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.06);
+            --shadow-card: 0 16px 36px rgba(15, 23, 42, 0.06);
         }
 
         * {
@@ -76,7 +76,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
 
         body {
             font-family: "Outfit", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
             color: var(--text-primary);
             min-height: 100vh;
             display: flex;
@@ -86,7 +86,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
 
         /* Header Navigation Bar */
         .neon-header {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.8);
@@ -96,7 +96,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             padding: 16px 32px;
         }
         .header-content {
-            max-width: 1100px;
+            max-width: 1160px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -115,15 +115,18 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         }
         .brand-name {
             font-size: 1.4rem;
-            font-weight: 800;
-            color: var(--neon-pink);
+            font-weight: 900;
+            color: var(--neon-dark);
             letter-spacing: -0.02em;
+        }
+        .brand-name span {
+            color: var(--neon-pink);
         }
         .back-link {
             color: var(--text-secondary);
             text-decoration: none;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -137,27 +140,26 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             background: rgba(255, 0, 84, 0.08);
         }
 
-        /* Main Container */
+        /* Main Wrapper */
         .onboard-wrapper {
-            max-width: 880px;
-            margin: 40px auto;
+            max-width: 960px;
+            margin: 32px auto;
             padding: 0 20px 60px;
             width: 100%;
         }
 
-        /* Card Frame */
+        /* Card Container */
         .onboard-card {
             background: var(--neon-card-bg);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-card), var(--shadow-glow);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             overflow: hidden;
-            transition: all 0.3s ease;
         }
 
         .card-header-banner {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            padding: 32px;
+            padding: 32px 40px;
             color: white;
             display: flex;
             justify-content: space-between;
@@ -170,50 +172,53 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             position: absolute;
             top: -50%;
             right: -10%;
-            width: 300px;
-            height: 300px;
+            width: 320px;
+            height: 320px;
             background: radial-gradient(circle, rgba(255, 0, 84, 0.25) 0%, transparent 70%);
             pointer-events: none;
         }
         .header-title-group h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 1.6rem;
+            font-weight: 800;
             margin-bottom: 6px;
             color: #ffffff;
         }
         .header-title-group p {
             color: #94a3b8;
-            font-size: 0.9rem;
+            font-size: 0.92rem;
         }
         .type-badge {
             background: linear-gradient(135deg, var(--neon-pink) 0%, #e0004a 100%);
             color: white;
             font-weight: 700;
-            font-size: 0.85rem;
-            padding: 8px 16px;
+            font-size: 0.82rem;
+            padding: 8px 18px;
             border-radius: 30px;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             box-shadow: 0 4px 12px rgba(255, 0, 84, 0.3);
         }
 
-        /* Step Progress Bar */
+        /* Desktop & Mobile Persistent Stepper */
         .stepper-container {
-            padding: 24px 32px;
+            padding: 20px 32px;
             background: #f8fafc;
             border-bottom: 1px solid var(--neon-border);
+            overflow-x: auto;
         }
         .stepper-bar {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            min-width: 680px;
             position: relative;
         }
         .stepper-bar::before {
             content: "";
             position: absolute;
             top: 18px;
-            left: 0;
-            right: 0;
+            left: 20px;
+            right: 20px;
             height: 3px;
             background: #e2e8f0;
             z-index: 1;
@@ -224,20 +229,20 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1;
+            cursor: pointer;
         }
         .step-circle {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: white;
-            border: 3px solid #cbd5e1;
+            border: 2px solid #cbd5e1;
             color: #64748b;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 0.95rem;
+            font-weight: 800;
+            font-size: 0.85rem;
             transition: all 0.3s;
         }
         .step-node.active .step-circle {
@@ -252,23 +257,32 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             color: white;
         }
         .step-title {
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             color: #94a3b8;
-            margin-top: 8px;
+            margin-top: 6px;
             text-transform: uppercase;
             letter-spacing: 0.03em;
+            white-space: nowrap;
         }
-        .step-node.active .step-title {
-            color: var(--neon-pink);
-        }
-        .step-node.completed .step-title {
-            color: var(--neon-cyan);
+        .step-node.active .step-title { color: var(--neon-pink); }
+        .step-node.completed .step-title { color: var(--neon-cyan); }
+
+        /* Mobile Progress Counter Indicator */
+        .mobile-step-indicator {
+            display: none;
+            padding: 12px 24px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--neon-border);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-align: center;
         }
 
         /* Form Body */
         .card-body {
-            padding: 36px 32px;
+            padding: 40px;
         }
         .form-section {
             display: none;
@@ -283,23 +297,28 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         }
 
         .section-heading {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 24px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 8px;
             color: var(--text-primary);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
         .section-heading i {
             color: var(--neon-pink);
         }
+        .section-subheading {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+        }
 
-        /* Form Controls */
+        /* Form Controls Grid */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 22px;
         }
         .form-group.full-width {
             grid-column: span 2;
@@ -307,11 +326,11 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
         }
         .form-group label {
             font-size: 0.88rem;
-            font-weight: 600;
+            font-weight: 700;
             color: #334155;
         }
         .input-wrapper {
@@ -321,14 +340,14 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         }
         .input-wrapper i {
             position: absolute;
-            left: 14px;
+            left: 16px;
             color: #94a3b8;
             font-size: 1rem;
             pointer-events: none;
         }
         .form-control {
             width: 100%;
-            padding: 12px 16px 12px 42px;
+            padding: 14px 16px 14px 44px;
             border: 1.5px solid var(--neon-border);
             border-radius: var(--radius-sm);
             font-size: 0.95rem;
@@ -340,7 +359,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
         .form-control:focus {
             outline: none;
             border-color: var(--neon-pink);
-            box-shadow: 0 0 0 3px rgba(255, 0, 84, 0.12);
+            box-shadow: 0 0 0 4px rgba(255, 0, 84, 0.12);
         }
         select.form-control {
             appearance: none;
@@ -350,63 +369,25 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             background-size: 16px;
         }
 
-        /* Type Selector Cards */
-        .account-type-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .type-card {
-            border: 2px solid var(--neon-border);
-            border-radius: var(--radius-md);
-            padding: 18px;
-            cursor: pointer;
-            transition: all 0.2s;
+        /* Country Selector Search Box */
+        .country-select-box {
+            border: 1.5px solid var(--neon-border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
             background: white;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 14px;
+            justify-content: space-between;
         }
-        .type-card:hover {
-            border-color: #f472b6;
-            transform: translateY(-2px);
-        }
-        .type-card.selected {
-            border-color: var(--neon-pink);
-            background: rgba(255, 0, 84, 0.03);
-            box-shadow: 0 4px 14px rgba(255, 0, 84, 0.1);
-        }
-        .type-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: rgba(255, 0, 84, 0.1);
-            color: var(--neon-pink);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-        .type-card.selected .type-icon {
-            background: var(--neon-pink);
-            color: white;
-        }
-        .type-info h4 {
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-        .type-info p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
+        .country-select-box:hover { border-color: var(--neon-pink); }
+        .selected-flag { font-size: 1.3rem; margin-right: 10px; }
 
-        /* Upload Dropzones */
+        /* Document Dropzones */
         .upload-card {
             border: 2px dashed #cbd5e1;
             border-radius: var(--radius-md);
-            padding: 24px;
+            padding: 28px;
             text-align: center;
             background: #f8fafc;
             cursor: pointer;
@@ -418,90 +399,92 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             background: rgba(255, 0, 84, 0.02);
         }
         .upload-icon {
-            font-size: 2rem;
+            font-size: 2.2rem;
             color: var(--neon-cyan);
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .upload-title {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--text-primary);
         }
         .upload-sub {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
             margin-top: 4px;
         }
         .upload-preview {
-            max-height: 120px;
+            max-height: 140px;
             width: auto;
             border-radius: var(--radius-sm);
-            margin-top: 10px;
+            margin-top: 14px;
             display: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        /* Canvas Signature Pad */
+        /* Signature Canvas Pad */
         .sig-pad-wrapper {
-            border: 1px solid var(--neon-border);
+            border: 1.5px solid var(--neon-border);
             border-radius: var(--radius-sm);
             background: white;
             position: relative;
+            overflow: hidden;
         }
         canvas#sigCanvas {
             width: 100%;
-            height: 140px;
-            border-radius: var(--radius-sm);
+            height: 160px;
             cursor: crosshair;
-            touch-action: none;
+            display: block;
         }
-        .clear-sig-btn {
+        .sig-actions {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #f1f5f9;
-            border: none;
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #64748b;
-        }
-        .clear-sig-btn:hover {
-            background: #e2e8f0;
-            color: #0f172a;
+            bottom: 10px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
         }
 
-        /* Buttons Footer */
-        .card-footer-nav {
-            padding: 24px 32px 32px;
+        /* Policy Terms Box */
+        .terms-box {
+            background: #f8fafc;
+            border: 1px solid var(--neon-border);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            max-height: 280px;
+            overflow-y: auto;
+            font-size: 0.88rem;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .terms-box h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin: 16px 0 6px;
+        }
+        .terms-box h4:first-child { margin-top: 0; }
+
+        /* Card Action Buttons */
+        .card-footer {
+            padding: 24px 40px;
+            background: #f8fafc;
+            border-top: 1px solid var(--neon-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid var(--neon-border);
-            background: #ffffff;
         }
         .btn {
-            padding: 12px 28px;
-            border-radius: 30px;
-            font-size: 0.95rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            padding: 14px 28px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
             border: none;
-        }
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #475569;
-        }
-        .btn-secondary:hover {
-            background: #e2e8f0;
-            color: #0f172a;
+            transition: all 0.2s;
+            text-decoration: none;
         }
         .btn-primary {
             background: linear-gradient(135deg, var(--neon-pink) 0%, #e0004a 100%);
@@ -512,76 +495,103 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
             transform: translateY(-1px);
             box-shadow: 0 6px 20px rgba(255, 0, 84, 0.4);
         }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--neon-border);
+            color: var(--text-primary);
+        }
+        .btn-outline:hover {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+        }
 
-        /* Success Modal Overlay */
-        .success-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
+        /* Review Summary Cards */
+        .review-card {
+            background: white;
+            border: 1px solid var(--neon-border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .review-header h4 { font-size: 1rem; font-weight: 800; }
+        .edit-link {
+            color: var(--neon-pink);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Country Search Modal */
+        .modal-backdrop {
             display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
-        .success-modal {
+        .modal-backdrop.active { display: flex; }
+        .country-modal {
             background: white;
-            border-radius: 24px;
-            max-width: 500px;
+            border-radius: var(--radius-lg);
             width: 100%;
-            padding: 40px 32px;
-            text-align: center;
+            max-width: 520px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        @keyframes modalPop {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--neon-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .success-badge-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-teal) 100%);
-            color: white;
-            border-radius: 50%;
+        .modal-body {
+            padding: 16px 24px;
+            overflow-y: auto;
+        }
+        .country-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            margin: 0 auto 20px;
-            box-shadow: 0 10px 25px rgba(31, 169, 178, 0.4);
-        }
-        .app-ref-box {
-            background: #f8fafc;
-            border: 1px dashed var(--neon-cyan);
-            padding: 12px 20px;
+            gap: 14px;
+            padding: 12px 16px;
             border-radius: var(--radius-sm);
-            margin: 20px 0;
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--neon-cyan);
-            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.15s;
         }
+        .country-item:hover { background: #f1f5f9; }
 
-        @media (max-width: 640px) {
-            .form-grid, .account-type-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-group.full-width {
-                grid-column: span 1;
-            }
-            .card-header-banner {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .stepper-container {
-                padding: 16px;
-            }
-            .step-title {
-                display: none;
-            }
+        @media (max-width: 768px) {
+            .card-header-banner { padding: 24px; flex-direction: column; align-items: flex-start; gap: 12px; }
+            .card-body { padding: 24px 20px; }
+            .card-footer { padding: 20px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full-width { grid-column: span 1; }
+            .stepper-container { display: none; }
+            .mobile-step-indicator { display: block; }
         }
     </style>
 </head>
@@ -591,586 +601,832 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Dig
     <header class="neon-header">
         <div class="header-content">
             <a href="index.php" class="brand-logo">
-                <img src="logo.png" alt="Neon Logo" onerror="this.src='assets/7PzcYdFs3fE3HNk64pDrpdmsSOk.svg';">
-                <span class="brand-name">neon</span>
+                <img src="https://deccanfinltd.world/assets/img/logo.png" alt="Neon Bank Logo">
+                <span class="brand-name">NEON <span>BANK</span></span>
             </a>
-            <a href="index.php" class="back-link">
-                <i class="fa-solid fa-arrow-left"></i>
-                <span>Back to Home</span>
+            <a href="choose-account.php" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Account Types
             </a>
         </div>
     </header>
 
-    <!-- Form Container Wrapper -->
+    <!-- Main Content Container -->
     <div class="onboard-wrapper">
         <div class="onboard-card">
             
-            <!-- Banner Header -->
+            <!-- Banner -->
             <div class="card-header-banner">
                 <div class="header-title-group">
-                    <h1>Open Your Neon Account</h1>
-                    <p>Digital, zero hidden fees, 100% Swiss security</p>
+                    <h1>International Banking Onboarding</h1>
+                    <p>Swiss & Global Digital Banking Application</p>
                 </div>
-                <div class="type-badge" id="accountBadgeText"><?= htmlspecialchars($accountTitle) ?></div>
+                <div class="type-badge"><?= htmlspecialchars($accountTitle) ?></div>
             </div>
 
-            <!-- Stepper Progress Bar -->
+            <!-- Desktop Horizontal Stepper Bar (10 Steps) -->
             <div class="stepper-container">
                 <div class="stepper-bar">
-                    <div class="step-node active" id="node1">
+                    <div class="step-node active" data-step="0">
                         <div class="step-circle">1</div>
-                        <span class="step-title">Account & Info</span>
+                        <div class="step-title">Welcome</div>
                     </div>
-                    <div class="step-node" id="node2">
+                    <div class="step-node" data-step="1">
                         <div class="step-circle">2</div>
-                        <span class="step-title">Address & ID</span>
+                        <div class="step-title">Nationality</div>
                     </div>
-                    <div class="step-node" id="node3">
+                    <div class="step-node" data-step="2">
                         <div class="step-circle">3</div>
-                        <span class="step-title">KYC Uploads</span>
+                        <div class="step-title">Terms</div>
                     </div>
-                    <div class="step-node" id="node4">
+                    <div class="step-node" data-step="3">
                         <div class="step-circle">4</div>
-                        <span class="step-title">Signature & Review</span>
+                        <div class="step-title">Personal</div>
+                    </div>
+                    <div class="step-node" data-step="4">
+                        <div class="step-circle">5</div>
+                        <div class="step-title">Contact</div>
+                    </div>
+                    <div class="step-node" data-step="5">
+                        <div class="step-circle">6</div>
+                        <div class="step-title">Financial</div>
+                    </div>
+                    <div class="step-node" data-step="6">
+                        <div class="step-circle">7</div>
+                        <div class="step-title">Tax & ID</div>
+                    </div>
+                    <div class="step-node" data-step="7">
+                        <div class="step-circle">8</div>
+                        <div class="step-title">Documents</div>
+                    </div>
+                    <div class="step-node" data-step="8">
+                        <div class="step-circle">9</div>
+                        <div class="step-title">Nominee</div>
+                    </div>
+                    <div class="step-node" data-step="9">
+                        <div class="step-circle">10</div>
+                        <div class="step-title">Review</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Form Form Wrapper -->
-            <form id="neonOnboardForm">
-                <input type="hidden" name="account_type" id="inputAccountType" value="<?= htmlspecialchars($type) ?>">
+            <!-- Mobile Compact Step Indicator -->
+            <div class="mobile-step-indicator" id="mobileStepLabel">
+                Step 1 of 10 • Welcome to Neon Bank
+            </div>
 
-                <div class="card-body">
-                    
-                    <!-- STEP 1: ACCOUNT & PERSONAL INFO -->
-                    <div class="form-section active" id="section1">
+            <!-- Form Body -->
+            <div class="card-body">
+                <form id="onboardingForm" onsubmit="return false;">
+                    <input type="hidden" name="account_type" value="<?= htmlspecialchars($type) ?>">
+
+                    <!-- STEP 0: LANDING WELCOME PAGE -->
+                    <div class="form-section active" data-section="0">
                         <div class="section-heading">
-                            <i class="fa-solid fa-user-gear"></i>
-                            <span>Select Account & Personal Details</span>
+                            <i class="fa-solid fa-earth-americas"></i> Open Your Neon Bank Account
+                        </div>
+                        <p class="section-subheading">International banking designed around your global lifestyle. Secure, transparent, and multi-currency enabled.</p>
+                        
+                        <div style="background: white; border: 1.5px solid var(--neon-border); border-radius: var(--radius-md); padding: 28px; margin-bottom: 24px;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+                                <div>
+                                    <i class="fa-solid fa-shield-halved" style="font-size: 2rem; color: var(--neon-pink); margin-bottom: 10px;"></i>
+                                    <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 4px;">Secure Onboarding</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Bank-grade data encryption and secure file validation</p>
+                                </div>
+                                <div>
+                                    <i class="fa-solid fa-globe" style="font-size: 2rem; color: var(--neon-cyan); margin-bottom: 10px;"></i>
+                                    <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 4px;">Multi-Country Support</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Customized KYC onboarding rules tailored to your jurisdiction</p>
+                                </div>
+                                <div>
+                                    <i class="fa-solid fa-id-card" style="font-size: 2rem; color: var(--neon-pink); margin-bottom: 10px;"></i>
+                                    <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 4px;">Digital Verification</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Fast digital document upload & verification process</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; background: rgba(255, 0, 84, 0.04); padding: 16px 20px; border-radius: var(--radius-sm); border-left: 4px solid var(--neon-pink);">
+                            <i class="fa-solid fa-info-circle" style="color: var(--neon-pink); margin-right: 6px;"></i>
+                            <strong>Note:</strong> Exact onboarding requirements and documentation depend on your nationality, country of tax residence, selected account product, and applicable regulatory frameworks.
+                        </p>
+                    </div>
+
+                    <!-- STEP 1: NATIONALITY FIRST -->
+                    <div class="form-section" data-section="1">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-passport"></i> What is your nationality?
+                        </div>
+                        <p class="section-subheading">Select your primary citizenship to customize your country-specific KYC compliance requirements.</p>
+                        
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Primary Citizenship / Passport Country *</label>
+                                <div class="country-select-box" onclick="openCountryModal('nationality')">
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="selected-flag" id="nationalityFlag">🇨🇭</span>
+                                        <span id="nationalityName" style="font-weight: 700;">Switzerland</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down" style="color: var(--text-secondary);"></i>
+                                </div>
+                                <input type="hidden" name="nationality" id="inputNationality" value="Switzerland">
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Country of Current Residence *</label>
+                                <div class="country-select-box" onclick="openCountryModal('residency')">
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="selected-flag" id="residencyFlag">🇨🇭</span>
+                                        <span id="residencyName" style="font-weight: 700;">Switzerland</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down" style="color: var(--text-secondary);"></i>
+                                </div>
+                                <input type="hidden" name="residency_country" id="inputResidency" value="Switzerland">
+                            </div>
                         </div>
 
-                        <div class="account-type-grid">
-                            <div class="type-card <?= $type==='CURRENT'?'selected':'' ?>" onclick="selectType('CURRENT', 'Everyday Current Account', this)">
-                                <div class="type-icon"><i class="fa-solid fa-wallet"></i></div>
-                                <div class="type-info">
-                                    <h4>Everyday Current</h4>
-                                    <p>Zero monthly fees, free Debit Mastercard</p>
+                        <!-- Dynamic Jurisdiction Box -->
+                        <div id="jurisdictionNotice" style="margin-top: 24px; padding: 18px 20px; background: white; border: 1.5px solid var(--neon-border); border-radius: var(--radius-md); display: flex; align-items: center; gap: 14px;">
+                            <i class="fa-solid fa-scale-balanced" style="font-size: 1.5rem; color: var(--neon-pink);"></i>
+                            <div>
+                                <h4 style="font-size: 0.95rem; font-weight: 800;" id="jurisdictionTitle">Switzerland / International Onboarding Engine Active</h4>
+                                <p style="font-size: 0.82rem; color: var(--text-secondary);" id="jurisdictionDesc">Standard Swiss digital verification & FATCA / CRS tax compliance rules applied.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: TERMS & POLICY CONSENT -->
+                    <div class="form-section" data-section="2">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-file-contract"></i> Terms, Privacy & Regulatory Policies
+                        </div>
+                        <p class="section-subheading">Please review and accept our international banking service agreements before continuing.</p>
+
+                        <div class="terms-box">
+                            <h4>1. Account Opening & Banking Services Agreement</h4>
+                            <p>By proceeding with this account application, you confirm your request to open an international digital multi-currency account governed by standard international banking procedures. You agree that all transactions and financial operations are subject to account verification and security authentication.</p>
+
+                            <h4>2. Privacy Policy & Identity Verification Notice</h4>
+                            <p>Neon Bank collects personal details, identity credentials, contact identifiers, financial parameters, and biometric signature files solely for regulatory identity verification, Anti-Money Laundering (AML), and Customer Due Diligence (CDD) purposes.</p>
+
+                            <h4>3. Electronic Communication & Disclosure Consent</h4>
+                            <p>You consent to receive all account statements, transaction notifications, regulatory disclosures, legal updates, and electronic communications digitally via email or verified push notification channels.</p>
+
+                            <h4>4. International Tax Declarations (FATCA / CRS)</h4>
+                            <p>You warrant that all tax residency declarations and Identification Numbers (TINs) submitted during onboarding are truthful, complete, and accurate.</p>
+                        </div>
+
+                        <div style="background: white; border: 1.5px solid var(--neon-border); border-radius: var(--radius-sm); padding: 16px 20px;">
+                            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
+                                <input type="checkbox" id="consentCheckbox" style="margin-top: 3px; width: 18px; height: 18px; accent-color: var(--neon-pink);">
+                                <span>I have read, understood, and actively agree to the Terms of Service, Privacy Policy, and Regulatory Verification Notices.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: PERSONAL INFORMATION -->
+                    <div class="form-section" data-section="3">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-user-gear"></i> Personal Details
+                        </div>
+                        <p class="section-subheading">Enter your official name as shown on your legal identity documents or passport.</p>
+
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Full Legal Name (First, Middle, Last) *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" name="full_name" class="form-control" placeholder="e.g. Soumojit Saha" required>
                                 </div>
                             </div>
-                            <div class="type-card <?= $type==='SAVINGS'?'selected':'' ?>" onclick="selectType('SAVINGS', 'High-Yield Savings Account', this)">
-                                <div class="type-icon"><i class="fa-solid fa-piggy-bank"></i></div>
-                                <div class="type-info">
-                                    <h4>Neon Savings</h4>
-                                    <p>Earn high interest on your savings</p>
+
+                            <div class="form-group">
+                                <label>Date of Birth *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <input type="date" name="dob" class="form-control" required>
                                 </div>
                             </div>
-                            <div class="type-card <?= $type==='JOINT'?'selected':'' ?>" onclick="selectType('JOINT', 'Joint Account for Duos', this)">
-                                <div class="type-icon"><i class="fa-solid fa-people-hold"></i></div>
-                                <div class="type-info">
-                                    <h4>Joint Duo Account</h4>
-                                    <p>Shared finances under one roof</p>
-                                </div>
-                            </div>
-                            <div class="type-card <?= $type==='INVEST'?'selected':'' ?>" onclick="selectType('INVEST', 'Stocks & ETFs Investment Account', this)">
-                                <div class="type-icon"><i class="fa-solid fa-chart-line"></i></div>
-                                <div class="type-info">
-                                    <h4>Neon Invest</h4>
-                                    <p>Invest in global stocks & ETFs</p>
+
+                            <div class="form-group">
+                                <label>Gender *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-venus-mars"></i>
+                                    <select name="gender" class="form-control" required>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other / Prefer not to say</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- STEP 4: CONTACT & ADDRESS -->
+                    <div class="form-section" data-section="4">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-address-book"></i> Contact & Residential Address
+                        </div>
+                        <p class="section-subheading">Provide your verified contact details and principal residential location.</p>
 
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="full_name">Full Legal Name *</label>
-                                <div class="input-wrapper">
-                                    <i class="fa-regular fa-user"></i>
-                                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Marc Muster" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="email">Email Address *</label>
-                                <div class="input-wrapper">
-                                    <i class="fa-regular fa-envelope"></i>
-                                    <input type="email" id="email" name="email" class="form-control" placeholder="name@domain.com" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="phone">Mobile Phone *</label>
+                                <label>Mobile Phone Number (with Country Code) *</label>
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-mobile-screen"></i>
-                                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="+41 79 123 45 67" required>
+                                    <input type="text" name="phone" class="form-control" placeholder="+41 79 123 45 67 or +91 9876543210" required>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="dob">Date of Birth *</label>
+                                <label>Email Address *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-regular fa-calendar"></i>
-                                    <input type="date" id="dob" name="dob" class="form-control" required>
+                                    <i class="fa-solid fa-envelope"></i>
+                                    <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="gender">Gender *</label>
+                            <div class="form-group full-width">
+                                <label>Residential Address Line *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-solid fa-venus-mars"></i>
-                                    <select id="gender" name="gender" class="form-control" required>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <input type="text" name="address" class="form-control" placeholder="Street address, building / apartment number, city, postal code" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Account Password (for mobile app & online banking sign in) *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-key"></i>
+                                    <input type="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 5: EMPLOYMENT & FINANCIAL PROFILE -->
+                    <div class="form-section" data-section="5">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-briefcase"></i> Employment & Financial Profile
+                        </div>
+                        <p class="section-subheading">Helps us customize transaction limits and international banking features.</p>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Employment Status *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                    <select name="employment_status" class="form-control">
+                                        <option value="Employed">Employed / Salaried</option>
+                                        <option value="Self-Employed">Self-Employed / Business Owner</option>
+                                        <option value="Retired">Retired</option>
+                                        <option value="Student">Student</option>
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="initial_deposit">Initial Deposit Amount (CHF) *</label>
+                                <label>Employer / Business Name</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-solid fa-coins"></i>
-                                    <input type="number" id="initial_deposit" name="initial_deposit" class="form-control" placeholder="100.00" value="100" min="10" required>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: ADDRESS & IDENTIFICATION -->
-                    <div class="form-section" id="section2">
-                        <div class="section-heading">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>Address & Identification Document</span>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group full-width">
-                                <label for="address">Residential Address *</label>
-                                <div class="input-wrapper">
-                                    <i class="fa-solid fa-house"></i>
-                                    <input type="text" id="address" name="address" class="form-control" placeholder="Street, House No, Postal Code, City" required>
+                                    <i class="fa-solid fa-building"></i>
+                                    <input type="text" name="employer_name" class="form-control" placeholder="e.g. UBS AG or Self">
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="nationality">Country / Nationality *</label>
+                                <label>Annual Income Range *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-solid fa-globe"></i>
-                                    <select id="nationality" name="nationality" class="form-control" onchange="onCountryChange(this.value)" required>
-                                        <option value="Switzerland" selected>Switzerland 🇨🇭</option>
-                                        <option value="India">India 🇮🇳</option>
-                                        <option value="United States">United States 🇺🇸</option>
-                                        <option value="United Kingdom">United Kingdom 🇬🇧</option>
-                                        <option value="Germany">Germany 🇩🇪</option>
-                                        <option value="France">France 🇫🇷</option>
-                                        <option value="United Arab Emirates">United Arab Emirates 🇦🇪</option>
-                                        <option value="Singapore">Singapore 🇸🇬</option>
-                                        <option value="Canada">Canada 🇨🇦</option>
-                                        <option value="Australia">Australia 🇦🇺</option>
-                                        <option value="Japan">Japan 🇯🇵</option>
-                                        <option value="Other">Other Country</option>
+                                    <i class="fa-solid fa-coins"></i>
+                                    <select name="income_range" class="form-control">
+                                        <option value="Under CHF 50,000">Under CHF 50,000 / $55,000</option>
+                                        <option value="CHF 50,000 - 100,000">CHF 50,000 – 100,000</option>
+                                        <option value="CHF 100,000 - 250,000">CHF 100,000 – 250,000</option>
+                                        <option value="Above CHF 250,000">Above CHF 250,000+</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="national_id" id="lbl_national_id">National ID / Passport Number *</label>
+                                <label>Primary Source of Funds *</label>
                                 <div class="input-wrapper">
-                                    <i class="fa-regular fa-id-card"></i>
-                                    <input type="text" id="national_id" name="national_id" class="form-control" placeholder="e.g. S12345678" required>
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <select name="source_of_funds" class="form-control">
+                                        <option value="Salary / Employment Income">Salary / Employment Income</option>
+                                        <option value="Business Profits">Business Profits</option>
+                                        <option value="Investment / Capital Gains">Investment / Capital Gains</option>
+                                        <option value="Inheritance / Savings">Inheritance / Savings</option>
+                                    </select>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 3: KYC UPLOADS -->
-                    <div class="form-section" id="section3">
-                        <div class="section-heading">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span>Verification Documents (Selfie & Documents)</span>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Live Selfie / Portrait Photo *</label>
-                                <div class="upload-card" onclick="triggerFileInput('filePortrait')">
-                                    <i class="fa-solid fa-camera upload-icon"></i>
-                                    <div class="upload-title">Take Selfie or Upload Photo</div>
-                                    <div class="upload-sub">Clear facial photo in good lighting</div>
-                                    <img id="prevPortrait" class="upload-preview" alt="Portrait Preview">
-                                </div>
-                                <input type="file" id="filePortrait" accept="image/*" style="display:none" onchange="handleFile(this, 'portrait_data', 'prevPortrait')">
-                                <input type="hidden" name="portrait_data" id="portrait_data" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label id="lbl_doc_id_title">National ID / Passport Document *</label>
-                                <div class="upload-card" onclick="triggerFileInput('fileIdDoc')">
-                                    <i class="fa-solid fa-passport upload-icon"></i>
-                                    <div class="upload-title" id="lbl_doc_id_head">Upload Passport / ID Card</div>
-                                    <div class="upload-sub" id="lbl_doc_id_sub">Front side image of ID card</div>
-                                    <img id="prevIdDoc" class="upload-preview" alt="ID Preview">
-                                </div>
-                                <input type="file" id="fileIdDoc" accept="image/*" style="display:none" onchange="handleFile(this, 'doc_pan_data', 'prevIdDoc')">
-                                <input type="hidden" name="doc_pan_data" id="doc_pan_data" required>
                             </div>
 
                             <div class="form-group full-width">
-                                <label>Proof of Address (Utility Bill / Bank Statement) *</label>
-                                <div class="upload-card" onclick="triggerFileInput('fileAddressDoc')">
-                                    <i class="fa-solid fa-file-invoice upload-icon"></i>
-                                    <div class="upload-title">Upload Proof of Address</div>
-                                    <div class="upload-sub">Recent document (less than 3 months old)</div>
-                                    <img id="prevAddressDoc" class="upload-preview" alt="Address Proof Preview">
+                                <label>Primary Account Purpose *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-bullseye"></i>
+                                    <select name="account_purpose" class="form-control">
+                                        <option value="Personal Everyday Banking">Personal Everyday Banking</option>
+                                        <option value="International Money Transfer & Forex">International Money Transfer & Forex</option>
+                                        <option value="Savings & High-Yield Interest">Savings & High-Yield Interest</option>
+                                        <option value="Global Stock & ETF Investments">Global Stock & ETF Investments</option>
+                                    </select>
                                 </div>
-                                <input type="file" id="fileAddressDoc" accept="image/*" style="display:none" onchange="handleFile(this, 'doc_aadhaar_data', 'prevAddressDoc')">
-                                <input type="hidden" name="doc_aadhaar_data" id="doc_aadhaar_data" required>
                             </div>
                         </div>
                     </div>
 
-                    <!-- STEP 4: SIGNATURE & CONSENT -->
-                    <div class="form-section" id="section4">
+                    <!-- STEP 6: TAX RESIDENCY & JURISDICTION ID -->
+                    <div class="form-section" data-section="6">
                         <div class="section-heading">
-                            <i class="fa-solid fa-file-signature"></i>
-                            <span>Digital Signature & Final Review</span>
+                            <i class="fa-solid fa-landmark"></i> Tax Residency & Identity Document No.
                         </div>
+                        <p class="section-subheading" id="taxDesc">Specify your tax jurisdiction and primary identity document number.</p>
 
-                        <div class="form-group full-width" style="margin-bottom: 24px;">
-                            <label>Draw Digital Signature *</label>
-                            <div class="sig-pad-wrapper">
-                                <button type="button" class="clear-sig-btn" onclick="clearSignature()"><i class="fa-solid fa-rotate-left"></i> Clear</button>
-                                <canvas id="sigCanvas"></canvas>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Country of Tax Residence *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-flag"></i>
+                                    <input type="text" name="tax_residency" id="inputTaxResidency" class="form-control" value="Switzerland" required>
+                                </div>
                             </div>
-                            <input type="hidden" name="signature_data" id="signature_data" required>
+
+                            <div class="form-group">
+                                <label id="labelTaxId">Tax ID / Social Security / AHV Number *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-hashtag"></i>
+                                    <input type="text" name="tax_id_no" id="inputTaxIdNo" class="form-control" placeholder="e.g. 756.1234.5678.90 or PAN / SSN" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label id="labelNationalId">Primary Identity / Passport Number *</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-id-card"></i>
+                                    <input type="text" name="national_id" id="inputNationalId" class="form-control" placeholder="e.g. Passport number or National ID" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 7: SECURE DOCUMENT COLLECTION -->
+                    <div class="form-section" data-section="7">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Document Collection & Verification
+                        </div>
+                        <p class="section-subheading" id="docSubheading">Upload clear photo copies of your identity document and proof of address.</p>
+
+                        <div class="form-grid">
+                            <!-- Document 1: Front / Identity -->
+                            <div class="form-group">
+                                <label id="labelDocPan">Identity Document (Passport / Front Copy) *</label>
+                                <div class="upload-card" onclick="document.getElementById('filePan').click()">
+                                    <div class="upload-icon"><i class="fa-solid fa-file-image"></i></div>
+                                    <div class="upload-title">Click to Upload Document</div>
+                                    <div class="upload-sub">JPG, PNG or PDF (Max 5MB)</div>
+                                    <img id="previewPan" class="upload-preview" alt="Preview">
+                                </div>
+                                <input type="file" id="filePan" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this, 'previewPan', 'doc_pan_data')">
+                                <input type="hidden" name="doc_pan_data" id="doc_pan_data">
+                            </div>
+
+                            <!-- Document 2: Back / Address -->
+                            <div class="form-group">
+                                <label id="labelDocAadhaar">Address Proof / Second Identity Copy *</label>
+                                <div class="upload-card" onclick="document.getElementById('fileAadhaar').click()">
+                                    <div class="upload-icon"><i class="fa-solid fa-file-invoice"></i></div>
+                                    <div class="upload-title">Click to Upload Document</div>
+                                    <div class="upload-sub">Utility bill, bank statement or ID back</div>
+                                    <img id="previewAadhaar" class="upload-preview" alt="Preview">
+                                </div>
+                                <input type="file" id="fileAadhaar" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this, 'previewAadhaar', 'doc_aadhaar_data')">
+                                <input type="hidden" name="doc_aadhaar_data" id="doc_aadhaar_data">
+                            </div>
+
+                            <!-- Portrait / Selfie Capture -->
+                            <div class="form-group">
+                                <label>Live Portrait / Selfie Photo *</label>
+                                <div class="upload-card" onclick="document.getElementById('filePortrait').click()">
+                                    <div class="upload-icon"><i class="fa-solid fa-camera"></i></div>
+                                    <div class="upload-title">Take / Upload Face Photo</div>
+                                    <div class="upload-sub">Ensure good lighting</div>
+                                    <img id="previewPortrait" class="upload-preview" alt="Preview">
+                                </div>
+                                <input type="file" id="filePortrait" accept="image/*" style="display:none;" onchange="handleFileUpload(this, 'previewPortrait', 'portrait_data')">
+                                <input type="hidden" name="portrait_data" id="portrait_data">
+                            </div>
+
+                            <!-- Authorized Digital Signature -->
+                            <div class="form-group">
+                                <label>Authorized Signature *</label>
+                                <div class="sig-pad-wrapper">
+                                    <canvas id="sigCanvas"></canvas>
+                                    <div class="sig-actions">
+                                        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="clearSignature()">Clear</button>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="signature_data" id="signature_data">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 8: OPTIONAL NOMINEE -->
+                    <div class="form-section" data-section="8">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-users"></i> Nominee / Beneficiary Details
+                        </div>
+                        <p class="section-subheading">Designate a legal nominee for your account (Optional - can also be added later in settings).</p>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nominee Full Name</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" name="nominee_name" class="form-control" placeholder="e.g. Sophia Saha">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Relationship</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-heart"></i>
+                                    <input type="text" name="nominee_relation" class="form-control" placeholder="e.g. Spouse / Son / Parent">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Nominee Contact Phone Number</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <input type="text" name="nominee_phone" class="form-control" placeholder="+41 79 123 45 67">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 9: REVIEW & SUBMIT APPLICATION -->
+                    <div class="form-section" data-section="9">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-clipboard-check"></i> Review & Submit Application
+                        </div>
+                        <p class="section-subheading">Double check your entered information before submitting for instant digital review.</p>
+
+                        <div class="review-card">
+                            <div class="review-header">
+                                <h4>1. Nationality & Jurisdiction</h4>
+                                <span class="edit-link" onclick="goToStep(1)">Edit</span>
+                            </div>
+                            <p style="font-size: 0.9rem;"><strong>Nationality:</strong> <span id="revNationality">Switzerland</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Country of Residence:</strong> <span id="revResidency">Switzerland</span></p>
                         </div>
 
-                        <div style="background: #f8fafc; padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--neon-border);">
-                            <label style="display: flex; gap: 12px; align-items: flex-start; cursor: pointer;">
-                                <input type="checkbox" id="termsCheck" required style="margin-top: 4px; accent-color: var(--neon-pink); width: 18px; height: 18px;">
-                                <span style="font-size: 0.88rem; color: #475569;">
-                                    I confirm that the details provided are accurate and complete. I agree to the <a href="#" style="color: var(--neon-pink); text-decoration: underline;">Neon Terms of Service</a> and Privacy Policy.
-                                </span>
+                        <div class="review-card">
+                            <div class="review-header">
+                                <h4>2. Personal & Contact Details</h4>
+                                <span class="edit-link" onclick="goToStep(3)">Edit</span>
+                            </div>
+                            <p style="font-size: 0.9rem;"><strong>Full Name:</strong> <span id="revFullName">-</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Email:</strong> <span id="revEmail">-</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Phone:</strong> <span id="revPhone">-</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Address:</strong> <span id="revAddress">-</span></p>
+                        </div>
+
+                        <div class="review-card">
+                            <div class="review-header">
+                                <h4>3. Documents & Compliance</h4>
+                                <span class="edit-link" onclick="goToStep(7)">Edit</span>
+                            </div>
+                            <p style="font-size: 0.9rem;"><strong>Identity ID Number:</strong> <span id="revTaxId">-</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Documents Attached:</strong> <span style="color: var(--neon-cyan); font-weight: 700;">Identity Copy, Proof of Address, Portrait & Signature ✓</span></p>
+                        </div>
+
+                        <div style="background: rgba(255, 0, 84, 0.04); border: 1.5px solid var(--neon-pink); border-radius: var(--radius-md); padding: 20px; margin-top: 24px;">
+                            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
+                                <input type="checkbox" id="finalDeclarationCheckbox" style="margin-top: 3px; width: 18px; height: 18px; accent-color: var(--neon-pink);">
+                                <span>Final Declaration: I solemnly declare that the information supplied above is complete, accurate, and correct.</span>
                             </label>
                         </div>
                     </div>
 
-                </div>
+                    <!-- SUCCESS STATE SCREEN (STEP 10) -->
+                    <div class="form-section" data-section="10">
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="width: 80px; height: 80px; background: rgba(31, 169, 178, 0.12); color: var(--neon-cyan); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px;">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <h2 style="font-size: 1.8rem; font-weight: 900; margin-bottom: 8px;">Application Submitted Successfully!</h2>
+                            <p style="color: var(--text-secondary); font-size: 1rem; max-width: 500px; margin: 0 auto 24px;">Your digital account application has been received and logged in our system under Review Status.</p>
+                            
+                            <div style="background: #f8fafc; border: 1.5px solid var(--neon-border); border-radius: var(--radius-md); padding: 24px; max-width: 420px; margin: 0 auto 32px;">
+                                <div style="font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Your Application Reference ID</div>
+                                <div id="submittedAppId" style="font-size: 1.8rem; font-weight: 900; color: var(--neon-pink); letter-spacing: 2px; margin: 8px 0;">FR-XXXXXX</div>
+                                <div style="font-size: 0.85rem; color: var(--neon-cyan); font-weight: 700;"><i class="fa-solid fa-clock"></i> Status: Under Review</div>
+                            </div>
 
-                <!-- Footer Navigation Buttons -->
-                <div class="card-footer-nav">
-                    <button type="button" class="btn btn-secondary" id="btnPrev" style="visibility: hidden;" onclick="changeStep(-1)">
-                        <i class="fa-solid fa-arrow-left"></i> Previous
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnNext" onclick="changeStep(1)">
-                        <span>Next Step</span> <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
+                            <div style="display: flex; gap: 16px; justify-content: center;">
+                                <a href="index.php" class="btn btn-outline">Return to Homepage</a>
+                                <a href="choose-account.php" class="btn btn-primary">Open Another Account</a>
+                            </div>
+                        </div>
+                    </div>
 
-            </form>
-
-        </div>
-    </div>
-
-    <!-- Success Modal -->
-    <div class="success-overlay" id="successModal">
-        <div class="success-modal">
-            <div class="success-badge-icon">
-                <i class="fa-solid fa-check"></i>
+                </form>
             </div>
-            <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">Application Submitted!</h2>
-            <p style="color: var(--text-secondary); font-size: 0.95rem;">Welcome to <strong>Neon Finance</strong>. Your digital onboarding application has been successfully received.</p>
-            
-            <div class="app-ref-box" id="modalAppId">FR-000000</div>
-            
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 24px;">Our verification team will review your KYC documents within 72 hrs. You can download the <strong>Neon Finance Mobile App</strong> to sign in once approved.</p>
-            
-            <a href="index.php" class="btn btn-primary" style="width: 100%; justify-content: center;">Done & Return Home</a>
+
+            <!-- Card Footer Controls -->
+            <div class="card-footer" id="cardFooter">
+                <button type="button" class="btn btn-secondary" id="btnPrev" onclick="navigateStep(-1)" style="display:none;">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <div></div>
+                <button type="button" class="btn btn-primary" id="btnNext" onclick="navigateStep(1)">
+                    Start Application <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
         </div>
     </div>
 
-    <!-- JavaScript Handling -->
+    <!-- Country Search Modal -->
+    <div class="modal-backdrop" id="countryModalBackdrop">
+        <div class="country-modal">
+            <div class="modal-header">
+                <h3 style="font-size: 1.1rem; font-weight: 800;">Select Country</h3>
+                <button type="button" onclick="closeCountryModal()" style="background:none; border:none; font-size: 1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="padding: 12px 24px; border-bottom: 1px solid var(--neon-border);">
+                <input type="text" id="countrySearchInput" class="form-control" placeholder="Search country or code..." style="padding-left: 16px;" onkeyup="filterCountries()">
+            </div>
+            <div class="modal-body" id="countryList">
+                <!-- Country Options Populated via JS -->
+            </div>
+        </div>
+    </div>
+
     <script>
-        let currentStep = 1;
+        const countries = [
+            { code: "CH", name: "Switzerland", flag: "🇨🇭", kyc: "Swiss Digital / FATCA / CRS" },
+            { code: "IN", name: "India", flag: "🇮🇳", kyc: "PAN & Aadhaar / NRI Rules" },
+            { code: "AE", name: "United Arab Emirates", flag: "🇦🇪", kyc: "Emirates ID & Passport" },
+            { code: "SG", name: "Singapore", flag: "🇸🇬", kyc: "Singpass / Passport NRIC" },
+            { code: "US", name: "United States", flag: "🇺🇸", kyc: "SSN / ITIN / FATCA W-9" },
+            { code: "GB", name: "United Kingdom", flag: "🇬🇧", kyc: "UK Passport / National Insurance" },
+            { code: "CA", name: "Canada", flag: "🇨🇦", kyc: "SIN / Canadian Passport" },
+            { code: "AU", name: "Australia", flag: "🇦🇺", kyc: "TFN / Australian ID" },
+            { code: "DE", name: "Germany", flag: "🇩🇪", kyc: "EU ID / Steuer-ID" },
+            { code: "FR", name: "France", flag: "🇫🇷", kyc: "EU Passport / Tax ID" }
+        ];
 
-        function selectType(typeName, title, cardElem) {
-            document.getElementById('inputAccountType').value = typeName;
-            document.getElementById('accountBadgeText').innerText = title;
-            document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-            cardElem.classList.add('selected');
-        }
+        let activeStep = 0;
+        let activeCountryTarget = 'nationality';
+        let sigCanvas, sigCtx, isDrawing = false;
 
-        function changeStep(delta) {
-            if (delta === 1) {
+        document.addEventListener("DOMContentLoaded", () => {
+            initSignaturePad();
+            populateCountries();
+        });
+
+        function navigateStep(direction) {
+            if (direction === 1) {
                 if (!validateCurrentStep()) return;
-                if (currentStep === 4) {
-                    submitForm();
-                    return;
-                }
             }
 
-            currentStep += delta;
-            if (currentStep < 1) currentStep = 1;
-            if (currentStep > 4) currentStep = 4;
+            activeStep += direction;
+            if (activeStep < 0) activeStep = 0;
+            if (activeStep > 9) activeStep = 9;
 
-            // Update UI Sections
-            document.querySelectorAll('.form-section').forEach((s, idx) => {
-                s.classList.toggle('active', idx === (currentStep - 1));
+            updateStepUI();
+        }
+
+        function goToStep(step) {
+            activeStep = step;
+            updateStepUI();
+        }
+
+        function updateStepUI() {
+            const sections = document.querySelectorAll(".form-section");
+            sections.forEach((sec, idx) => {
+                sec.classList.toggle("active", idx === activeStep);
             });
 
-            // Update Stepper Nodes
-            for (let i = 1; i <= 4; i++) {
-                const node = document.getElementById(`node${i}`);
-                if (node) {
-                    if (i < currentStep) {
-                        node.className = 'step-node completed';
-                    } else if (i === currentStep) {
-                        node.className = 'step-node active';
-                    } else {
-                        node.className = 'step-node';
-                    }
-                }
-            }
+            // Stepper nodes update
+            const nodes = document.querySelectorAll(".step-node");
+            nodes.forEach((node, idx) => {
+                node.classList.remove("active", "completed");
+                if (idx === activeStep) node.classList.add("active");
+                if (idx < activeStep) node.classList.add("completed");
+            });
 
-            // Ensure canvas has correct width when entering Step 4
-            if (currentStep === 4) {
-                setTimeout(resizeCanvas, 60);
-            }
+            // Footer controls
+            const btnPrev = document.getElementById("btnPrev");
+            const btnNext = document.getElementById("btnNext");
+            const footer = document.getElementById("cardFooter");
 
-            // Update Footer Buttons
-            document.getElementById('btnPrev').style.visibility = (currentStep === 1) ? 'hidden' : 'visible';
-            const btnNext = document.getElementById('btnNext');
-            if (currentStep === 4) {
-                btnNext.innerHTML = `<span>Submit Application</span> <i class="fa-solid fa-paper-plane"></i>`;
+            if (activeStep === 10) {
+                footer.style.display = "none";
+                return;
             } else {
-                btnNext.innerHTML = `<span>Next Step</span> <i class="fa-solid fa-arrow-right"></i>`;
+                footer.style.display = "flex";
             }
-        }
 
-        function onCountryChange(country) {
-            const lbl = document.getElementById('lbl_national_id');
-            const input = document.getElementById('national_id');
-            const docTitle = document.getElementById('lbl_doc_id_title');
-            const docHead = document.getElementById('lbl_doc_id_head');
-            const docSub = document.getElementById('lbl_doc_id_sub');
+            btnPrev.style.display = activeStep === 0 ? "none" : "inline-flex";
 
-            if (country === 'India') {
-                if (lbl) lbl.innerText = 'Aadhaar Card Number / National ID *';
-                if (input) input.placeholder = 'e.g. 1234 5678 9012';
-                if (docTitle) docTitle.innerText = 'Aadhaar Card / Government ID *';
-                if (docHead) docHead.innerText = 'Upload Aadhaar Card / ID';
-                if (docSub) docSub.innerText = 'Front side image of Aadhaar Card or National ID';
+            if (activeStep === 0) {
+                btnNext.innerHTML = 'Start Application <i class="fa-solid fa-arrow-right"></i>';
+            } else if (activeStep === 9) {
+                btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
             } else {
-                if (lbl) lbl.innerText = 'National ID / Passport Number *';
-                if (input) input.placeholder = 'e.g. S12345678';
-                if (docTitle) docTitle.innerText = 'National ID / Passport Document *';
-                if (docHead) docHead.innerText = 'Upload Passport / ID Card';
-                if (docSub) docSub.innerText = 'Front side image of Passport or Government ID';
+                btnNext.innerHTML = 'Continue <i class="fa-solid fa-arrow-right"></i>';
+            }
+
+            // Update mobile header
+            const stepTitles = ["Welcome", "Nationality", "Terms", "Personal", "Contact", "Financial", "Tax & ID", "Documents", "Nominee", "Review"];
+            document.getElementById("mobileStepLabel").innerText = `Step ${activeStep + 1} of 10 • ${stepTitles[activeStep] || ''}`;
+
+            if (activeStep === 9) {
+                updateReviewData();
             }
         }
 
         function validateCurrentStep() {
-            const currentSection = document.getElementById(`section${currentStep}`);
-            if (!currentSection) return true;
-
-            // Dedicated validation for Step 4
-            if (currentStep === 4) {
-                const sig = document.getElementById('signature_data')?.value;
-                if (!sig || sig.trim() === '') {
-                    alert('Please draw your digital signature on the signature pad.');
-                    return false;
-                }
-                const terms = document.getElementById('termsCheck');
-                if (!terms || !terms.checked) {
-                    alert('Please accept the Terms of Service to proceed.');
-                    return false;
-                }
-                return true;
-            }
-
-            const inputs = currentSection.querySelectorAll('input[required], select[required]');
-            for (let input of inputs) {
-                if (input.type === 'hidden') {
-                    if (!input.value || input.value.trim() === '') {
-                        if (input.id === 'portrait_data') {
-                            alert('Please capture or upload your Live Selfie / Portrait Photo.');
-                        } else if (input.id === 'doc_pan_data') {
-                            const country = document.getElementById('nationality')?.value;
-                            alert(country === 'India' ? 'Please upload your Aadhaar Card / ID Document.' : 'Please upload your National ID / Passport Document.');
-                        } else if (input.id === 'doc_aadhaar_data') {
-                            alert('Please upload your Proof of Address.');
-                        } else {
-                            alert('Please complete all required fields in this step.');
-                        }
-                        return false;
-                    }
-                    continue;
-                }
-
-                if (input.type === 'checkbox') {
-                    if (!input.checked) {
-                        alert('Please check the required agreement box.');
-                        return false;
-                    }
-                    continue;
-                }
-
-                if (!input.value || input.value.trim() === '') {
-                    try { input.focus(); } catch (e) {}
-                    let label = '';
-                    if (input.id) {
-                        const associatedLabel = document.querySelector(`label[for="${input.id}"]`);
-                        if (associatedLabel) {
-                            label = associatedLabel.innerText.replace('*', '').trim();
-                        }
-                    }
-                    if (!label && input.labels && input.labels.length > 0) {
-                        label = input.labels[0].innerText.replace('*', '').trim();
-                    }
-                    if (!label) {
-                        label = input.getAttribute('placeholder') || input.name || 'Required field';
-                    }
-                    alert('Please complete the required field: ' + label);
+            if (activeStep === 2) {
+                const consent = document.getElementById("consentCheckbox").checked;
+                if (!consent) {
+                    alert("Please accept the Terms & Policies before proceeding.");
                     return false;
                 }
             }
+
+            if (activeStep === 9) {
+                const finalDec = document.getElementById("finalDeclarationCheckbox").checked;
+                if (!finalDec) {
+                    alert("Please check the final declaration box before submitting.");
+                    return false;
+                }
+                submitForm();
+                return false;
+            }
+
             return true;
         }
 
-        function triggerFileInput(id) {
-            document.getElementById(id).click();
+        function updateReviewData() {
+            const form = document.getElementById("onboardingForm");
+            document.getElementById("revNationality").innerText = document.getElementById("nationalityName").innerText;
+            document.getElementById("revResidency").innerText = document.getElementById("residencyName").innerText;
+            document.getElementById("revFullName").innerText = form.full_name.value || '-';
+            document.getElementById("revEmail").innerText = form.email.value || '-';
+            document.getElementById("revPhone").innerText = form.phone.value || '-';
+            document.getElementById("revAddress").innerText = form.address.value || '-';
+            document.getElementById("revTaxId").innerText = form.national_id.value || form.tax_id_no.value || '-';
         }
 
-        function handleFile(fileInput, targetHiddenId, previewImgId) {
-            const file = fileInput.files[0];
-            if (file) {
+        // Country Search Modal Handling
+        function openCountryModal(target) {
+            activeCountryTarget = target;
+            document.getElementById("countryModalBackdrop").classList.add("active");
+        }
+        function closeCountryModal() {
+            document.getElementById("countryModalBackdrop").classList.remove("active");
+        }
+        function populateCountries() {
+            const list = document.getElementById("countryList");
+            list.innerHTML = countries.map(c => `
+                <div class="country-item" onclick="selectCountry('${c.name}', '${c.flag}', '${c.kyc}')">
+                    <span style="font-size: 1.5rem;">${c.flag}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight: 700; font-size: 0.95rem;">${c.name}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary);">${c.kyc}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        function selectCountry(name, flag, kyc) {
+            if (activeCountryTarget === 'nationality') {
+                document.getElementById("nationalityName").innerText = name;
+                document.getElementById("nationalityFlag").innerText = flag;
+                document.getElementById("inputNationality").value = name;
+            } else {
+                document.getElementById("residencyName").innerText = name;
+                document.getElementById("residencyFlag").innerText = flag;
+                document.getElementById("inputResidency").value = name;
+            }
+
+            // Update Dynamic KYC Labels
+            if (name === "India") {
+                document.getElementById("jurisdictionTitle").innerText = "India Onboarding Rules Active";
+                document.getElementById("jurisdictionDesc").innerText = "PAN & Aadhaar mandatory KYC verification rules applied.";
+                document.getElementById("labelTaxId").innerText = "PAN Card Number *";
+                document.getElementById("inputTaxIdNo").placeholder = "e.g. ABCDE1234F";
+                document.getElementById("labelNationalId").innerText = "Aadhaar Card Number *";
+                document.getElementById("inputNationalId").placeholder = "12-digit Aadhaar Number";
+                document.getElementById("labelDocPan").innerText = "PAN Card Image Copy *";
+                document.getElementById("labelDocAadhaar").innerText = "Aadhaar Card Image Copy *";
+            } else {
+                document.getElementById("jurisdictionTitle").innerText = `${name} / International Onboarding Engine Active`;
+                document.getElementById("jurisdictionDesc").innerText = "Standard Passport / National ID & Tax Identification compliance rules applied.";
+                document.getElementById("labelTaxId").innerText = "Tax ID / Social Security / AHV Number *";
+                document.getElementById("inputTaxIdNo").placeholder = "Tax Identification Number";
+                document.getElementById("labelNationalId").innerText = "Passport / National Identity Card Number *";
+                document.getElementById("inputNationalId").placeholder = "Passport or Identity Card No.";
+                document.getElementById("labelDocPan").innerText = "Passport / Identity Card Front *";
+                document.getElementById("labelDocAadhaar").innerText = "Proof of Address / Document Back *";
+            }
+
+            closeCountryModal();
+        }
+
+        // File Base64 Upload Handling
+        function handleFileUpload(input, previewId, hiddenInputId) {
+            if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById(targetHiddenId).value = e.target.result;
-                    const prev = document.getElementById(previewImgId);
+                    document.getElementById(hiddenInputId).value = e.target.result;
+                    const prev = document.getElementById(previewId);
                     prev.src = e.target.result;
-                    prev.style.display = 'inline-block';
+                    prev.style.display = "block";
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // Canvas Signature Pad Logic
-        const canvas = document.getElementById('sigCanvas');
-        const ctx = canvas.getContext('2d');
-        let drawing = false;
+        // Signature Canvas
+        function initSignaturePad() {
+            sigCanvas = document.getElementById("sigCanvas");
+            if (!sigCanvas) return;
+            sigCanvas.width = sigCanvas.offsetWidth;
+            sigCanvas.height = sigCanvas.offsetHeight;
+            sigCtx = sigCanvas.getContext("2d");
+            sigCtx.strokeStyle = "#0f172a";
+            sigCtx.lineWidth = 2.5;
+            sigCtx.lineCap = "round";
 
-        function resizeCanvas() {
-            const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
-            const targetWidth = parentWidth > 50 ? parentWidth : (window.innerWidth > 600 ? 580 : 320);
+            const startDraw = (e) => { isDrawing = true; sigCtx.beginPath(); draw(e); };
+            const stopDraw = () => { isDrawing = false; saveSignature(); };
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const rect = sigCanvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                sigCtx.lineTo(x, y);
+                sigCtx.stroke();
+            };
 
-            // Preserve canvas content across resize if already drawn
-            const prevData = canvas.toDataURL();
-            const hadDrawing = document.getElementById('signature_data').value !== '';
-
-            canvas.width = targetWidth;
-            canvas.height = 140;
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#0f172a';
-
-            if (hadDrawing) {
-                const img = new Image();
-                img.onload = function() {
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = prevData;
-            }
-        }
-        window.addEventListener('resize', resizeCanvas);
-        // Initial setup
-        resizeCanvas();
-
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        }
-
-        canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); });
-        canvas.addEventListener('mousemove', (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); updateSigInput(); });
-        canvas.addEventListener('mouseup', () => drawing = false);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); }, { passive: false });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); updateSigInput(); }, { passive: false });
-        canvas.addEventListener('touchend', () => drawing = false);
-
-        function updateSigInput() {
-            document.getElementById('signature_data').value = canvas.toDataURL('image/png');
+            sigCanvas.addEventListener("mousedown", startDraw);
+            sigCanvas.addEventListener("mouseup", stopDraw);
+            sigCanvas.addEventListener("mousemove", draw);
+            sigCanvas.addEventListener("touchstart", startDraw);
+            sigCanvas.addEventListener("touchend", stopDraw);
+            sigCanvas.addEventListener("touchmove", draw);
         }
 
         function clearSignature() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('signature_data').value = '';
+            if (sigCtx && sigCanvas) {
+                sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+                document.getElementById("signature_data").value = "";
+            }
         }
 
-        // AJAX Form Submission
-        function submitForm() {
-            const terms = document.getElementById('termsCheck');
-            if (!terms || !terms.checked) {
-                alert('Please accept the Terms of Service to proceed.');
-                return;
+        function saveSignature() {
+            if (sigCanvas) {
+                document.getElementById("signature_data").value = sigCanvas.toDataURL("image/png");
             }
-            const sig = document.getElementById('signature_data')?.value;
-            if (!sig || sig.trim() === '') {
-                alert('Please draw your digital signature before submitting.');
-                return;
-            }
+        }
 
-            const btnNext = document.getElementById('btnNext');
-            if (btnNext) {
-                btnNext.disabled = true;
-                btnNext.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
-            }
+        // Submit Form via AJAX
+        async function submitForm() {
+            const btnNext = document.getElementById("btnNext");
+            btnNext.disabled = true;
+            btnNext.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Application...';
 
-            const form = document.getElementById('neonOnboardForm');
+            const form = document.getElementById("onboardingForm");
             const formData = new FormData(form);
 
-            // Ensure national_id maps to aadhaar_number for backend compatibility
-            const nationalId = document.getElementById('national_id')?.value;
-            if (nationalId && !formData.get('aadhaar_number')) {
-                formData.append('aadhaar_number', nationalId);
+            // Populate fallback fields for backward database compatibility
+            if (!formData.get('aadhaar_number')) {
+                formData.set('aadhaar_number', formData.get('national_id') || 'NA');
             }
 
-            fetch('api/submit.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(async res => {
-                const text = await res.text();
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Non-JSON response from server:', text);
-                    throw new Error('Server returned unexpected output: ' + text.substring(0, 100));
-                }
-            })
-            .then(data => {
-                if (data.success || data.app_id) {
-                    const appId = data.app_id || 'FR-' + Math.floor(100000 + Math.random() * 900000);
-                    document.getElementById('modalAppId').innerText = appId;
-                    document.getElementById('successModal').style.display = 'flex';
+            try {
+                const response = await fetch('api/register.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    document.getElementById("submittedAppId").innerText = res.app_id;
+                    activeStep = 10;
+                    updateStepUI();
                 } else {
-                    alert(data.message || 'Submission failed. Please check form details.');
-                    if (btnNext) {
-                        btnNext.disabled = false;
-                        btnNext.innerHTML = `<span>Submit Application</span> <i class="fa-solid fa-paper-plane"></i>`;
-                    }
-                }
-            })
-            .catch(err => {
-                console.error('Submission error:', err);
-                alert('Submission could not be completed: ' + err.message);
-                if (btnNext) {
+                    alert(res.message || "Failed to submit application. Please try again.");
                     btnNext.disabled = false;
-                    btnNext.innerHTML = `<span>Submit Application</span> <i class="fa-solid fa-paper-plane"></i>`;
+                    btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
                 }
-            });
+            } catch (err) {
+                alert("An error occurred during submission: " + err.message);
+                btnNext.disabled = false;
+                btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
+            }
         }
     </script>
 </body>
