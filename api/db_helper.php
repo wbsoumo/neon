@@ -444,6 +444,55 @@ function get_db_connection() {
             } catch (PDOException $ex) {}
         }
 
+        // Create user_spaces table
+        $pdo->exec("CREATE TABLE IF NOT EXISTS user_spaces (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            space_id VARCHAR(50) UNIQUE NOT NULL,
+            app_id VARCHAR(50) NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            icon_key VARCHAR(50) NOT NULL,
+            currency VARCHAR(10) DEFAULT 'CHF',
+            balance DECIMAL(15,2) DEFAULT 0.00,
+            target_amount DECIMAL(15,2) NULL,
+            target_date VARCHAR(20) NULL,
+            color_hex VARCHAR(20) NULL,
+            allocation_type VARCHAR(20) DEFAULT 'NONE',
+            allocation_value DECIMAL(15,2) DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_spaces_app (app_id)
+        ) ENGINE=InnoDB;");
+
+        // Create space_transactions table
+        $pdo->exec("CREATE TABLE IF NOT EXISTS space_transactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            transaction_id VARCHAR(50) UNIQUE NOT NULL,
+            space_id VARCHAR(50) NOT NULL,
+            app_id VARCHAR(50) NOT NULL,
+            type VARCHAR(20) NOT NULL, -- ADD, WITHDRAW, AUTOMATIC, REVERSAL
+            amount DECIMAL(15,2) NOT NULL,
+            currency VARCHAR(10) DEFAULT 'CHF',
+            source_dest VARCHAR(100) NOT NULL,
+            status VARCHAR(20) DEFAULT 'SUCCESS',
+            reference_id VARCHAR(100) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_space_tx_space (space_id),
+            INDEX idx_space_tx_app (app_id)
+        ) ENGINE=InnoDB;");
+
+        // Create space_allocation_rules table
+        $pdo->exec("CREATE TABLE IF NOT EXISTS space_allocation_rules (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            space_id VARCHAR(50) UNIQUE NOT NULL,
+            app_id VARCHAR(50) NOT NULL,
+            rule_type VARCHAR(20) NOT NULL, -- FIXED_MONTHLY, PERCENTAGE_INCOMING
+            rule_value DECIMAL(15,2) NOT NULL,
+            is_active TINYINT DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_alloc_app (app_id)
+        ) ENGINE=InnoDB;");
+
         return $pdo;
     } catch (PDOException $e) {
         die(json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]));

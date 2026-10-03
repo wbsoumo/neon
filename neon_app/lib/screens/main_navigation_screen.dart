@@ -5,10 +5,12 @@ import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 import '../services/api_service.dart';
 import '../services/market_data_service.dart';
+import '../models/space_model.dart';
 import 'add_beneficiary_screen.dart';
 import 'payment_processing_screen.dart';
 import 'passbook_screen.dart';
 import 'stock_details_screen.dart';
+import 'space_details_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -52,12 +54,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   String _selectedStockCategory = 'All';
   final TextEditingController _stockSearchController = TextEditingController();
 
+  // Spaces Dashboard State
+  List<SpaceModel> _spaces = [];
+  bool _isLoadingSpaces = true;
+  double _mainBalanceChf = 0.0;
+  double _mainBalanceInr = 0.0;
+
   @override
   void initState() {
     super.initState();
     _user = widget.user;
     _fetchData();
     _fetchExchangeRatesAndStockData();
+    _fetchSpaces();
+  }
+
+  Future<void> _fetchSpaces() async {
+    setState(() => _isLoadingSpaces = true);
+    final res = await ApiService.fetchSpaces(_user.appId, sessionId: _user.sessionId);
+    if (mounted) {
+      if (res['success'] == true && res['spaces'] != null) {
+        final List list = res['spaces'];
+        setState(() {
+          _spaces = list.map((x) => SpaceModel.fromJson(x)).toList();
+          _mainBalanceChf = (res['main_balance_chf'] as num?)?.toDouble() ?? (_user.balance * _inrToChfRate);
+          _mainBalanceInr = (res['main_balance_inr'] as num?)?.toDouble() ?? _user.balance;
+          _isLoadingSpaces = false;
+        });
+      } else {
+        setState(() {
+          _mainBalanceChf = _user.balance * _inrToChfRate;
+          _mainBalanceInr = _user.balance;
+          _isLoadingSpaces = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchExchangeRatesAndStockData() async {
@@ -2343,109 +2374,580 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   // ==========================================
-  // TAB 4: SPACES & CARDS (Screenshot #1 & #4)
+  // TAB 4: SPACES DASHBOARD (Redesigned)
   // ==========================================
   Widget _buildSpacesTab() {
-    final holidaysChf = (_user.balance * 0.4) * _inrToChfRate;
-    final taxesChf = (_user.balance * 0.1) * _inrToChfRate;
-    final mainAccChf = _user.balance * _inrToChfRate;
+    final mainChf = _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate);
+    final mainInr = _mainBalanceInr > 0 ? _mainBalanceInr : _user.balance;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text("Spaces & Cards", style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text("Swiss Spaces & Vaults", style: TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () {
+              _fetchSpaces();
+              _fetchData();
+            },
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _fetchSpaces();
+          await _fetchData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Primary Main Account Balance in CHF
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(22),
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 6)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: const [
+                            Text("🇨🇭", style: TextStyle(fontSize: 16)),
+                            SizedBox(width: 6),
+                            Text(
+                              "MAIN SWISS ACCOUNT",
+                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "FINMA Protected",
+                            style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "CHF ${mainChf.toStringAsFixed(2)}",
+                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.currency_exchange_rounded, color: Colors.white60, size: 13),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Secondary Balance: ₹ ${mainInr.toStringAsFixed(2)}",
+                            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Header & Add Space Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text("Your Financial Spaces", style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                      Text("Organize funds into dedicated goal vaults", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.neonPink,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: _showCreateSpaceModal,
+                    icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                    label: const Text("New Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Spaces List or Empty Onboarding State
+              _isLoadingSpaces
+                  ? const Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : _spaces.isEmpty
+                      ? _buildEmptySpacesOnboardingCard()
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _spaces.length,
+                          separatorBuilder: (ctx, i) => const SizedBox(height: 14),
+                          itemBuilder: (ctx, i) => _buildSpaceCardItem(_spaces[i]),
+                        ),
+
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySpacesOnboardingCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.neonPink.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppTheme.neonPink),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Organize your money",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Create dedicated Spaces for travel, emergency funds, tax reserves, investments and custom targets.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.neonPink,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            onPressed: _showCreateSpaceModal,
+            icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
+            label: const Text(
+              "+ Create your first Space",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpaceCardItem(SpaceModel space) {
+    final themeColor = _parseColorHex(space.colorHex);
+    final progress = space.progressPercentage;
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SpaceDetailsScreen(
+              space: space,
+              appId: _user.appId,
+              sessionId: _user.sessionId,
+              mainBalanceChf: _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate),
+              onSpaceUpdated: _fetchSpaces,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3)),
+          ],
+          border: Border.all(color: Colors.grey[200]!),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main Account Live Conversion Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppTheme.neonPink, AppTheme.neonBurgundy]),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: AppTheme.neonPink.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Main Account Balance", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(
-                    "₹ ${_user.balance.toStringAsFixed(2)}",
-                    style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                  child: Icon(_getSpaceIcon(space.iconKey), color: themeColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.currency_exchange, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
                       Text(
-                        "≈ ${mainAccChf.toStringAsFixed(2)} CHF (Live Converter)",
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.bold),
+                        space.name,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                      ),
+                      Text(
+                        space.category,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const Text("Your Savings Spaces", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(child: _buildSpaceCard("Holidays (40%)", "${holidaysChf.toStringAsFixed(2)} CHF", Icons.flight_takeoff_rounded, Colors.orange[400]!)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildSpaceCard("Taxes (10%)", "${taxesChf.toStringAsFixed(2)} CHF", Icons.account_balance_rounded, Colors.brown[300]!)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.neonPink),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SpaceDetailsScreen(
+                          space: space,
+                          appId: _user.appId,
+                          sessionId: _user.sessionId,
+                          mainBalanceChf: _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate),
+                          onSpaceUpdated: _fetchSpaces,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "${space.currency} ${space.balance.toStringAsFixed(2)}",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: themeColor),
+                ),
+                if (space.targetAmount != null && space.targetAmount! > 0)
+                  Text(
+                    "Target: ${space.currency} ${space.targetAmount!.toStringAsFixed(2)}",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+              ],
+            ),
+            if (space.targetAmount != null && space.targetAmount! > 0) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress / 100,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                  minHeight: 8,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.add_circle_outline_rounded, color: AppTheme.neonPink),
-                  SizedBox(width: 8),
-                  Text("Add new space", style: TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "${progress.toStringAsFixed(0)}% completed",
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: themeColor),
+                  ),
+                  if (space.targetDate != null && space.targetDate!.isNotEmpty)
+                    Text(
+                      "Target: ${space.targetDate}",
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSpaceCard(String name, String amount, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
-        ],
+  IconData _getSpaceIcon(String key) {
+    switch (key.toLowerCase()) {
+      case 'travel':
+      case 'holiday':
+        return Icons.flight_takeoff_rounded;
+      case 'emergency':
+        return Icons.shield_rounded;
+      case 'investment':
+      case 'investments':
+        return Icons.trending_up_rounded;
+      case 'tax':
+      case 'taxes':
+        return Icons.receipt_long_rounded;
+      case 'home':
+      case 'property':
+        return Icons.home_rounded;
+      case 'education':
+        return Icons.school_rounded;
+      case 'healthcare':
+      case 'health':
+        return Icons.medical_services_rounded;
+      case 'business':
+        return Icons.business_center_rounded;
+      default:
+        return Icons.savings_rounded;
+    }
+  }
+
+  Color _parseColorHex(String hex) {
+    try {
+      final buffer = StringBuffer();
+      if (hex.length == 6 || hex.length == 7) buffer.write('ff');
+      buffer.write(hex.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (_) {
+      return AppTheme.neonPink;
+    }
+  }
+
+  void _showCreateSpaceModal() {
+    final nameCtrl = TextEditingController();
+    final targetCtrl = TextEditingController();
+    final dateCtrl = TextEditingController();
+    final initialCtrl = TextEditingController();
+
+    String selectedCategory = 'Holiday / Travel';
+    String selectedIconKey = 'travel';
+    String selectedCurrency = 'CHF';
+    String selectedColor = '#E91E63';
+
+    final categories = [
+      {'name': 'Holiday / Travel', 'icon': 'travel', 'color': '#EC4899'},
+      {'name': 'Emergency Fund', 'icon': 'emergency', 'color': '#EF4444'},
+      {'name': 'Investments', 'icon': 'investment', 'color': '#10B981'},
+      {'name': 'Taxes', 'icon': 'tax', 'color': '#F59E0B'},
+      {'name': 'Education', 'icon': 'education', 'color': '#6366F1'},
+      {'name': 'Property', 'icon': 'home', 'color': '#8B5CF6'},
+      {'name': 'Healthcare', 'icon': 'healthcare', 'color': '#14B8A6'},
+      {'name': 'Business', 'icon': 'business', 'color': '#0EA5E9'},
+      {'name': 'Custom Space', 'icon': 'custom', 'color': '#64748B'},
+    ];
+
+    final currencies = ['CHF', 'EUR', 'USD', 'GBP', 'INR', 'SGD', 'AED', 'CAD', 'AUD'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(backgroundColor: color.withOpacity(0.2), child: Icon(icon, color: color)),
-          const SizedBox(height: 12),
-          Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-          const SizedBox(height: 4),
-          Text(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Create New Space", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text("Choose Space Purpose", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categories.length,
+                    separatorBuilder: (c, i) => const SizedBox(width: 8),
+                    itemBuilder: (c, i) {
+                      final item = categories[i];
+                      final isSelected = selectedCategory == item['name'];
+                      return ChoiceChip(
+                        label: Text(item['name']!),
+                        selected: isSelected,
+                        selectedColor: AppTheme.neonPink,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (val) {
+                          setModalState(() {
+                            selectedCategory = item['name']!;
+                            selectedIconKey = item['icon']!;
+                            selectedColor = item['color']!;
+                            if (nameCtrl.text.isEmpty) {
+                              nameCtrl.text = item['name']!;
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: "Space Name",
+                    hintText: "e.g. Swiss Alps Trip",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: targetCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: "Target Amount",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 1,
+                      child: DropdownButtonFormField<String>(
+                        value: selectedCurrency,
+                        decoration: InputDecoration(
+                          labelText: "Currency",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: currencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => setModalState(() => selectedCurrency = val!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: dateCtrl,
+                  decoration: InputDecoration(
+                    labelText: "Target Date (Optional)",
+                    hintText: "e.g. 15 Dec 2026",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: initialCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: "Initial Deposit (Optional)",
+                    hintText: "Deducted from Main Account",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.neonPink,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Please enter a space name")),
+                        );
+                        return;
+                      }
+
+                      final targetAmt = double.tryParse(targetCtrl.text.trim());
+                      final date = dateCtrl.text.trim();
+                      final initialAmt = double.tryParse(initialCtrl.text.trim()) ?? 0.0;
+
+                      Navigator.pop(ctx);
+                      setState(() => _isLoadingSpaces = true);
+
+                      final res = await ApiService.createSpace(
+                        appId: _user.appId,
+                        name: name,
+                        category: selectedCategory,
+                        iconKey: selectedIconKey,
+                        currency: selectedCurrency,
+                        targetAmount: targetAmt,
+                        targetDate: date,
+                        initialAmount: initialAmt,
+                        colorHex: selectedColor,
+                        sessionId: _user.sessionId,
+                      );
+
+                      if (mounted) {
+                        if (res['success'] == true) {
+                          await _fetchSpaces();
+                          await _fetchData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("New Space created successfully!")),
+                          );
+                        } else {
+                          setState(() => _isLoadingSpaces = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(res['message'] ?? 'Failed to create Space')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text("Create Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

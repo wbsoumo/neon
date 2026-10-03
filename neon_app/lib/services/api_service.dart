@@ -439,4 +439,157 @@ class ApiService {
     // Fallback graph points if network unavailable
     return [0.932, 0.935, 0.941, 0.938, 0.945, 0.949, 0.952];
   }
+
+  // ==========================================
+  // 6. SPACES API INTEGRATION
+  // ==========================================
+
+  static Future<Map<String, dynamic>> fetchSpaces(String appId, {String sessionId = ''}) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: {"action": "list", "app_id": appId, "session_id": sessionId},
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to load spaces from server."};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createSpace({
+    required String appId,
+    required String name,
+    required String category,
+    required String iconKey,
+    required String currency,
+    double? targetAmount,
+    String? targetDate,
+    double initialAmount = 0.0,
+    String colorHex = '#E91E63',
+    String allocationType = 'NONE',
+    double allocationValue = 0.0,
+    String sessionId = '',
+  }) async {
+    try {
+      final body = {
+        "action": "create",
+        "app_id": appId,
+        "name": name,
+        "category": category,
+        "icon_key": iconKey,
+        "currency": currency,
+        "color_hex": colorHex,
+        "allocation_type": allocationType,
+        "allocation_value": allocationValue.toString(),
+        "initial_amount": initialAmount.toString(),
+        "session_id": sessionId,
+      };
+      if (targetAmount != null) body["target_amount"] = targetAmount.toString();
+      if (targetDate != null) body["target_date"] = targetDate;
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: body,
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to create space on server."};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateSpace({
+    required String appId,
+    required String spaceId,
+    required String name,
+    double? targetAmount,
+    String? targetDate,
+    String allocationType = 'NONE',
+    double allocationValue = 0.0,
+    String sessionId = '',
+  }) async {
+    try {
+      final body = {
+        "action": "update",
+        "app_id": appId,
+        "space_id": spaceId,
+        "name": name,
+        "allocation_type": allocationType,
+        "allocation_value": allocationValue.toString(),
+        "session_id": sessionId,
+      };
+      if (targetAmount != null) body["target_amount"] = targetAmount.toString();
+      if (targetDate != null) body["target_date"] = targetDate;
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: body,
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to update space."};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteSpace({
+    required String appId,
+    required String spaceId,
+    String sessionId = '',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: {"action": "delete", "app_id": appId, "space_id": spaceId, "session_id": sessionId},
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to delete space."};
+    }
+  }
+
+  static Future<Map<String, dynamic>> transferSpaceMoney({
+    required String appId,
+    required String spaceId,
+    required String type, // ADD or WITHDRAW
+    required double amount,
+    String sessionId = '',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: {
+          "action": "transfer",
+          "app_id": appId,
+          "space_id": spaceId,
+          "type": type,
+          "amount": amount.toString(),
+          "session_id": sessionId,
+        },
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to execute transfer."};
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchSpaceTransactions({
+    required String appId,
+    required String spaceId,
+    String sessionId = '',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/spaces.php"),
+        body: {
+          "action": "transactions",
+          "app_id": appId,
+          "space_id": spaceId,
+          "session_id": sessionId,
+        },
+      ).timeout(const Duration(seconds: 10));
+      return json.decode(response.body);
+    } catch (e) {
+      return {"success": false, "message": "Failed to fetch transactions."};
+    }
+  }
 }
+
