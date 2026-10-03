@@ -261,7 +261,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         ),
                       ),
                       Text(
-                        "₹ ${_user.balance.toStringAsFixed(2)}",
+                        "CHF ${(_user.balance * _inrToChfRate).toStringAsFixed(2)}",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -273,8 +273,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "A/C: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730'} • IFSC: NEON0001",
-                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500),
+                    "₹ ${_user.balance.toStringAsFixed(2)} INR • IBAN: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730'} • SWIFT: UBSWCHZH80A",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 20),
 
@@ -435,6 +435,202 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 childCount: _transactions.length,
               ),
             ),
+
+          // International Finance Services Cards Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text(
+                    "International Finance Services",
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Text(
+                    "Swiss Banking Portal",
+                    style: TextStyle(
+                      color: AppTheme.neonPink,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Investments & Wealth Card
+                  _buildFinanceServiceCard(
+                    icon: Icons.trending_up_rounded,
+                    iconBgColor: const Color(0xFFE8F5E9),
+                    iconColor: const Color(0xFF2E7D32),
+                    title: "Investments & Swiss Portfolios",
+                    subtitle: "SMI 20 Index • Global Tech Basket (+14.2% YTD)",
+                    badgeText: "High Yield",
+                    badgeColor: const Color(0xFF2E7D32),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Foreign Investments Card
+                  _buildFinanceServiceCard(
+                    icon: Icons.public_rounded,
+                    iconBgColor: const Color(0xFFE3F2FD),
+                    iconColor: const Color(0xFF1565C0),
+                    title: "Foreign Investments & Metals",
+                    subtitle: "US Equity Funds & Zurich Allocated Vault Gold",
+                    badgeText: "Multi-Currency",
+                    badgeColor: const Color(0xFF1565C0),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // International Loans Card
+                  _buildFinanceServiceCard(
+                    icon: Icons.account_balance_outlined,
+                    iconBgColor: const Color(0xFFFFF3E0),
+                    iconColor: const Color(0xFFE65100),
+                    title: "International Credit & Mortgages",
+                    subtitle: "Expat Mortgages & Credit Lines @ 2.4% APR",
+                    badgeText: "Fast Approval",
+                    badgeColor: const Color(0xFFE65100),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Travel Finance Card
+                  _buildFinanceServiceCard(
+                    icon: Icons.flight_takeoff_rounded,
+                    iconBgColor: const Color(0xFFF3E5F5),
+                    iconColor: const Color(0xFF7B1FA2),
+                    title: "Travel Finance & Zero-FX Card",
+                    subtitle: "Zero Foreign Markup • Free Airport Lounge Access",
+                    badgeText: "Zero FX Fee",
+                    badgeColor: const Color(0xFF7B1FA2),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Currency Exchange & FX Rates
+                  _buildFinanceServiceCard(
+                    icon: Icons.currency_exchange_rounded,
+                    iconBgColor: const Color(0xFFE0F7FA),
+                    iconColor: const Color(0xFF00838F),
+                    title: "Live FX Exchange Rates",
+                    subtitle: "1 CHF = 95.84 INR • 1 CHF = 1.15 USD • 1 CHF = 1.04 EUR",
+                    badgeText: "Real-Time API",
+                    badgeColor: const Color(0xFF00838F),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Financial Services & Swiss Security
+                  _buildFinanceServiceCard(
+                    icon: Icons.verified_user_outlined,
+                    iconBgColor: const Color(0xFFFCE4EC),
+                    iconColor: AppTheme.neonPink,
+                    title: "Swiss Financial Protection",
+                    subtitle: "Asset guarantee up to CHF 100,000 per depositor",
+                    badgeText: "FINMA Standard",
+                    badgeColor: AppTheme.neonPink,
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinanceServiceCard({
+    required IconData icon,
+    required Color iconBgColor,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required String badgeText,
+    required Color badgeColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: badgeColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

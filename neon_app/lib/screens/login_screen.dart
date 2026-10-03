@@ -16,13 +16,58 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  // Dynamic Input Mode: 'phone' vs 'email'
+  bool _isPhoneInput = false;
+  String _selectedCountryCode = "+91";
+
+  final List<Map<String, String>> _countryCodes = [
+    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
+    {'code': '+41', 'flag': '🇨🇭', 'name': 'Switzerland'},
+    {'code': '+971', 'flag': '🇦🇪', 'name': 'UAE'},
+    {'code': '+65', 'flag': '🇸🇬', 'name': 'Singapore'},
+    {'code': '+1', 'flag': '🇺🇸', 'name': 'USA'},
+    {'code': '+1', 'flag': '🇨🇦', 'name': 'Canada'},
+    {'code': '+61', 'flag': '🇦🇺', 'name': 'Australia'},
+    {'code': '+44', 'flag': '🇬🇧', 'name': 'UK'},
+    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germany'},
+    {'code': '+33', 'flag': '🇫🇷', 'name': 'France'},
+  ];
+
   // Controllers
   final TextEditingController _identityController = TextEditingController(); // Email or Mobile
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _pinController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _identityController.addListener(_detectInputType);
+  }
+
+  void _detectInputType() {
+    final text = _identityController.text.trim();
+    if (text.isEmpty) {
+      if (_isPhoneInput) {
+        setState(() => _isPhoneInput = false);
+      }
+      return;
+    }
+
+    // If text contains '@' or letters -> Email Mode
+    // If text starts with digits or '+' -> Phone Mode
+    final hasLetterOrAt = RegExp(r'[a-zA-Z@]').hasMatch(text);
+    final isNumeric = RegExp(r'^[0-9+\s\-]+$').hasMatch(text);
+
+    if (isNumeric && !_isPhoneInput) {
+      setState(() => _isPhoneInput = true);
+    } else if (hasLetterOrAt && _isPhoneInput) {
+      setState(() => _isPhoneInput = false);
+    }
+  }
+
+  @override
   void dispose() {
+    _identityController.removeListener(_detectInputType);
     _identityController.dispose();
     _passwordController.dispose();
     _pinController.dispose();
@@ -30,10 +75,26 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    final identity = _identityController.text.trim();
-    if (identity.isEmpty) {
-      _showSnackBar("Please enter your Mobile Number or Email Address");
+    final rawIdentity = _identityController.text.trim();
+    if (rawIdentity.isEmpty) {
+      _showSnackBar("Please enter your registered Mobile Number or Email Address");
       return;
+    }
+
+    String fullIdentity = rawIdentity;
+    if (_isPhoneInput) {
+      if (rawIdentity.length < 6) {
+        _showSnackBar("Please enter a valid mobile number");
+        return;
+      }
+      if (!rawIdentity.startsWith('+')) {
+        fullIdentity = "$_selectedCountryCode$rawIdentity";
+      }
+    } else {
+      if (!rawIdentity.contains('@') || !rawIdentity.contains('.')) {
+        _showSnackBar("Please enter a valid email address (e.g. user@domain.com)");
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -41,18 +102,18 @@ class _LoginScreenState extends State<LoginScreen> {
     Map<String, dynamic> response;
     if (_isPasswordMode) {
       if (_passwordController.text.isEmpty) {
-        _showSnackBar("Please enter your password");
+        _showSnackBar("Please enter your account password");
         setState(() => _isLoading = false);
         return;
       }
-      response = await ApiService.loginWithCredentials(identity, _passwordController.text);
+      response = await ApiService.loginWithCredentials(fullIdentity, _passwordController.text);
     } else {
       if (_pinController.text.length < 4) {
-        _showSnackBar("Please enter your 6-digit MPIN");
+        _showSnackBar("Please enter your 6-digit Security MPIN");
         setState(() => _isLoading = false);
         return;
       }
-      response = await ApiService.loginWithPin(identity, _pinController.text);
+      response = await ApiService.loginWithPin(fullIdentity, _pinController.text);
     }
 
     setState(() => _isLoading = false);
@@ -70,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        _showSnackBar(response['message'] ?? "Login failed. Please check credentials.");
+        _showSnackBar(response['message'] ?? "Login failed. Please check your credentials.");
       }
     }
   }
@@ -82,6 +143,52 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  void _showCountryCodePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Select Country Code",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.darkNavy,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: _countryCodes.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = _countryCodes[index];
+                    return ListTile(
+                      leading: Text(item['flag']!, style: const TextStyle(fontSize: 24)),
+                      title: Text("${item['name']} (${item['code']})", style: const TextStyle(fontWeight: FontWeight.w700)),
+                      onTap: () {
+                        setState(() => _selectedCountryCode = item['code']!);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -134,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      "Secure Indian Digital Banking",
+                      "International Digital Banking Portal",
                       style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.textMuted,
@@ -145,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 36),
 
               // Login Type Switcher Pills
               Container(
@@ -211,21 +318,68 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 28),
 
               // Form Input Fields
-              Text(
-                "Mobile Number or Email",
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: Colors.grey[800],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _isPhoneInput ? "Mobile Number" : "Email or Mobile Number",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  if (_isPhoneInput)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.neonCyan.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        "PHONE MODE",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.darkNavy,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _identityController,
-                keyboardType: TextInputType.emailAddress,
+                keyboardType: _isPhoneInput ? TextInputType.phone : TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: "Enter registered Email / Mobile",
-                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.neonPink),
+                  hintText: _isPhoneInput ? "Enter 10-digit phone number" : "Enter Email or Mobile number",
+                  prefixIcon: _isPhoneInput
+                      ? InkWell(
+                          onTap: _showCountryCodePicker,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _countryCodes.firstWhere((c) => c['code'] == _selectedCountryCode)['flag']!,
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _selectedCountryCode,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                    color: AppTheme.darkNavy,
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_drop_down, color: Colors.grey, size: 20),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.mark_email_read_outlined, color: AppTheme.neonPink),
                   filled: true,
                   fillColor: Colors.grey[50],
                   border: OutlineInputBorder(
@@ -256,7 +410,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     hintText: "Enter account password",
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.neonPink),
+                    prefixIcon: const Icon(Icons.lock_person_outlined, color: AppTheme.neonPink),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -293,7 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   maxLength: 6,
                   decoration: InputDecoration(
                     hintText: "Enter 6-digit MPIN",
-                    prefixIcon: const Icon(Icons.dialpad_rounded, color: AppTheme.neonPink),
+                    prefixIcon: const Icon(Icons.shield_outlined, color: AppTheme.neonPink),
                     counterText: "",
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -327,12 +481,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Verify & Login",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.verified_user_outlined, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              "Secure Sign In",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ),

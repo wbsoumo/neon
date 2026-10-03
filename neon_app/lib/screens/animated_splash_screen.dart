@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'main_navigation_screen.dart';
 import 'splash_screen.dart';
+import 'language_selection_screen.dart';
 
 class AnimatedNeonSplashScreen extends StatefulWidget {
   const AnimatedNeonSplashScreen({super.key});
@@ -56,6 +58,25 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
   }
 
   Future<void> _checkSessionAndNavigate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSelectedLanguage = prefs.getBool('has_selected_language') ?? false;
+
+    if (!mounted) return;
+
+    if (!hasSelectedLanguage) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const LanguageSelectionScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
+      return;
+    }
+
     final savedUser = await ApiService.getSavedUserSession();
     if (!mounted) return;
 
