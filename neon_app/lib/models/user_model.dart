@@ -7,6 +7,12 @@ class UserModel {
   final double balance;
   final String accountNumber;
   final String status;
+  final String photoPath;
+  final String dob;
+  final String gender;
+  final String address;
+  final String nationalId;
+  final String country;
 
   final String sessionId;
 
@@ -19,6 +25,12 @@ class UserModel {
     required this.balance,
     required this.accountNumber,
     required this.status,
+    this.photoPath = '',
+    this.dob = '',
+    this.gender = '',
+    this.address = '',
+    this.nationalId = '',
+    this.country = 'Switzerland',
     this.sessionId = '',
   });
 
@@ -32,6 +44,12 @@ class UserModel {
       balance: (json['balance'] != null) ? double.tryParse(json['balance'].toString()) ?? 0.0 : 0.0,
       accountNumber: json['account_number'] ?? 'CH890000',
       status: json['status'] ?? 'APPROVED',
+      photoPath: json['photo_path'] ?? json['signature_path'] ?? '',
+      dob: json['dob'] ?? '',
+      gender: json['gender'] ?? '',
+      address: json['address'] ?? '',
+      nationalId: json['national_id'] ?? json['aadhaar_number'] ?? '',
+      country: json['country'] ?? 'Switzerland',
       sessionId: sessionId.isNotEmpty ? sessionId : (json['session_id'] ?? ''),
     );
   }
@@ -46,6 +64,12 @@ class UserModel {
       'balance': balance,
       'account_number': accountNumber,
       'status': status,
+      'photo_path': photoPath,
+      'dob': dob,
+      'gender': gender,
+      'address': address,
+      'national_id': nationalId,
+      'country': country,
       'session_id': sessionId,
     };
   }

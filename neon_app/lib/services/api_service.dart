@@ -134,16 +134,16 @@ class ApiService {
   // 2. USER DETAILS & BALANCE (STRICT LIVE API)
   // ==========================================
 
-  static Future<UserModel?> getUserDetails(String appId) async {
+  static Future<UserModel?> getUserDetails(String appId, {String sessionId = ''}) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/get_user_details.php?app_id=$appId"),
+        Uri.parse("$baseUrl/get_user_details.php?app_id=$appId&session_id=$sessionId"),
       ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true && data['user'] != null) {
-          return UserModel.fromJson(data['user']);
+          return UserModel.fromJson(data['user'], sessionId: sessionId);
         }
       }
     } catch (e) {
