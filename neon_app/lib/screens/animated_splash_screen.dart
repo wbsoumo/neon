@@ -16,50 +16,83 @@ class AnimatedNeonSplashScreen extends StatefulWidget {
 class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _glowAnimation;
+  late Animation<double> _bgGlowAnimation;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _textFadeAnimation;
+  late Animation<double> _taglineFadeAnimation;
 
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+    // 0.2s - 0.8s: Background Glow Expansion
+    _bgGlowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+        curve: const Interval(0.1, 0.5, curve: Curves.easeOut),
       ),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // 0.5s - 1.2s: Logo Scale & Fade
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
+        curve: const Interval(0.25, 0.55, curve: Curves.easeIn),
       ),
     );
 
-    _glowAnimation = Tween<double>(begin: 2.0, end: 18.0).animate(
+    _logoScaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeInOut),
+        curve: const Interval(0.25, 0.65, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    // 1.0s - 1.6s: Brand Name Reveal (NEON BANK)
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.45, 0.75, curve: Curves.easeIn),
+      ),
+    );
+
+    // 1.4s - 2.0s: Secondary Tagline Reveal
+    _taglineFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.65, 0.9, curve: Curves.easeIn),
       ),
     );
 
     _controller.forward();
 
-    // Check session & navigate smoothly after animation
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      _checkSessionAndNavigate();
-    });
+    // Perform initialization asynchronously and navigate smoothly
+    _initializeAppAndNavigate();
   }
 
-  Future<void> _checkSessionAndNavigate() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _initializeAppAndNavigate() async {
+    final startTime = DateTime.now();
+
+    // Perform Session & Language Check in background
+    final prefsFuture = SharedPreferences.getInstance();
+    final userFuture = ApiService.getSavedUserSession();
+
+    final prefs = await prefsFuture;
     final hasSelectedLanguage = prefs.getBool('has_selected_language') ?? false;
+    final savedUser = await userFuture;
+
+    // Minimum display time for animation experience (2.2 seconds)
+    final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+    final remainingDelay = 2200 - elapsed;
+    if (remainingDelay > 0) {
+      await Future.delayed(Duration(milliseconds: remainingDelay));
+    }
 
     if (!mounted) return;
 
@@ -71,14 +104,11 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 600),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
       return;
     }
-
-    final savedUser = await ApiService.getSavedUserSession();
-    if (!mounted) return;
 
     if (savedUser != null && savedUser.appId.isNotEmpty) {
       Navigator.pushReplacement(
@@ -88,7 +118,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 600),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
     } else {
@@ -99,7 +129,7 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 600),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
     }
@@ -114,121 +144,144 @@ class _AnimatedNeonSplashScreenState extends State<AnimatedNeonSplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Clean White Canvas
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
+      backgroundColor: const Color(0xFFFAFBFD), // Premium off-white neutral background
+      body: Stack(
+        children: [
+          // Background Glow Effect
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Center(
+                child: Container(
+                  width: 320 * _bgGlowAnimation.value,
+                  height: 320 * _bgGlowAnimation.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppTheme.neonPink.withValues(alpha: 0.08 * _bgGlowAnimation.value),
+                        const Color(0xFF0E1C36).withValues(alpha: 0.03 * _bgGlowAnimation.value),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.6, 1.0],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Main Animated Content
+          Center(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Animated Glowing Brand Wordmark Badge on White Canvas
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: AppTheme.neonPink.withValues(alpha: 0.2),
-                          width: 1.5,
+                    // Stage 2: Existing Application Logo Reveal
+                    FadeTransition(
+                      opacity: _logoFadeAnimation,
+                      child: ScaleTransition(
+                        scale: _logoScaleAnimation,
+                        child: Container(
+                          width: 88,
+                          height: 88,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0E1C36).withValues(alpha: 0.06),
+                                blurRadius: 24,
+                                spreadRadius: 4,
+                                offset: const Offset(0, 8),
+                              ),
+                              BoxShadow(
+                                color: AppTheme.neonPink.withValues(alpha: 0.12),
+                                blurRadius: 16,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.neonPink.withValues(alpha: 0.18),
-                            blurRadius: _glowAnimation.value,
-                            spreadRadius: _glowAnimation.value / 4,
-                          ),
-                          BoxShadow(
-                            color: AppTheme.neonCyan.withValues(alpha: 0.12),
-                            blurRadius: _glowAnimation.value * 1.5,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 46,
-                            height: 46,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.neonPink,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Text(
-                                "e\no",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                  height: 0.95,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
-                                fontSize: 34,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -1.0,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: "neon",
-                                  style: TextStyle(color: AppTheme.textPrimary),
-                                ),
-                                TextSpan(
-                                  text: " finance",
-                                  style: TextStyle(
-                                    color: AppTheme.neonPink,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ),
                     ),
-                    const SizedBox(height: 36),
-                    // Subtitle with Brand Neon Pink Indicator
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.neonPink),
+
+                    const SizedBox(height: 28),
+
+                    // Stage 3: Brand Name "NEON BANK" Reveal
+                    FadeTransition(
+                      opacity: _textFadeAnimation,
+                      child: Column(
+                        children: [
+                          const Text(
+                            "NEON BANK",
+                            style: TextStyle(
+                              color: AppTheme.darkNavy,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 4.0,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          "SWISS DIGITAL BANKING",
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2.0,
+                          const SizedBox(height: 10),
+
+                          // Stage 4: Security / Banking Identity Tagline
+                          FadeTransition(
+                            opacity: _taglineFadeAnimation,
+                            child: const Text(
+                              "Secure  •  Global  •  Digital Banking",
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+
+          // Stage 5: Loading Indicator at Bottom
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _taglineFadeAnimation,
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.neonPink.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
