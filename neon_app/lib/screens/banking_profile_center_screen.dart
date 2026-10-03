@@ -306,7 +306,6 @@ class _BankingProfileCenterScreenState extends State<BankingProfileCenterScreen>
       await _refreshProfile();
     }
   }
-  }
 
   // Section 5: Generic Display Sheet for Tax, Security, Legal, Support, Settings, Documents
   void _openSimpleInfoSheet(String title, List<Map<String, String>> items) {
