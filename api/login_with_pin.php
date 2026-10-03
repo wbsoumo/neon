@@ -148,7 +148,10 @@ try {
         'email' => $application['email'],
         'phone' => $application['phone'],
         'balance' => (float)$application['balance'],
-        'status' => $application['status']
+        'status' => $application['status'],
+        'account_number' => $account ? $account['account_number'] : null,
+        'has_mpin' => $account ? !empty($account['mpin_hash']) : false,
+        'mpin' => ($account && !empty($account['mpin_hash'])) ? "CREATED" : "NOT_CREATED"
     ];
     
     log_user_login($identity, $application['app_id'], 'SUCCESS', 'Authenticated using Login PIN');

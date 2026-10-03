@@ -121,6 +121,9 @@ try {
         update_fcm_token($application['app_id'], $fcmToken);
     }
     
+    // Fetch account details to include MPIN status
+    $account = get_account_by_app_id($application['app_id']);
+
     // Clean response data
     $safeDetails = [
         'app_id' => $application['app_id'],
@@ -129,7 +132,10 @@ try {
         'email' => $application['email'],
         'phone' => $application['phone'],
         'balance' => (float)$application['balance'],
-        'status' => $application['status']
+        'status' => $application['status'],
+        'account_number' => $account ? $account['account_number'] : null,
+        'has_mpin' => $account ? !empty($account['mpin_hash']) : false,
+        'mpin' => ($account && !empty($account['mpin_hash'])) ? "CREATED" : "NOT_CREATED"
     ];
     
     log_user_login($identity, $application['app_id'], 'SUCCESS');
