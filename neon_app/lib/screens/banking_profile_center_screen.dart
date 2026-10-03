@@ -356,19 +356,23 @@ class _BankingProfileCenterScreenState extends State<BankingProfileCenterScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.neonPink.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.neonPink.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppTheme.neonPink, size: 20),
           ),
-          child: Icon(icon, color: AppTheme.neonPink, size: 20),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          onTap: onTap,
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        onTap: onTap,
       ),
     );
   }
