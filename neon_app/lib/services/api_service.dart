@@ -164,7 +164,6 @@ class ApiService {
     };
     final trimmedSession = sessionId.trim();
     if (trimmedSession.isNotEmpty) {
-      headers["X-Session-ID"] = trimmedSession;
       headers["Authorization"] = "Bearer $trimmedSession";
     }
     return headers;
@@ -384,10 +383,7 @@ class ApiService {
 
       final response = await http.get(
         Uri.parse("$baseUrl/get_user_by_account.php?account_number=$accountNumber&session_id=$sessionId"),
-        headers: {
-          if (sessionId.isNotEmpty) "X-Session-ID": sessionId,
-          if (sessionId.isNotEmpty) "Authorization": "Bearer $sessionId",
-        },
+        headers: _buildHeaders(sessionId),
       ).timeout(const Duration(seconds: 8));
 
       return json.decode(response.body);
@@ -436,18 +432,12 @@ class ApiService {
       final savedUser = await getSavedUserSession();
       final sessionId = savedUser?.sessionId ?? '';
 
-      final Map<String, String> headers = {};
-      if (sessionId.isNotEmpty) {
-        headers["X-Session-ID"] = sessionId;
-        headers["Authorization"] = "Bearer $sessionId";
-      }
-
       final String resolvedType = type.isNotEmpty ? type : (ifsc.isEmpty ? "SELF_BANK" : "OTHER_BANK");
       final String resolvedNickname = nickname.isNotEmpty ? nickname : (bankName.isNotEmpty ? bankName : "Beneficiary");
 
       final response = await http.post(
         Uri.parse("$baseUrl/add_beneficiary.php"),
-        headers: headers,
+        headers: _buildHeaders(sessionId),
         body: {
           "app_id": appId,
           "session_id": sessionId,
@@ -482,15 +472,9 @@ class ApiService {
       final savedUser = await getSavedUserSession();
       final sessionId = savedUser?.sessionId ?? '';
 
-      final Map<String, String> headers = {};
-      if (sessionId.isNotEmpty) {
-        headers["X-Session-ID"] = sessionId;
-        headers["Authorization"] = "Bearer $sessionId";
-      }
-
       final response = await http.post(
         Uri.parse("$baseUrl/transfer_p2p.php"),
-        headers: headers,
+        headers: _buildHeaders(sessionId),
         body: {
           "app_id": senderAppId,
           "sender_app_id": senderAppId,
@@ -525,15 +509,9 @@ class ApiService {
       final savedUser = await getSavedUserSession();
       final sessionId = savedUser?.sessionId ?? '';
 
-      final Map<String, String> headers = {};
-      if (sessionId.isNotEmpty) {
-        headers["X-Session-ID"] = sessionId;
-        headers["Authorization"] = "Bearer $sessionId";
-      }
-
       final response = await http.post(
         Uri.parse("$baseUrl/transfer_payout.php"),
-        headers: headers,
+        headers: _buildHeaders(sessionId),
         body: {
           "app_id": senderAppId,
           "sender_app_id": senderAppId,
