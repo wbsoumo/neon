@@ -164,20 +164,32 @@ class ApiService {
     String appId = '',
   }) async {
     try {
+      final savedUser = await getSavedUserSession();
+      final effectiveSessionId = sessionId.isNotEmpty ? sessionId : (savedUser?.sessionId ?? '');
+      final effectiveAppId = appId.isNotEmpty ? appId : (savedUser?.appId ?? '');
+
+      final headers = <String, String>{};
+      if (effectiveSessionId.isNotEmpty) {
+        headers["X-Session-ID"] = effectiveSessionId;
+        headers["Authorization"] = "Bearer $effectiveSessionId";
+      }
+
       final response = await http.post(
         Uri.parse("$baseUrl/create_mpin.php"),
+        headers: headers,
         body: {
           "mpin": mpin,
-          "session_id": sessionId,
-          "app_id": appId,
+          "session_id": effectiveSessionId,
+          "app_id": effectiveAppId,
         },
       ).timeout(const Duration(seconds: 10));
 
-      return json.decode(response.body);
+      final Map<String, dynamic> data = json.decode(response.body);
+      return data;
     } catch (e) {
       return {
         "success": false,
-        "message": "Network error while creating MPIN."
+        "message": "Error creating MPIN: ${e.toString()}"
       };
     }
   }
@@ -189,20 +201,32 @@ class ApiService {
     required String appId,
   }) async {
     try {
+      final savedUser = await getSavedUserSession();
+      final effectiveSessionId = sessionId.isNotEmpty ? sessionId : (savedUser?.sessionId ?? '');
+      final effectiveAppId = appId.isNotEmpty ? appId : (savedUser?.appId ?? '');
+
+      final headers = <String, String>{};
+      if (effectiveSessionId.isNotEmpty) {
+        headers["X-Session-ID"] = effectiveSessionId;
+        headers["Authorization"] = "Bearer $effectiveSessionId";
+      }
+
       final response = await http.post(
         Uri.parse("$baseUrl/verify_mpin.php"),
+        headers: headers,
         body: {
           "mpin": mpin,
-          "session_id": sessionId,
-          "app_id": appId,
+          "session_id": effectiveSessionId,
+          "app_id": effectiveAppId,
         },
       ).timeout(const Duration(seconds: 10));
 
-      return json.decode(response.body);
+      final Map<String, dynamic> data = json.decode(response.body);
+      return data;
     } catch (e) {
       return {
         "success": false,
-        "message": "Network error during MPIN verification."
+        "message": "Error during MPIN verification: ${e.toString()}"
       };
     }
   }

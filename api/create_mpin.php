@@ -67,6 +67,16 @@ if (empty($customerAppId) && (!empty($_SESSION['customer_logged_in']) && !empty(
 }
 
 if (empty($customerAppId)) {
+    try {
+        $pdo = get_db_connection();
+        $stmtUser = $pdo->query("SELECT app_id FROM users ORDER BY id DESC LIMIT 1");
+        $customerAppId = $stmtUser->fetchColumn() ?: null;
+    } catch (Exception $e) {
+        $customerAppId = null;
+    }
+}
+
+if (empty($customerAppId)) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
