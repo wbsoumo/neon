@@ -2480,24 +2480,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
               // Header & Add Space Button
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text("Your Financial Spaces", style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-                      Text("Organize funds into dedicated goal vaults", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Your Financial Spaces",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          "Organize funds into dedicated goal vaults",
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.neonPink,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: _showCreateSpaceModal,
-                    icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                    label: const Text("New Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                    label: const Text("New Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ],
               ),
