@@ -157,6 +157,56 @@ class ApiService {
     }
   }
 
+  // Create / Set 6-Digit Transaction MPIN (Aadhaar Removed)
+  static Future<Map<String, dynamic>> createMpin({
+    required String mpin,
+    required String sessionId,
+    String appId = '',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/create_mpin.php"),
+        body: {
+          "mpin": mpin,
+          "session_id": sessionId,
+          "app_id": appId,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Network error while creating MPIN."
+      };
+    }
+  }
+
+  // Standalone MPIN Verification Endpoint
+  static Future<Map<String, dynamic>> verifyMpin({
+    required String mpin,
+    required String sessionId,
+    required String appId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/verify_mpin.php"),
+        body: {
+          "mpin": mpin,
+          "session_id": sessionId,
+          "app_id": appId,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Network error during MPIN verification."
+      };
+    }
+  }
+
   // Register New Account
   static Future<Map<String, dynamic>> registerUser({
     required String fullName,

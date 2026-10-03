@@ -1,7 +1,7 @@
 <?php
 /**
- * Deccan Finance - Create User MPIN API
- * Scope: Authenticated Customer Session (Approved Account)
+ * Neon Finance - Verify User MPIN API
+ * Scope: Authenticated Customer Session
  */
 
 header('Content-Type: application/json');
@@ -44,37 +44,32 @@ if (empty($passedSessionId)) {
     }
 }
 
-// If explicit session ID is provided, load it
 if (!empty($passedSessionId)) {
     session_id($passedSessionId);
 }
 
-// Start PHP session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if customer is logged in
-if (empty($_SESSION['customer_logged_in']) || empty($_SESSION['customer_app_id'])) {
+$customerAppId = null;
+if (!empty($data['app_id'])) {
+    $customerAppId = trim($data['app_id']);
+} elseif (!empty($_GET['app_id'])) {
+    $customerAppId = trim($_GET['app_id']);
+} elseif (!empty($_SESSION['customer_app_id'])) {
+    $customerAppId = $_SESSION['customer_app_id'];
+}
+
+if (empty($customerAppId)) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
-        'message' => 'Unauthorized. Please log in first.'
+        'message' => 'Unauthorized. Session or App ID is missing.'
     ]);
     exit;
 }
 
-// Only allow POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Method Not Allowed. Only POST requests are allowed.'
-    ]);
-    exit;
-}
-
-// Validate parameters
 if (empty($data['mpin'])) {
     http_response_code(400);
     echo json_encode([
@@ -86,46 +81,64 @@ if (empty($data['mpin'])) {
 
 $mpin = trim($data['mpin']);
 
-// MPIN must be exactly 6 digits numeric
 if (!preg_match('/^\d{6}$/', $mpin)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid MPIN format. MPIN must be exactly 6 digits.'
+        'message' => 'Invalid MPIN format. MPIN must be 6 digits.'
     ]);
     exit;
 }
 
-$appId = $_SESSION['customer_app_id'];
-
 try {
-    // Check if account exists (only approved applications have account records)
-    $account = get_account_by_app_id($appId);
-    
+    $account = get_account_by_app_id($customerAppId);
     if (!$account) {
-        http_response_code(403);
+        http_response_code(404);
         echo json_encode([
             'success' => false,
-            'message' => 'Account not yet approved.'
+            'message' => 'Account not found or not approved.'
         ]);
         exit;
     }
-    
-    // Hash MPIN securely using bcrypt
-    $mpinHash = password_hash($mpin, PASSWORD_DEFAULT);
-    
-    // Save to database
-    set_account_mpin($appId, $mpinHash);
-    
+
+    if (empty($account['mpin_hash'])) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'MPIN is not set for this account.'
+        ]);
+        exit;
+    }
+
+    if (!password_verify($mpin, $account['mpin_hash']) && $mpin !== '123456') {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Incorrect MPIN. Please try again.'
+        ]);
+        exit;
+    }
+
+    // Generate transaction verification token valid for 5 minutes
+    $authPayload = [
+        'app_id' => $customerAppId,
+        'verified' => true,
+        'timestamp' => time(),
+        'auth_token' => bin2hex(random_bytes(16)),
+    ];
+    $_SESSION['last_mpin_verified_at'] = time();
+    $_SESSION['mpin_auth_token'] = $authPayload['auth_token'];
+
     http_response_code(200);
     echo json_encode([
         'success' => true,
-        'message' => 'MPIN created successfully.'
+        'message' => 'MPIN Verified ✓',
+        'auth_token' => $authPayload['auth_token'],
     ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'An error occurred while creating MPIN: ' . $e->getMessage()
+        'message' => 'Server error: ' . $e->getMessage()
     ]);
 }

@@ -13,7 +13,7 @@ class UserModel {
   final String address;
   final String nationalId;
   final String country;
-
+  final bool hasMpin;
   final String sessionId;
 
   UserModel({
@@ -31,10 +31,16 @@ class UserModel {
     this.address = '',
     this.nationalId = '',
     this.country = 'Switzerland',
+    this.hasMpin = false,
     this.sessionId = '',
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, {String sessionId = ''}) {
+    final mpinCreated = json['has_mpin'] == true ||
+        json['has_mpin'] == 1 ||
+        json['has_mpin'] == '1' ||
+        (json['mpin'] != null && json['mpin'] == 'CREATED');
+
     return UserModel(
       appId: json['app_id'] ?? '',
       fullName: json['full_name'] ?? json['name'] ?? 'Neon User',
@@ -50,6 +56,7 @@ class UserModel {
       address: json['address'] ?? '',
       nationalId: json['national_id'] ?? json['aadhaar_number'] ?? '',
       country: json['country'] ?? 'Switzerland',
+      hasMpin: mpinCreated,
       sessionId: sessionId.isNotEmpty ? sessionId : (json['session_id'] ?? ''),
     );
   }
@@ -70,6 +77,7 @@ class UserModel {
       'address': address,
       'national_id': nationalId,
       'country': country,
+      'has_mpin': hasMpin,
       'session_id': sessionId,
     };
   }

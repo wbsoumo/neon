@@ -90,6 +90,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   double _mainBalanceChf = 0.0;
   double _mainBalanceInr = 0.0;
 
+  // MPIN Setup Prompt State
+  bool _hasShownMpinPopup = false;
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +101,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _fetchExchangeRatesAndStockData();
     _fetchSpaces();
     _fetchRecentNeonRecipients();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkMpinStatusAndPrompt();
+    });
   }
 
   Future<void> _fetchRecentNeonRecipients() async {
@@ -3144,6 +3151,218 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  void _checkMpinStatusAndPrompt() {
+    if (!_user.hasMpin && !_hasShownMpinPopup) {
+      _hasShownMpinPopup = true;
+      _showMpinSetupReminderModal();
+    }
+  }
+
+  void _showMpinSetupReminderModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.neonPink.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shield_outlined, color: AppTheme.neonPink, size: 36),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Create Your Transaction MPIN",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Protect your transfers, payouts, and multi-currency operations with a secure 6-digit transaction MPIN.",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.darkNavy,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showCreateMpinModal();
+                },
+                child: const Text("Create MPIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Later", style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateMpinModal() {
+    final pinCtrl = TextEditingController();
+    final confirmPinCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _user.hasMpin ? "Change Transaction MPIN" : "Create Transaction MPIN",
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Enter a 6-digit Security MPIN for authorizing payments and payouts.",
+                  style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 20),
+
+                const Text("New 6-Digit MPIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: pinCtrl,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 8),
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: "••••••",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                const Text("Confirm 6-Digit MPIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: confirmPinCtrl,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 8),
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: "••••••",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+
+                if (errorMessage != null) ...[
+                  const SizedBox(height: 10),
+                  Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.darkNavy,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final p1 = pinCtrl.text.trim();
+                            final p2 = confirmPinCtrl.text.trim();
+
+                            if (p1.length < 6 || !RegExp(r'^\d{6}$').hasMatch(p1)) {
+                              setModalState(() => errorMessage = "MPIN must be exactly 6 numeric digits.");
+                              return;
+                            }
+                            if (p1 != p2) {
+                              setModalState(() => errorMessage = "MPINs do not match. Please re-enter.");
+                              return;
+                            }
+
+                            setModalState(() {
+                              isSubmitting = true;
+                              errorMessage = null;
+                            });
+
+                            final res = await ApiService.createMpin(
+                              mpin: p1,
+                              sessionId: _user.sessionId,
+                              appId: _user.appId,
+                            );
+
+                            setModalState(() => isSubmitting = false);
+
+                            if (res['success'] == true) {
+                              Navigator.pop(ctx);
+                              await _fetchData();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Transaction MPIN Created ✓ Your transaction security is enabled."),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } else {
+                              setModalState(() => errorMessage = res['message'] ?? "Failed to set MPIN.");
+                            }
+                          },
+                    child: isSubmitting
+                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text("Save Transaction MPIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showCreateSpaceModal() {
     final nameCtrl = TextEditingController();
     final targetCtrl = TextEditingController();
@@ -3357,6 +3576,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget _buildProfileTab() {
     return BankingProfileCenterScreen(
       user: _user,
+      onOpenMpinModal: _showCreateMpinModal,
       onProfileUpdated: () async {
         final updated = await ApiService.getUserDetails(_user.appId, sessionId: _user.sessionId);
         if (updated != null && mounted) {
