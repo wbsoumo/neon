@@ -13,6 +13,12 @@ import 'stock_details_screen.dart';
 import 'space_details_screen.dart';
 import 'banking_profile_center_screen.dart';
 import 'send_money_screen.dart';
+import 'forex_exchange_screen.dart';
+import 'global_investments_screen.dart';
+import 'foreign_assets_screen.dart';
+import 'swiss_loans_screen.dart';
+import 'travel_finance_screen.dart';
+import 'precious_metals_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -56,14 +62,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   String _selectedStockCategory = 'All';
   final TextEditingController _stockSearchController = TextEditingController();
 
-  // Spaces Dashboard State
+  // Account Header Currency Switcher
+  String _selectedHeaderCurrency = 'CHF';
+  final Map<String, String> _currencyFlags = {
+    'CHF': '🇨🇭',
+    'INR': '🇮🇳',
+    'AED': '🇦🇪',
+    'USD': '🇺🇸',
+    'EUR': '🇪🇺',
+    'GBP': '🇬🇧',
+    'SGD': '🇸🇬',
+    'CAD': '🇨🇦',
+    'AUD': '🇦🇺',
+  };
+
+  // Transaction Feed Search & Category Filter
+  String _txnSearchQuery = '';
+  String _txnCategoryFilter = 'All';
+  final TextEditingController _txnSearchController = TextEditingController();
+
+  // Recent Neon Bank Recipients (Local Storage)
+  List<Map<String, dynamic>> _recentNeonRecipients = [];
+
+  // Spaces State
   List<SpaceModel> _spaces = [];
   bool _isLoadingSpaces = true;
   double _mainBalanceChf = 0.0;
   double _mainBalanceInr = 0.0;
-
-  // Recent Neon Bank Recipients (Local Storage)
-  List<Map<String, dynamic>> _recentNeonRecipients = [];
 
   @override
   void initState() {
@@ -235,17 +260,121 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  double _getConvertedHeaderBalance() {
+    final chfVal = _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate);
+    switch (_selectedHeaderCurrency) {
+      case 'CHF': return chfVal;
+      case 'INR': return _user.balance;
+      case 'USD': return chfVal * 1.145;
+      case 'EUR': return chfVal * 1.042;
+      case 'AED': return chfVal * 4.205;
+      case 'GBP': return chfVal * 0.892;
+      case 'SGD': return chfVal * 1.541;
+      case 'CAD': return chfVal * 1.562;
+      case 'AUD': return chfVal * 1.724;
+      default: return chfVal;
+    }
+  }
+
+  String _getCurrencySymbol(String code) {
+    switch (code) {
+      case 'INR': return '₹';
+      case 'USD': return '\$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      case 'AED': return 'AED ';
+      case 'SGD': return 'S\$';
+      case 'CAD': return 'CA\$';
+      case 'AUD': return 'A\$';
+      case 'CHF': return 'CHF ';
+      default: return '$code ';
+    }
+  }
+
+  List<TransactionModel> get _filteredTransactions {
+    return _transactions.where((t) {
+      final q = _txnSearchQuery.trim().toLowerCase();
+      final matchesQuery = q.isEmpty ||
+          t.recipientName.toLowerCase().contains(q) ||
+          t.amount.toString().contains(q);
+
+      if (!matchesQuery) return false;
+
+      if (_txnCategoryFilter == 'Incoming') {
+        return t.isCredit;
+      } else if (_txnCategoryFilter == 'Outgoing') {
+        return !t.isCredit;
+      } else if (_txnCategoryFilter == 'Pending') {
+        return t.status.toUpperCase() == 'PENDING';
+      }
+      return true;
+    }).toList();
+  }
+
+  void _showReceiveMoneyModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppTheme.neonPink.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.qr_code_2_rounded, color: AppTheme.neonPink, size: 36),
+            ),
+            const SizedBox(height: 12),
+            const Text("Receive Money & IBAN", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            const Text("Share your Swiss IBAN or QR code to receive international funds instantly.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppTheme.bgLight, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey[200]!)),
+              child: Column(
+                children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Swiss IBAN", style: TextStyle(color: Colors.grey, fontSize: 12)), Text(_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730', style: const TextStyle(fontWeight: FontWeight.bold))]),
+                  const SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("SWIFT / BIC", style: TextStyle(color: Colors.grey, fontSize: 12)), const Text("UBSWCHZH80A", style: TextStyle(fontWeight: FontWeight.bold))]),
+                  const SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("Account Holder", style: TextStyle(color: Colors.grey, fontSize: 12)), Text(_user.fullName, style: const TextStyle(fontWeight: FontWeight.bold))]),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonPink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("Done", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ==========================================
-  // TAB 1: TRANSACTIONS / MAIN START (Screenshot #1 & #4)
+  // TAB 1: TRANSACTIONS / MAIN DASHBOARD
   // ==========================================
   Widget _buildTransactionsTab() {
     final isBurgundyHeader = _selectedAccountTier == "Joint account";
+    final displayedBalance = _getConvertedHeaderBalance();
+    final symbol = _getCurrencySymbol(_selectedHeaderCurrency);
+    final flag = _currencyFlags[_selectedHeaderCurrency] ?? '🇨🇭';
+
+    final filteredTxns = _filteredTransactions;
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       body: CustomScrollView(
         slivers: [
-          // Header Banner matching Screenshots #1 & #4
+          // Header Banner
           SliverToBoxAdapter(
             child: Container(
               color: isBurgundyHeader ? AppTheme.neonBurgundy : AppTheme.neonPink,
@@ -257,25 +386,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Search icon
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                      GestureDetector(
+                        onTap: () => setState(() => _currentIndex = 1),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.search, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.search, color: Colors.white, size: 20),
                       ),
                       // Account Selector Switcher Pill
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: PopupMenuButton<String>(
                           onSelected: (val) => setState(() => _selectedAccountTier = val),
                           itemBuilder: (context) => [
-                            const PopupMenuItem(value: "Main account", child: Text("Main account (CHF 8'730.40)")),
+                            const PopupMenuItem(value: "Main account", child: Text("Main account (CHF 7'850.42)")),
                             const PopupMenuItem(value: "Personal account", child: Text("Personal account (CHF 3'500.00)")),
                             const PopupMenuItem(value: "Joint account", child: Text("Joint account (CHF 1'500.00)")),
                           ],
@@ -294,7 +426,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ),
                         ),
                       ),
-                      // Logout / Session Control icon
+                      // Logout icon
                       GestureDetector(
                         onTap: () async {
                           await ApiService.clearUserSession();
@@ -305,7 +437,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
@@ -314,81 +446,218 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Balance & Currency Display
+
+                  // Account Balance Header with Interactive Currency Switcher
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Text(
-                        "Account Balance ",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Main Account Balance",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+                              child: Text(
+                                "$symbol${displayedBalance.toStringAsFixed(2)}",
+                                key: ValueKey(_selectedHeaderCurrency),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        "CHF ${(_user.balance * _inrToChfRate).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
+
+                      // Interactive Currency Selector Pill
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: PopupMenuButton<String>(
+                          onSelected: (code) {
+                            setState(() => _selectedHeaderCurrency = code);
+                          },
+                          itemBuilder: (ctx) => _currencyFlags.keys.map((code) {
+                            return PopupMenuItem(
+                              value: code,
+                              child: Row(
+                                children: [
+                                  Text(_currencyFlags[code]!, style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 8),
+                                  Text(code, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                Text(flag, style: const TextStyle(fontSize: 16)),
+                                const SizedBox(width: 6),
+                                Text(_selectedHeaderCurrency, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                                const Icon(Icons.arrow_drop_down, color: Colors.white),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
-                    "₹ ${_user.balance.toStringAsFixed(2)} INR • IBAN: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730'} • SWIFT: UBSWCHZH80A",
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500),
+                    _selectedHeaderCurrency == 'CHF'
+                        ? "≈ ₹ ${_user.balance.toStringAsFixed(2)} INR • IBAN: ${_user.accountNumber.isNotEmpty ? _user.accountNumber : 'CH8900008730'} • 1 CHF = ₹ ${(_inrToChfRate > 0 ? (1 / _inrToChfRate) : 95.238).toStringAsFixed(2)}"
+                        : "≈ CHF ${(_mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate)).toStringAsFixed(2)} • Live FX conversion rate applied",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 20),
 
-                  // Quick Action Cards Bar (Transfer & Passbook)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          _showTransferTypePickerModal();
-                        },
-                        child: _buildHeaderShortcut(Icons.send_rounded, "Transfer"),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PassbookScreen(
-                                accountNumber: _user.accountNumber,
-                                balance: _user.balance,
-                                transactions: _transactions,
+                  // Enhanced Quick Action Shortcut Bar
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _showTransferTypePickerModal,
+                          child: _buildHeaderShortcut(Icons.send_rounded, "Transfer"),
+                        ),
+                        const SizedBox(width: 14),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PassbookScreen(
+                                  accountNumber: _user.accountNumber,
+                                  balance: _user.balance,
+                                  transactions: _transactions,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        child: _buildHeaderShortcut(Icons.account_balance_outlined, "Passbook"),
-                      ),
-                    ],
+                            );
+                          },
+                          child: _buildHeaderShortcut(Icons.account_balance_outlined, "Passbook"),
+                        ),
+                        const SizedBox(width: 14),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ForexExchangeScreen(
+                                  baseBalanceChf: _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate),
+                                ),
+                              ),
+                            );
+                          },
+                          child: _buildHeaderShortcut(Icons.currency_exchange_rounded, "Exchange"),
+                        ),
+                        const SizedBox(width: 14),
+                        GestureDetector(
+                          onTap: () => _showNeonAccountVerificationModal(),
+                          child: _buildHeaderShortcut(Icons.speed_rounded, "Send Money"),
+                        ),
+                        const SizedBox(width: 14),
+                        GestureDetector(
+                          onTap: _showReceiveMoneyModal,
+                          child: _buildHeaderShortcut(Icons.qr_code_2_rounded, "Receive"),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Transactions Section Header
-          const SliverToBoxAdapter(
+          // Transactions Section Header & Search/Filters
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                "Transactions",
-                style: TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "TRANSACTIONS FEED",
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      Text(
+                        "${filteredTxns.length} Activity Items",
+                        style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Search input
+                  TextField(
+                    controller: _txnSearchController,
+                    decoration: InputDecoration(
+                      hintText: "Search transactions by recipient or amount...",
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                      suffixIcon: _txnSearchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _txnSearchController.clear();
+                                setState(() => _txnSearchQuery = '');
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    onChanged: (val) => setState(() => _txnSearchQuery = val),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Category Filter Chips
+                  SizedBox(
+                    height: 34,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: ['All', 'Incoming', 'Outgoing', 'Pending'].map((filter) {
+                        final isSelected = _txnCategoryFilter == filter;
+                        return Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(filter, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black87)),
+                            selected: isSelected,
+                            selectedColor: AppTheme.neonPink,
+                            onSelected: (val) => setState(() => _txnCategoryFilter = filter),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -403,11 +672,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
               ),
             )
+          else if (filteredTxns.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(30),
+                child: Center(
+                  child: Column(
+                    children: const [
+                      Icon(Icons.search_off_rounded, size: 40, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text("No matching transactions found", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ),
+            )
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final txn = _transactions[index];
+                  final txn = filteredTxns[index];
                   final isCredit = txn.isCredit;
                   return GestureDetector(
                     onTap: () {
@@ -433,7 +717,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[100]!),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.02),
@@ -445,21 +730,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       child: Row(
                         children: [
                           Container(
-                            width: 42,
-                            height: 42,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
                               color: isCredit ? Colors.green[50] : Colors.grey[100],
                               shape: BoxShape.circle,
                             ),
-                            child: Center(
-                              child: Text(
-                                txn.recipientName.isNotEmpty ? txn.recipientName[0] : "N",
-                                style: TextStyle(
-                                  color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                ),
-                              ),
+                            child: Icon(
+                              isCredit ? Icons.south_west_rounded : Icons.north_east_rounded,
+                              color: isCredit ? AppTheme.successGreen : AppTheme.neonPink,
+                              size: 20,
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -470,40 +750,66 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                                 Text(
                                   txn.recipientName,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 15,
                                     color: AppTheme.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  txn.date,
+                                  "${txn.date} • ${isCredit ? 'Credit Received' : 'Bank Transfer'}",
                                   style: const TextStyle(
                                     color: AppTheme.textMuted,
-                                    fontSize: 12,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Text(
-                            "${isCredit ? '+' : '-'}${txn.amount.toStringAsFixed(2)}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                "${isCredit ? '+' : '-'} ₹${txn.amount.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: isCredit ? AppTheme.successGreen : AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: txn.status.toUpperCase() == 'COMPLETED'
+                                      ? Colors.green[50]
+                                      : Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  txn.status.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: txn.status.toUpperCase() == 'COMPLETED'
+                                        ? Colors.green
+                                        : Colors.orange[800],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   );
                 },
-                childCount: _transactions.length,
+                childCount: filteredTxns.length,
               ),
             ),
 
-          // International Finance Services Cards Section
+          // International Finance Services (Compact 3-Column Grid)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
@@ -511,20 +817,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
                   Text(
-                    "International Finance Services",
+                    "INTERNATIONAL FINANCE SERVICES",
                     style: TextStyle(
                       color: AppTheme.textMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
                     ),
                   ),
                   Text(
                     "Swiss Banking Portal",
                     style: TextStyle(
                       color: AppTheme.neonPink,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
@@ -532,87 +838,127 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
           ),
 
+          // 3-Column Cards Grid (3 per row)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 0.95,
                 children: [
-                  // Investments & Wealth Card
-                  _buildFinanceServiceCard(
+                  _buildGridServiceCard(
                     icon: Icons.trending_up_rounded,
-                    iconBgColor: const Color(0xFFE8F5E9),
-                    iconColor: const Color(0xFF2E7D32),
-                    title: "Investments & Swiss Portfolios",
-                    subtitle: "SMI 20 Index • Global Tech Basket (+14.2% YTD)",
-                    badgeText: "High Yield",
-                    badgeColor: const Color(0xFF2E7D32),
+                    title: "Global\nInvestments",
+                    color: const Color(0xFF2E7D32),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalInvestmentsScreen()));
+                    },
                   ),
-                  const SizedBox(height: 10),
-
-                  // Foreign Investments Card
-                  _buildFinanceServiceCard(
+                  _buildGridServiceCard(
                     icon: Icons.public_rounded,
-                    iconBgColor: const Color(0xFFE3F2FD),
-                    iconColor: const Color(0xFF1565C0),
-                    title: "Foreign Investments & Metals",
-                    subtitle: "US Equity Funds & Zurich Allocated Vault Gold",
-                    badgeText: "Multi-Currency",
-                    badgeColor: const Color(0xFF1565C0),
+                    title: "Foreign\nAssets",
+                    color: const Color(0xFF1565C0),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ForeignAssetsScreen()));
+                    },
                   ),
-                  const SizedBox(height: 10),
-
-                  // International Loans Card
-                  _buildFinanceServiceCard(
-                    icon: Icons.account_balance_outlined,
-                    iconBgColor: const Color(0xFFFFF3E0),
-                    iconColor: const Color(0xFFE65100),
-                    title: "International Credit & Mortgages",
-                    subtitle: "Expat Mortgages & Credit Lines @ 2.4% APR",
-                    badgeText: "Fast Approval",
-                    badgeColor: const Color(0xFFE65100),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Travel Finance Card
-                  _buildFinanceServiceCard(
-                    icon: Icons.flight_takeoff_rounded,
-                    iconBgColor: const Color(0xFFF3E5F5),
-                    iconColor: const Color(0xFF7B1FA2),
-                    title: "Travel Finance & Zero-FX Card",
-                    subtitle: "Zero Foreign Markup • Free Airport Lounge Access",
-                    badgeText: "Zero FX Fee",
-                    badgeColor: const Color(0xFF7B1FA2),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Currency Exchange & FX Rates
-                  _buildFinanceServiceCard(
+                  _buildGridServiceCard(
                     icon: Icons.currency_exchange_rounded,
-                    iconBgColor: const Color(0xFFE0F7FA),
-                    iconColor: const Color(0xFF00838F),
-                    title: "Live FX Exchange Rates",
-                    subtitle: "1 CHF = 95.84 INR • 1 CHF = 1.15 USD • 1 CHF = 1.04 EUR",
-                    badgeText: "Real-Time API",
-                    badgeColor: const Color(0xFF00838F),
+                    title: "Forex\nExchange",
+                    color: const Color(0xFF00838F),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ForexExchangeScreen(
+                            baseBalanceChf: _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 10),
-
-                  // Financial Services & Swiss Security
-                  _buildFinanceServiceCard(
-                    icon: Icons.verified_user_outlined,
-                    iconBgColor: const Color(0xFFFCE4EC),
-                    iconColor: AppTheme.neonPink,
-                    title: "Swiss Financial Protection",
-                    subtitle: "Asset guarantee up to CHF 100,000 per depositor",
-                    badgeText: "FINMA Standard",
-                    badgeColor: AppTheme.neonPink,
+                  _buildGridServiceCard(
+                    icon: Icons.account_balance_outlined,
+                    title: "Swiss\nLoans",
+                    color: const Color(0xFFE65100),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SwissLoansScreen()));
+                    },
                   ),
-                  const SizedBox(height: 30),
+                  _buildGridServiceCard(
+                    icon: Icons.flight_takeoff_rounded,
+                    title: "Travel\nFinance",
+                    color: const Color(0xFF7B1FA2),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const TravelFinanceScreen()));
+                    },
+                  ),
+                  _buildGridServiceCard(
+                    icon: Icons.monetization_on_outlined,
+                    title: "Precious\nMetals",
+                    color: const Color(0xFFF57F17),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const PreciousMetalsScreen()));
+                    },
+                  ),
                 ],
               ),
             ),
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 30)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGridServiceCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: AppTheme.darkNavy),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
