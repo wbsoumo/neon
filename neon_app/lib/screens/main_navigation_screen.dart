@@ -12,6 +12,7 @@ import 'passbook_screen.dart';
 import 'stock_details_screen.dart';
 import 'space_details_screen.dart';
 import 'banking_profile_center_screen.dart';
+import 'send_money_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -1126,6 +1127,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Segmented Transfer Mode Switcher
+            // Payment Tabs Ticker: Neon Bank vs Other Banks
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -1147,10 +1149,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.account_balance_wallet_rounded, size: 18, color: _paymentMode == "P2P" ? AppTheme.neonPink : AppTheme.textMuted),
+                            Icon(Icons.account_balance_rounded, size: 18, color: _paymentMode == "P2P" ? AppTheme.neonPink : AppTheme.textMuted),
                             const SizedBox(width: 6),
                             Text(
-                              "Neon Wallet",
+                              "Neon Bank",
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
@@ -1175,10 +1177,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.account_balance_rounded, size: 18, color: _paymentMode == "P2B" ? AppTheme.neonBlue : AppTheme.textMuted),
+                            Icon(Icons.public_rounded, size: 18, color: _paymentMode == "P2B" ? AppTheme.neonBlue : AppTheme.textMuted),
                             const SizedBox(width: 6),
                             Text(
-                              "Other Bank",
+                              "Other Banks",
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
@@ -1195,7 +1197,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Beneficiary Header Action Card
+            // Add Beneficiary Header Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1218,9 +1220,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Add Beneficiary", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
+                        Text("Add New Beneficiary", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
                         SizedBox(height: 2),
-                        Text("Save new recipient account or IBAN", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        Text("Save recipient account or IBAN details", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -1246,481 +1248,153 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // Saved Beneficiaries Quick Bar (Filtered by Payment Mode)
-            if (filteredBeneficiaries.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _paymentMode == "P2P" ? "Neon Beneficiaries" : "Bank Beneficiaries",
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                  ),
-                  Text("${filteredBeneficiaries.length} Saved", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 82,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: filteredBeneficiaries.length,
-                  itemBuilder: (context, idx) {
-                    final b = filteredBeneficiaries[idx];
-                    final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
-                    final acc = b['beneficiary_account_number'] ?? '';
-                    final ifsc = b['ifsc_code'] ?? '';
-                    final bankName = b['bank_name'] ?? b['nickname'] ?? (b['type'] == 'SELF_BANK' ? 'Neon Finance' : 'Bank Account');
-                    final statusStr = (b['status'] ?? 'APPROVED').toString().toUpperCase();
-                    final isApproved = statusStr == 'APPROVED' || statusStr == 'DONE';
+            // Beneficiary Selection List Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _paymentMode == "P2P" ? "Select Neon Recipient" : "Select Bank Beneficiary",
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                ),
+                Text("${filteredBeneficiaries.length} Saved", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-                    return GestureDetector(
-                      onTap: () {
-                        if (!isApproved) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Beneficiary approval is pending. Transfers will be enabled once approved."),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          return;
-                        }
-                        setState(() {
-                          if (_paymentMode == "P2P") {
-                            _paymentRecipientController.text = acc;
-                          } else {
-                            _p2bNameController.text = name;
-                            _p2bAccController.text = acc;
-                            _p2bIfscController.text = ifsc;
-                          }
-                          _selectedBeneficiaryName = name;
-                          _selectedBeneficiaryBank = bankName;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Selected $name ($bankName)")),
-                        );
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isApproved ? Colors.white : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isApproved 
-                                ? (_paymentMode == "P2P" ? AppTheme.neonPink.withValues(alpha: 0.25) : AppTheme.neonBlue.withValues(alpha: 0.25))
-                                : Colors.grey[300]!,
-                          ),
-                          boxShadow: isApproved ? [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6)] : [],
+            filteredBeneficiaries.isEmpty
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.people_outline_rounded, size: 44, color: Colors.grey),
+                        const SizedBox(height: 10),
+                        Text(
+                          _paymentMode == "P2P" ? "No Neon Bank recipients saved" : "No external bank beneficiaries saved",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: isApproved 
-                                  ? (_paymentMode == "P2P" ? AppTheme.neonPink.withValues(alpha: 0.15) : AppTheme.neonBlue.withValues(alpha: 0.15))
-                                  : Colors.grey[300],
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'B',
-                                style: TextStyle(
-                                  color: isApproved ? (_paymentMode == "P2P" ? AppTheme.neonPink : AppTheme.neonBlue) : Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        const SizedBox(height: 4),
+                        const Text("Tap 'Add' above to register a trusted transfer account.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredBeneficiaries.length,
+                    separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+                    itemBuilder: (ctx, idx) {
+                      final b = filteredBeneficiaries[idx];
+                      final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
+                      final acc = b['beneficiary_account_number'] ?? '';
+                      final bankName = b['bank_name'] ?? b['nickname'] ?? (b['type'] == 'SELF_BANK' ? 'Neon Bank' : 'State Bank of India');
+                      final statusStr = (b['status'] ?? 'APPROVED').toString().toUpperCase();
+                      final isApproved = statusStr == 'APPROVED' || statusStr == 'DONE';
+                      final currency = b['currency'] ?? 'INR';
+                      final country = b['country'] ?? (currency == 'INR' ? 'India' : 'Switzerland');
+                      final flag = b['flag'] ?? (country == 'India' ? '🇮🇳' : '🇨🇭');
+                      final maskedAcc = acc.length > 4 ? '••••••${acc.substring(acc.length - 4)}' : acc;
+
+                      return InkWell(
+                        onTap: () {
+                          if (!isApproved) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Beneficiary approval is pending. Transfers will be enabled once approved."),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SendMoneyScreen(
+                                user: _user,
+                                beneficiary: b,
+                                mode: _paymentMode,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey[200]!),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: _paymentMode == "P2P" ? AppTheme.neonPink.withValues(alpha: 0.12) : AppTheme.neonBlue.withValues(alpha: 0.12),
+                                child: Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : 'B',
+                                  style: TextStyle(
+                                    color: _paymentMode == "P2P" ? AppTheme.neonPink : AppTheme.neonBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                        color: isApproved ? AppTheme.textPrimary : AppTheme.textMuted,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: isApproved ? AppTheme.successGreen.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        isApproved ? "APPROVED" : "PENDING",
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                          color: isApproved ? AppTheme.successGreen : Colors.orange[800],
+                                    Row(
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary),
                                         ),
-                                      ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: isApproved ? AppTheme.successGreen.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            isApproved ? "VERIFIED" : "PENDING",
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: isApproved ? AppTheme.successGreen : Colors.orange[800],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    const SizedBox(height: 3),
+                                    Text("$bankName • $maskedAcc", style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 2),
+                                    Text("$flag $country • $currency", style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(bankName, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                                Text(acc, style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // Active Transfer Form Section
-            Text(
-              _paymentMode == "P2P" ? "Send Money (Neon Wallet)" : "Send Money (Other Bank)",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-            ),
-            const SizedBox(height: 14),
-
-            if (_paymentMode == "P2P") ...[
-              // MODE 1: P2P NEON WALLET TRANSFER FORM
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 14)
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_selectedBeneficiaryName.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.neonPink.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.person_pin_circle_rounded, color: AppTheme.neonPink, size: 22),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Recipient: $_selectedBeneficiaryName",
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
-                                  ),
-                                  Text("Neon Account: ${_paymentRecipientController.text}", style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                                ],
                               ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedBeneficiaryName = "";
-                                  _selectedBeneficiaryBank = "";
-                                  _paymentRecipientController.clear();
-                                });
-                              },
-                              child: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 18),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _paymentRecipientController,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: InputDecoration(
-                          labelText: "Neon 11-Digit Account Number *",
-                          labelStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "e.g. 38351908737",
-                          prefixIcon: const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.neonPink, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _paymentAmountController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: InputDecoration(
-                          labelText: "Transfer Amount (₹ / CHF) *",
-                          labelStyle: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "0.00",
-                          prefixIcon: const Icon(Icons.payments_outlined, color: AppTheme.neonPink, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Available Balance:", style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w500)),
-                          Text(
-                            "₹ ${_user.balance.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final recipientAcc = _paymentRecipientController.text.trim();
-                          final amountText = _paymentAmountController.text.trim();
-
-                          if (recipientAcc.isEmpty || amountText.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please enter recipient account and transfer amount.")),
-                            );
-                            return;
-                          }
-                          final amount = double.tryParse(amountText) ?? 0.0;
-                          if (amount <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please enter a valid transfer amount.")),
-                            );
-                            return;
-                          }
-
-                          if (_user.balance < amount) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Insufficient account balance! Available: ₹ ${_user.balance.toStringAsFixed(2)}, Requested: ₹ ${amount.toStringAsFixed(2)}",
-                                ),
-                                backgroundColor: AppTheme.dangerRed,
-                              ),
-                            );
-                            return;
-                          }
-
-                          _showMpinVerificationModal(
-                            recipientAccount: recipientAcc,
-                            recipientName: _selectedBeneficiaryName,
-                            amount: amount,
-                            mode: "P2P",
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.neonPink,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 2,
                         ),
-                        child: const Text("Confirm Wallet Transfer", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              // MODE 2: P2B OTHER BANK PAYOUT FORM
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 14)
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _p2bNameController,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: const InputDecoration(
-                          labelText: "Beneficiary Full Name *",
-                          labelStyle: TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "e.g. Rahul Sharma",
-                          prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.neonBlue, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _p2bAccController,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: const InputDecoration(
-                          labelText: "Bank Account Number / IBAN *",
-                          labelStyle: TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "e.g. 38351908737",
-                          prefixIcon: Icon(Icons.account_balance_rounded, color: AppTheme.neonBlue, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _p2bIfscController,
-                        textCapitalization: TextCapitalization.characters,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: const InputDecoration(
-                          labelText: "IFSC / SWIFT Code *",
-                          labelStyle: TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "e.g. SBIN0001234",
-                          prefixIcon: Icon(Icons.business_rounded, color: AppTheme.neonBlue, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey[200]!, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _p2bAmountController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                        decoration: const InputDecoration(
-                          labelText: "Transfer Amount (₹ / CHF) *",
-                          labelStyle: TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                          hintText: "0.00",
-                          prefixIcon: Icon(Icons.payments_outlined, color: AppTheme.neonBlue, size: 20),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Available Balance:", style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w500)),
-                          Text(
-                            "₹ ${_user.balance.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final name = _p2bNameController.text.trim();
-                          final acc = _p2bAccController.text.trim();
-                          final ifsc = _p2bIfscController.text.trim();
-                          final amountText = _p2bAmountController.text.trim();
-
-                          if (name.isEmpty || acc.isEmpty || ifsc.isEmpty || amountText.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please fill all required payout fields.")),
-                            );
-                            return;
-                          }
-                          final amount = double.tryParse(amountText) ?? 0.0;
-                          if (amount <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please enter a valid transfer amount.")),
-                            );
-                            return;
-                          }
-
-                          if (_user.balance < amount) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Insufficient account balance! Available: ₹ ${_user.balance.toStringAsFixed(2)}, Requested: ₹ ${amount.toStringAsFixed(2)}",
-                                ),
-                                backgroundColor: AppTheme.dangerRed,
-                              ),
-                            );
-                            return;
-                          }
-
-                          _showMpinVerificationModal(
-                            recipientAccount: acc,
-                            recipientName: name,
-                            amount: amount,
-                            mode: "P2B",
-                            ifscCode: ifsc,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.neonBlue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 2,
-                        ),
-                        child: const Text("Confirm Bank Payout", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                      );
+                    },
+                  ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
