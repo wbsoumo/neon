@@ -249,6 +249,14 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       res['remarks'] = remarks;
     }
 
+    final statusStr = (res['status'] ?? res['tx_status'] ?? '').toString().toUpperCase();
+    if ((res['success'] == true || statusStr == 'SUCCESS' || statusStr == 'COMPLETED') && widget.mode == 'P2P') {
+      await ApiService.saveRecentNeonRecipient(
+        name: _recipientName,
+        accountNumber: _accountNumber,
+      );
+    }
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

@@ -51,6 +51,67 @@ class ApiService {
     await prefs.remove(_sessionKey);
   }
 
+  // Local Storage for Recent Neon Bank Recipients (No DB insertion)
+  static const String _recentNeonKey = "recent_neon_bank_recipients";
+
+  static Future<List<Map<String, dynamic>>> getRecentNeonRecipients() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString(_recentNeonKey);
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List decoded = json.decode(jsonStr);
+        return List<Map<String, dynamic>>.from(decoded);
+      }
+    } catch (e) {
+      debugPrint("Error reading recent Neon recipients: $e");
+    }
+    return [];
+  }
+
+  static Future<void> saveRecentNeonRecipient({
+    required String name,
+    required String accountNumber,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = await getRecentNeonRecipients();
+
+      // Remove existing item with same account number if present
+      current.removeWhere((item) => item['accountNumber'] == accountNumber);
+
+      // Mask account number for safe local storage display
+      String masked = accountNumber;
+      if (accountNumber.length > 4) {
+        masked = "••••${accountNumber.substring(accountNumber.length - 4)}";
+      }
+
+      // Add to front of list
+      current.insert(0, {
+        "name": name,
+        "accountNumber": accountNumber,
+        "maskedAccount": masked,
+        "timestamp": DateTime.now().millisecondsSinceEpoch,
+      });
+
+      // Keep maximum 5 recent recipients
+      final trimmed = current.take(5).toList();
+      await prefs.setString(_recentNeonKey, json.encode(trimmed));
+    } catch (e) {
+      debugPrint("Error saving recent Neon recipient: $e");
+    }
+  }
+
+  static Future<void> removeRecentNeonRecipient(String accountNumber) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = await getRecentNeonRecipients();
+      current.removeWhere((item) => item['accountNumber'] == accountNumber);
+      await prefs.setString(_recentNeonKey, json.encode(current));
+    } catch (e) {
+      debugPrint("Error removing recent Neon recipient: $e");
+    }
+  }
+
   // ==========================================
   // 1. AUTHENTICATION (STRICT LIVE API ONLY)
   // ==========================================
@@ -189,6 +250,29 @@ class ApiService {
       debugPrint("getTransactions error: $e");
     }
     return [];
+  }
+
+  // Verify Neon Bank Account & Get Customer Details
+  static Future<Map<String, dynamic>> getUserByAccount(String accountNumber) async {
+    try {
+      final savedUser = await getSavedUserSession();
+      final sessionId = savedUser?.sessionId ?? '';
+
+      final response = await http.get(
+        Uri.parse("$baseUrl/get_user_by_account.php?account_number=$accountNumber&session_id=$sessionId"),
+        headers: {
+          if (sessionId.isNotEmpty) "X-Session-ID": sessionId,
+          if (sessionId.isNotEmpty) "Authorization": "Bearer $sessionId",
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      return json.decode(response.body);
+    } catch (e) {
+      return {
+        "success": false,
+        "message": "Account verification failed. Please check your network connection.",
+      };
+    }
   }
 
   // Get Live Beneficiaries List

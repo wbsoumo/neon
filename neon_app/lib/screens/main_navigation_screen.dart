@@ -34,7 +34,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   String _selectedBeneficiaryName = "";
   String _selectedBeneficiaryBank = "";
 
-  // Payment Mode: "P2P" (Neon Wallet) or "P2B" (External Bank Payout)
+  // Payment Mode: "P2P" (Neon Bank) or "P2B" (External Bank Payout)
   String _paymentMode = "P2P";
 
   // P2B Payout Controllers
@@ -62,6 +62,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   double _mainBalanceChf = 0.0;
   double _mainBalanceInr = 0.0;
 
+  // Recent Neon Bank Recipients (Local Storage)
+  List<Map<String, dynamic>> _recentNeonRecipients = [];
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +72,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _fetchData();
     _fetchExchangeRatesAndStockData();
     _fetchSpaces();
+    _fetchRecentNeonRecipients();
+  }
+
+  Future<void> _fetchRecentNeonRecipients() async {
+    final list = await ApiService.getRecentNeonRecipients();
+    if (mounted) {
+      setState(() => _recentNeonRecipients = list);
+    }
   }
 
   Future<void> _fetchSpaces() async {
@@ -798,7 +809,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                               children: [
                                 const Flexible(
                                   child: Text(
-                                    "Neon Wallet",
+                                    "Neon Bank",
                                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -941,7 +952,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    mode == "P2P" ? "Verify Neon Wallet Transfer" : "Verify Bank Transfer",
+                    mode == "P2P" ? "Verify Neon Bank Transfer" : "Verify Bank Transfer",
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                   ),
                   const SizedBox(height: 4),
@@ -1097,25 +1108,232 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _showNeonAccountVerificationModal({String prefilledAccount = '', String prefilledName = ''}) {
+    final accCtrl = TextEditingController(text: prefilledAccount);
+    bool isVerifying = false;
+    bool isVerified = false;
+    String verifiedName = prefilledName;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              top: 24,
+              left: 20,
+              right: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Verify Neon Bank Account",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                if (!isVerified) ...[
+                  const Text(
+                    "Enter the recipient's Neon Bank Account Number to verify before transferring.",
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: accCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Neon Bank Account Number",
+                      hintText: "e.g. 1001004821",
+                      prefixIcon: const Icon(Icons.account_balance_outlined, color: AppTheme.neonPink),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onChanged: (val) {
+                      if (errorMessage != null) {
+                        setModalState(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonPink,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: isVerifying
+                          ? null
+                          : () async {
+                              final accNum = accCtrl.text.trim();
+                              if (accNum.isEmpty) {
+                                setModalState(() => errorMessage = "Please enter an account number.");
+                                return;
+                              }
+
+                              setModalState(() {
+                                isVerifying = true;
+                                errorMessage = null;
+                              });
+
+                              final res = await ApiService.getUserByAccount(accNum);
+                              setModalState(() => isVerifying = false);
+
+                              if (res['success'] == true && res['user'] != null) {
+                                setModalState(() {
+                                  isVerified = true;
+                                  verifiedName = res['user']['full_name'] ?? 'Neon Customer';
+                                });
+                              } else {
+                                setModalState(() {
+                                  errorMessage = res['message'] ?? "Account not found. Please check the account number and try again.";
+                                });
+                              }
+                            },
+                      child: isVerifying
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          : const Text("Verify Account", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.green[300]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.successGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Account Verified ✓",
+                          style: TextStyle(color: AppTheme.successGreen, fontSize: 18, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          verifiedName,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "Neon Bank",
+                          style: TextStyle(fontSize: 13, color: AppTheme.textMuted, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Account ••••${accCtrl.text.trim().length > 4 ? accCtrl.text.trim().substring(accCtrl.text.trim().length - 4) : accCtrl.text.trim()}",
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonPink,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SendMoneyScreen(
+                              user: _user,
+                              beneficiary: {
+                                'beneficiary_name': verifiedName,
+                                'beneficiary_account_number': accCtrl.text.trim(),
+                                'bank_name': 'Neon Bank',
+                                'country': 'Switzerland',
+                                'currency': 'CHF',
+                                'flag': '🇨🇭',
+                              },
+                              mode: 'P2P',
+                            ),
+                          ),
+                        ).then((_) => _fetchRecentNeonRecipients());
+                      },
+                      child: const Text("Continue to Send Money", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // ==========================================
   // TAB 2: PAYMENTS / ZAHLUNGEN
   // ==========================================
   Widget _buildPaymentsTab() {
-    // Filter beneficiaries based on active payment mode
     final filteredBeneficiaries = _beneficiaries.where((b) {
       final type = (b['type'] ?? '').toString().toUpperCase();
-      if (_paymentMode == "P2P") {
-        return type == 'SELF_BANK';
-      } else {
-        return type == 'OTHER_BANK';
-      }
+      return type == 'OTHER_BANK';
     }).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         title: Text(
-          _paymentMode == "P2P" ? "Neon Wallet Transfer" : "Other Bank Transfer",
+          _paymentMode == "P2P" ? "Neon Bank Transfer" : "Other Bank Transfer",
           style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
         elevation: 0,
@@ -1126,8 +1344,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Segmented Transfer Mode Switcher
-            // Payment Tabs Ticker: Neon Bank vs Other Banks
+            // Segmented Transfer Mode Switcher: Neon Bank vs Other Banks
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -1197,203 +1414,350 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Add Beneficiary Header Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12)],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.neonPink.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.neonPink, size: 24),
+            if (_paymentMode == "P2P") ...[
+              // Primary Action: Send Money CTA Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.neonPink, AppTheme.neonBurgundy],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.neonPink.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text("Add New Beneficiary", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
-                        SizedBox(height: 2),
-                        Text("Save recipient account or IBAN details", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Neon Bank Transfer", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                            Text("Instant zero-fee transfer", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final updated = await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => AddBeneficiaryScreen(user: _user)),
-                      );
-                      if (updated == true) {
-                        _fetchData();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.neonPink,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Transfer money instantly using the recipient's Neon Bank Account Number.",
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
                     ),
-                    child: const Text("Add", style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppTheme.neonPink,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => _showNeonAccountVerificationModal(),
+                        icon: const Icon(Icons.arrow_forward_rounded, color: AppTheme.neonPink),
+                        label: const Text("Send Money", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Recent Neon Bank Recipients (Local Storage Only)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Recent Recipients", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+                  Text("${_recentNeonRecipients.length} Recent", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
 
-            const SizedBox(height: 24),
+              _recentNeonRecipients.isEmpty
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.history_rounded, size: 40, color: Colors.grey),
+                          SizedBox(height: 10),
+                          Text("No recent Neon Bank recipients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          SizedBox(height: 4),
+                          Text("Recipients from your successful Neon Bank transfers will appear here for fast access.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _recentNeonRecipients.length,
+                      separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+                      itemBuilder: (ctx, idx) {
+                        final r = _recentNeonRecipients[idx];
+                        final name = r['name'] ?? 'Recipient';
+                        final masked = r['maskedAccount'] ?? '••••';
+                        final accountNumber = r['accountNumber'] ?? '';
 
-            // Beneficiary Selection List Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _paymentMode == "P2P" ? "Select Neon Recipient" : "Select Bank Beneficiary",
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
-                ),
-                Text("${filteredBeneficiaries.length} Saved", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            filteredBeneficiaries.isEmpty
-                ? Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(28),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.people_outline_rounded, size: 44, color: Colors.grey),
-                        const SizedBox(height: 10),
-                        Text(
-                          _paymentMode == "P2P" ? "No Neon Bank recipients saved" : "No external bank beneficiaries saved",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text("Tap 'Add' above to register a trusted transfer account.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredBeneficiaries.length,
-                    separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) {
-                      final b = filteredBeneficiaries[idx];
-                      final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
-                      final acc = b['beneficiary_account_number'] ?? '';
-                      final bankName = b['bank_name'] ?? b['nickname'] ?? (b['type'] == 'SELF_BANK' ? 'Neon Bank' : 'State Bank of India');
-                      final statusStr = (b['status'] ?? 'APPROVED').toString().toUpperCase();
-                      final isApproved = statusStr == 'APPROVED' || statusStr == 'DONE';
-                      final currency = b['currency'] ?? 'INR';
-                      final country = b['country'] ?? (currency == 'INR' ? 'India' : 'Switzerland');
-                      final flag = b['flag'] ?? (country == 'India' ? '🇮🇳' : '🇨🇭');
-                      final maskedAcc = acc.length > 4 ? '••••••${acc.substring(acc.length - 4)}' : acc;
-
-                      return InkWell(
-                        onTap: () {
-                          if (!isApproved) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Beneficiary approval is pending. Transfers will be enabled once approved."),
-                                backgroundColor: Colors.orange,
-                              ),
+                        return InkWell(
+                          onTap: () {
+                            _showNeonAccountVerificationModal(
+                              prefilledAccount: accountNumber,
+                              prefilledName: name,
                             );
-                            return;
-                          }
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SendMoneyScreen(
-                                user: _user,
-                                beneficiary: b,
-                                mode: _paymentMode,
-                              ),
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                              ],
                             ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey[200]!),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: _paymentMode == "P2P" ? AppTheme.neonPink.withValues(alpha: 0.12) : AppTheme.neonBlue.withValues(alpha: 0.12),
-                                child: Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : 'B',
-                                  style: TextStyle(
-                                    color: _paymentMode == "P2P" ? AppTheme.neonPink : AppTheme.neonBlue,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: AppTheme.neonPink.withValues(alpha: 0.12),
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'R',
+                                    style: const TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          name,
-                                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isApproved ? AppTheme.successGreen.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            isApproved ? "VERIFIED" : "PENDING",
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w800,
-                                              color: isApproved ? AppTheme.successGreen : Colors.orange[800],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text("$bankName • $maskedAcc", style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                                    const SizedBox(height: 2),
-                                    Text("$flag $country • $currency", style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                                  ],
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary)),
+                                      const SizedBox(height: 2),
+                                      Text("Neon Bank • Account $masked", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
+                                  onPressed: () async {
+                                    await ApiService.removeRecentNeonRecipient(accountNumber);
+                                    _fetchRecentNeonRecipients();
+                                  },
+                                ),
+                                const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ] else ...[
+              // Option B: Other Banks Flow
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12)],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.neonPink.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.neonPink, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Add New Beneficiary", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary)),
+                          SizedBox(height: 2),
+                          Text("Save recipient account or IBAN details", style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => AddBeneficiaryScreen(user: _user)),
+                        );
+                        if (updated == true) {
+                          _fetchData();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonPink,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      ),
+                      child: const Text("Add", style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Select Bank Beneficiary", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+                  Text("${filteredBeneficiaries.length} Saved", style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              filteredBeneficiaries.isEmpty
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.people_outline_rounded, size: 44, color: Colors.grey),
+                          SizedBox(height: 10),
+                          Text("No external bank beneficiaries saved", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          SizedBox(height: 4),
+                          Text("Tap 'Add' above to register a trusted transfer account.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredBeneficiaries.length,
+                      separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+                      itemBuilder: (ctx, idx) {
+                        final b = filteredBeneficiaries[idx];
+                        final name = b['beneficiary_name'] ?? b['nickname'] ?? 'Recipient';
+                        final acc = b['beneficiary_account_number'] ?? '';
+                        final bankName = b['bank_name'] ?? b['nickname'] ?? 'State Bank of India';
+                        final statusStr = (b['status'] ?? 'APPROVED').toString().toUpperCase();
+                        final isApproved = statusStr == 'APPROVED' || statusStr == 'DONE';
+                        final currency = b['currency'] ?? 'INR';
+                        final country = b['country'] ?? (currency == 'INR' ? 'India' : 'Switzerland');
+                        final flag = b['flag'] ?? (country == 'India' ? '🇮🇳' : '🇨🇭');
+                        final maskedAcc = acc.length > 4 ? '••••••${acc.substring(acc.length - 4)}' : acc;
+
+                        return InkWell(
+                          onTap: () {
+                            if (!isApproved) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Beneficiary approval is pending. Transfers will be enabled once approved."),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SendMoneyScreen(
+                                  user: _user,
+                                  beneficiary: b,
+                                  mode: 'P2B',
                                 ),
                               ),
-                              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                            ],
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppTheme.neonBlue.withValues(alpha: 0.12),
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'B',
+                                    style: const TextStyle(color: AppTheme.neonBlue, fontWeight: FontWeight.bold, fontSize: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.textPrimary)),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: isApproved ? AppTheme.successGreen.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              isApproved ? "VERIFIED" : "PENDING",
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w800,
+                                                color: isApproved ? AppTheme.successGreen : Colors.orange[800],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text("$bankName • $maskedAcc", style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 2),
+                                      Text("$flag $country • $currency", style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ],
             const SizedBox(height: 30),
           ],
         ),
