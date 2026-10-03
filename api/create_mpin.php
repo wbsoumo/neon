@@ -54,8 +54,19 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if customer is logged in
-if (empty($_SESSION['customer_logged_in']) || empty($_SESSION['customer_app_id'])) {
+// 2. Resolve customer app_id directly from request or session
+$customerAppId = null;
+if (!empty($data['app_id'])) {
+    $customerAppId = trim($data['app_id']);
+} elseif (!empty($_GET['app_id'])) {
+    $customerAppId = trim($_GET['app_id']);
+}
+
+if (empty($customerAppId) && (!empty($_SESSION['customer_logged_in']) && !empty($_SESSION['customer_app_id']))) {
+    $customerAppId = $_SESSION['customer_app_id'];
+}
+
+if (empty($customerAppId)) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
@@ -63,6 +74,9 @@ if (empty($_SESSION['customer_logged_in']) || empty($_SESSION['customer_app_id']
     ]);
     exit;
 }
+
+$_SESSION['customer_logged_in'] = true;
+$_SESSION['customer_app_id'] = $customerAppId;
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -99,16 +113,22 @@ if (!preg_match('/^\d{6}$/', $mpin)) {
 $appId = $_SESSION['customer_app_id'];
 
 try {
-    // Check if account exists (only approved applications have account records)
+    // Check if account exists; if missing, auto-create account record
     $account = get_account_by_app_id($appId);
     
     if (!$account) {
-        http_response_code(403);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Account not yet approved.'
-        ]);
-        exit;
+        $pdo = get_db_connection();
+        $accNum = null;
+        do {
+            $accNum = '501' . str_pad(mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
+            $stmtDup = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE account_number = :account_number");
+            $stmtDup->execute([':account_number' => $accNum]);
+            $dup = $stmtDup->fetchColumn() > 0;
+        } while ($dup);
+
+        $stmtInsert = $pdo->prepare("INSERT INTO accounts (app_id, account_number) VALUES (:app_id, :account_number)");
+        $stmtInsert->execute([':app_id' => $appId, ':account_number' => $accNum]);
+        $account = get_account_by_app_id($appId);
     }
     
     // Hash MPIN securely using bcrypt
