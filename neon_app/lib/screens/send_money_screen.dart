@@ -25,6 +25,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   final TextEditingController _remarksController = TextEditingController();
   bool _isReviewing = false;
   bool _isProcessing = false;
+  bool _isLoadingRate = true;
+  double _chfToInrRate = 95.238; // Default live fallback rate
 
   late String _recipientName;
   late String _bankName;
@@ -32,7 +34,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   late String _ifscCode;
   late String _country;
   late String _flag;
-  late String _currency;
 
   @override
   void initState() {
@@ -44,7 +45,33 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     _ifscCode = b['ifsc_code'] ?? '';
     _country = b['country'] ?? (b['currency'] == 'INR' ? 'India' : 'Switzerland');
     _flag = b['flag'] ?? (_country == 'India' ? '🇮🇳' : '🇨🇭');
-    _currency = b['currency'] ?? 'INR';
+
+    _fetchExchangeRate();
+    _amountController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _remarksController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchExchangeRate() async {
+    final rate = await ApiService.getChfToInrRate();
+    if (mounted) {
+      setState(() {
+        _chfToInrRate = rate;
+        _isLoadingRate = false;
+      });
+    }
+  }
+
+  double get _userBalanceChf {
+    if (_chfToInrRate <= 0) return 0.0;
+    return widget.user.balance / _chfToInrRate;
   }
 
   String get _maskedAccount {
@@ -57,23 +84,23 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     final amountText = _amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid transfer amount.")),
+        const SnackBar(content: Text("Please enter a valid transfer amount in CHF.")),
       );
       return;
     }
 
-    final amount = double.tryParse(amountText) ?? 0.0;
-    if (amount <= 0) {
+    final amountChf = double.tryParse(amountText) ?? 0.0;
+    if (amountChf <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Transfer amount must be greater than zero.")),
       );
       return;
     }
 
-    if (widget.user.balance < amount) {
+    if (amountChf > _userBalanceChf) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Insufficient balance! Available: ₹ ${widget.user.balance.toStringAsFixed(2)}"),
+          content: Text("Insufficient balance! Available: CHF ${_userBalanceChf.toStringAsFixed(2)}"),
           backgroundColor: AppTheme.dangerRed,
         ),
       );
@@ -83,7 +110,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     setState(() => _isReviewing = true);
   }
 
-  void _showMpinVerificationModal(double amount) {
+  void _showMpinVerificationModal(double amountChf, double amountInr) {
     final pinControllers = List.generate(6, (_) => TextEditingController());
     final focusNodes = List.generate(6, (_) => FocusNode());
 
@@ -120,7 +147,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              "Authorize transfer of $_currency ${amount.toStringAsFixed(2)} to $_recipientName",
+              "Authorize transfer of CHF ${amountChf.toStringAsFixed(2)} (≈ ₹ ${amountInr.toStringAsFixed(2)}) to $_recipientName",
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
             ),
@@ -174,7 +201,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                     return;
                   }
                   Navigator.pop(ctx);
-                  _executeTransaction(amount, enteredPin);
+                  _executeTransaction(amountChf, amountInr, enteredPin);
                 },
                 child: const Text("Confirm & Authorize", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
               ),
@@ -185,7 +212,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     );
   }
 
-  Future<void> _executeTransaction(double amount, String mpin) async {
+  Future<void> _executeTransaction(double amountChf, double amountInr, String mpin) async {
     setState(() => _isProcessing = true);
     final remarks = _remarksController.text.trim();
 
@@ -194,7 +221,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       res = await ApiService.sendP2P(
         senderAppId: widget.user.appId,
         recipientAccount: _accountNumber,
-        amount: amount,
+        amount: amountInr,
         mpin: mpin,
       );
     } else {
@@ -203,7 +230,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
         beneficiaryName: _recipientName,
         beneficiaryAccount: _accountNumber,
         ifscCode: _ifscCode,
-        amount: amount,
+        amount: amountInr,
         mpin: mpin,
       );
     }
@@ -211,10 +238,13 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     if (!mounted) return;
     setState(() => _isProcessing = false);
 
-    // Enrich response data with recipient details if missing
+    // Enrich response data with CHF presentation details
     res['recipient_name'] = res['recipient_name'] ?? _recipientName;
     res['recipient_account'] = res['recipient_account'] ?? _accountNumber;
-    res['amount'] = res['amount'] ?? amount;
+    res['amount'] = amountChf;
+    res['currency'] = 'CHF';
+    res['amount_inr'] = amountInr;
+    res['exchange_rate'] = _chfToInrRate;
     if (remarks.isNotEmpty) {
       res['remarks'] = remarks;
     }
@@ -245,6 +275,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   }
 
   Widget _buildInputStep() {
+    final amountChf = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final amountInr = amountChf * _chfToInrRate;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -301,7 +334,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
         const SizedBox(height: 20),
 
-        // Amount Input Box
+        // CHF Amount Input Box
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
@@ -314,23 +347,39 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("TRANSFER AMOUNT", style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("TRANSFER AMOUNT (CHF)", style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  if (_isLoadingRate)
+                    const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text("LIVE FX RATE", style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.green)),
+                    ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    _currency == 'INR' ? '₹' : 'CHF',
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppTheme.neonPink),
+                  const Text(
+                    "CHF",
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.neonPink),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _amountController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black),
                       decoration: const InputDecoration(
-                        hintText: "0.00",
+                        hintText: "100.00",
                         hintStyle: TextStyle(color: Colors.black26),
                         border: InputBorder.none,
                       ),
@@ -338,14 +387,48 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 8),
+
+              // Dynamic Live INR Conversion Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Equivalent INR Amount:", style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+                        Text(
+                          "≈ ₹ ${amountInr.toStringAsFixed(2)} INR",
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Live exchange rate: 1 CHF = ₹ ${_chfToInrRate.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+
               const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Available Balance", style: TextStyle(color: Colors.grey, fontSize: 12)),
                   Text(
-                    "₹ ${widget.user.balance.toStringAsFixed(2)}",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    "CHF ${_userBalanceChf.toStringAsFixed(2)}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.neonPink),
                   ),
                 ],
               ),
@@ -396,7 +479,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   }
 
   Widget _buildReviewStep() {
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final amountChf = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final amountInr = amountChf * _chfToInrRate;
     final remarks = _remarksController.text.trim();
 
     return Column(
@@ -422,7 +506,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               _buildReviewRow("Destination", "$_flag $_country"),
               if (_ifscCode.isNotEmpty) _buildReviewRow("IFSC / SWIFT Code", _ifscCode),
               const Divider(height: 24),
-              _buildReviewRow("Transfer Amount", "$_currency ${amount.toStringAsFixed(2)}", isBold: true),
+              _buildReviewRow("Transfer Amount", "CHF ${amountChf.toStringAsFixed(2)}", isBold: true),
+              _buildReviewRow("Estimated INR Amount", "≈ ₹ ${amountInr.toStringAsFixed(2)}"),
+              _buildReviewRow("Exchange Rate", "1 CHF = ₹ ${_chfToInrRate.toStringAsFixed(2)}"),
               _buildReviewRow("Transfer Fee", "Free (Zero FX Fee)"),
               if (remarks.isNotEmpty) _buildReviewRow("Remarks", remarks),
             ],
@@ -451,7 +537,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                onPressed: _isProcessing ? null : () => _showMpinVerificationModal(amount),
+                onPressed: _isProcessing ? null : () => _showMpinVerificationModal(amountChf, amountInr),
                 child: _isProcessing
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Text("Confirm Transfer", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

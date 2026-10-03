@@ -401,6 +401,26 @@ class ApiService {
     return 0.0105;
   }
 
+  /// Fetch live exchange rate from CHF to INR via Frankfurter Open Source API
+  static Future<double> getChfToInrRate() async {
+    try {
+      final res = await http
+          .get(Uri.parse("https://api.frankfurter.app/latest?from=CHF&to=INR"))
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        final rate = (data['rates']?['INR'] as num?)?.toDouble();
+        if (rate != null && rate > 0) {
+          return rate;
+        }
+      }
+    } catch (e) {
+      debugPrint("CHF to INR Currency API error: $e");
+    }
+    // Fallback rate: 1 CHF ≈ 95.24 INR
+    return 95.238;
+  }
+
   /// Fetch historical EUR/CHF rates for stock graph visualization
   static Future<List<double>> getStockHistoryData(String period) async {
     try {
