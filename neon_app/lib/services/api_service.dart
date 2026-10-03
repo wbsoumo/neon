@@ -157,6 +157,38 @@ class ApiService {
     }
   }
 
+  static Map<String, String> _buildHeaders([String sessionId = '']) {
+    final headers = <String, String>{
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+      "Accept": "application/json",
+    };
+    if (sessionId.isNotEmpty) {
+      headers["X-Session-ID"] = sessionId;
+      headers["Authorization"] = "Bearer $sessionId";
+    }
+    return headers;
+  }
+
+  static Map<String, dynamic> _safeParseJson(String responseBody, {String defaultErrorMessage = "Invalid server response."}) {
+    final trimmed = responseBody.trim();
+    if (trimmed.startsWith('<')) {
+      return {
+        "success": false,
+        "message": defaultErrorMessage
+      };
+    }
+    try {
+      final decoded = json.decode(trimmed);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+    return {
+      "success": false,
+      "message": defaultErrorMessage
+    };
+  }
+
   // Create / Set 6-Digit Transaction MPIN (Aadhaar Removed)
   static Future<Map<String, dynamic>> createMpin({
     required String mpin,
@@ -168,11 +200,7 @@ class ApiService {
       final effectiveSessionId = sessionId.isNotEmpty ? sessionId : (savedUser?.sessionId ?? '');
       final effectiveAppId = appId.isNotEmpty ? appId : (savedUser?.appId ?? '');
 
-      final headers = <String, String>{};
-      if (effectiveSessionId.isNotEmpty) {
-        headers["X-Session-ID"] = effectiveSessionId;
-        headers["Authorization"] = "Bearer $effectiveSessionId";
-      }
+      final headers = _buildHeaders(effectiveSessionId);
 
       final response = await http.post(
         Uri.parse("$baseUrl/create_mpin.php"),
@@ -184,8 +212,7 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      final Map<String, dynamic> data = json.decode(response.body);
-      return data;
+      return _safeParseJson(response.body, defaultErrorMessage: "Failed to set MPIN. Please try again.");
     } catch (e) {
       return {
         "success": false,
@@ -205,11 +232,7 @@ class ApiService {
       final effectiveSessionId = sessionId.isNotEmpty ? sessionId : (savedUser?.sessionId ?? '');
       final effectiveAppId = appId.isNotEmpty ? appId : (savedUser?.appId ?? '');
 
-      final headers = <String, String>{};
-      if (effectiveSessionId.isNotEmpty) {
-        headers["X-Session-ID"] = effectiveSessionId;
-        headers["Authorization"] = "Bearer $effectiveSessionId";
-      }
+      final headers = _buildHeaders(effectiveSessionId);
 
       final response = await http.post(
         Uri.parse("$baseUrl/verify_mpin.php"),
@@ -221,8 +244,7 @@ class ApiService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      final Map<String, dynamic> data = json.decode(response.body);
-      return data;
+      return _safeParseJson(response.body, defaultErrorMessage: "Failed to verify MPIN. Please try again.");
     } catch (e) {
       return {
         "success": false,
