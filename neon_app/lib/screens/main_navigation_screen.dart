@@ -4,9 +4,11 @@ import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 import '../services/api_service.dart';
+import '../services/market_data_service.dart';
 import 'add_beneficiary_screen.dart';
 import 'payment_processing_screen.dart';
 import 'passbook_screen.dart';
+import 'stock_details_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
@@ -43,6 +45,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   List<double> _stockSpots = [0.932, 0.935, 0.941, 0.938, 0.945, 0.949, 0.952];
   bool _isLoadingStockData = false;
 
+  // Investment Dashboard State
+  List<StockItemModel> _allStocks = [];
+  List<String> _watchlistSymbols = [];
+  String _stockSearchQuery = '';
+  String _selectedStockCategory = 'All';
+  final TextEditingController _stockSearchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -54,12 +63,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Future<void> _fetchExchangeRatesAndStockData() async {
     final rate = await ApiService.getInrToChfRate();
     final spots = await ApiService.getStockHistoryData(_selectedStockPeriod);
+    final watchlist = await MarketDataService.getWatchlistSymbols();
+    final initialStocks = MarketDataService.getInitialStocks();
+    final updatedStocks = await MarketDataService.fetchUpdatedStockQuotes(initialStocks);
+
     if (mounted) {
       setState(() {
         _inrToChfRate = rate;
         _stockSpots = spots;
+        _allStocks = updatedStocks;
+        _watchlistSymbols = watchlist;
         _isLoadingStockData = false;
       });
+    }
+  }
+
+  Future<void> _toggleWatchlist(String symbol) async {
+    await MarketDataService.toggleWatchlistSymbol(symbol);
+    final updated = await MarketDataService.getWatchlistSymbols();
+    if (mounted) {
+      setState(() => _watchlistSymbols = updated);
     }
   }
 
@@ -1673,201 +1696,648 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   // ==========================================
-  // TAB 3: INVEST (Screenshot #3)
+  // TAB 3: INVEST & GLOBAL MARKETS DASHBOARD
   // ==========================================
   Widget _buildInvestTab() {
     final balanceChf = _user.balance * _inrToChfRate;
     final gainChf = balanceChf * 0.1667;
+    final indices = MarketDataService.getGlobalIndices();
+    final newsList = MarketDataService.getMarketNews();
+
+    // Filter stocks based on Search Query & Category Filter
+    List<StockItemModel> filteredStocks = _allStocks;
+    if (_selectedStockCategory == 'Watchlist') {
+      filteredStocks = filteredStocks.where((s) => _watchlistSymbols.contains(s.symbol)).toList();
+    } else if (_selectedStockCategory != 'All') {
+      filteredStocks = filteredStocks.where((s) => s.category == _selectedStockCategory).toList();
+    }
+
+    if (_stockSearchQuery.isNotEmpty) {
+      final query = _stockSearchQuery.toLowerCase();
+      filteredStocks = filteredStocks.where((s) {
+        return s.symbol.toLowerCase().contains(query) ||
+               s.name.toLowerCase().contains(query) ||
+               s.country.toLowerCase().contains(query);
+      }).toList();
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text("Global Stocks (FTSE)", style: TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Global Markets & Investing", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.darkNavy)),
+            Text("Swiss Banking Investment Portal", style: TextStyle(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
+          ],
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.star_outline_rounded), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppTheme.neonPink),
+            onPressed: () {
+              _fetchExchangeRatesAndStockData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Refreshing global market quotes...")),
+              );
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Live Currency Converter Badge
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppTheme.neonPink.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.currency_exchange_rounded, color: AppTheme.neonPink, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Live Rate: 1 INR = ${_inrToChfRate.toStringAsFixed(4)} CHF (Frankfurter API)",
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-                  ),
-                ],
-              ),
-            ),
-
-            // Performance Text
-            const Text("Performance", style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  "${balanceChf.toStringAsFixed(2)} CHF",
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+            // Live Rate & Transparency Banner
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.neonPink.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.neonPink.withValues(alpha: 0.2)),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
-                  style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Dynamic Performance Chart Card (Using fl_chart with smooth animations)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeInOut,
-              height: 220,
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: AppTheme.successGreen.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, 4)),
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10),
-                ],
-              ),
-              child: _isLoadingStockData
-                  ? const Center(child: CircularProgressIndicator(color: AppTheme.successGreen))
-                  : LineChart(
-                      LineChartData(
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          horizontalInterval: 0.01,
-                          getDrawingHorizontalLine: (value) => FlLine(
-                            color: Colors.grey[100]!,
-                            strokeWidth: 1,
-                            dashArray: [5, 5],
+                child: Row(
+                  children: [
+                    const Icon(Icons.currency_exchange_rounded, color: AppTheme.neonPink, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Live Rate: 1 INR = ${_inrToChfRate.toStringAsFixed(4)} CHF",
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
                           ),
-                        ),
-                        titlesData: FlTitlesData(show: false),
-                        borderData: FlBorderData(show: false),
-                        lineTouchData: LineTouchData(
-                          enabled: true,
-                          touchTooltipData: LineTouchTooltipData(
-                            getTooltipItems: (touchedSpots) {
-                              return touchedSpots.map((spot) {
-                                return LineTooltipItem(
-                                  "${spot.y.toStringAsFixed(4)} CHF",
-                                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                                );
-                              }).toList();
-                            },
-                          ),
-                        ),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: List.generate(_stockSpots.length, (i) => FlSpot(i.toDouble(), _stockSpots[i])),
-                            isCurved: true,
-                            curveSmoothness: 0.35,
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.successGreen, AppTheme.neonCyan],
-                            ),
-                            barWidth: 4,
-                            isStrokeCapRound: true,
-                            dotData: FlDotData(
-                              show: true,
-                              getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                                radius: 3.5,
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                                strokeColor: AppTheme.successGreen,
-                              ),
-                            ),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  AppTheme.successGreen.withValues(alpha: 0.35),
-                                  AppTheme.neonCyan.withValues(alpha: 0.05),
-                                  Colors.transparent,
-                                ],
-                              ),
-                            ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            "Data Source: 🟢 Live Gold Spot API • 🟡 Delayed Market Snapshots",
+                            style: TextStyle(fontSize: 10, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
-            // Interactive Time filters (1d, 1w, 1m, 1y, Max)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ["1d", "1w", "1m", "1y", "Max"].map((label) {
-                final isSelected = label == _selectedStockPeriod;
-                return GestureDetector(
-                  onTap: () => _onPeriodChanged(label),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            // Portfolio Performance Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text("Global Portfolio Value", style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w700)),
+                        Text("Swiss CHF", style: TextStyle(color: AppTheme.neonPink, fontSize: 12, fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          "CHF ${balanceChf.toStringAsFixed(2)}",
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.successGreen.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
+                            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Section 1: Major Global Market Indices (S&P 500, NASDAQ, SMI 20, FTSE, NIFTY)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                "Major Global Market Indices",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 105,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: indices.length,
+                itemBuilder: (context, index) {
+                  final idx = indices[index];
+                  final isPos = idx.changePercent >= 0;
+                  return Container(
+                    width: 145,
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.black : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[200]!),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
                     ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : AppTheme.textSecondary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(idx.flag, style: const TextStyle(fontSize: 16)),
+                            Text(idx.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppTheme.darkNavy)),
+                          ],
+                        ),
+                        Text(
+                          "${idx.currentPrice.toStringAsFixed(1)}",
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textPrimary),
+                        ),
+                        Row(
+                          children: [
+                            Icon(isPos ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isPos ? AppTheme.successGreen : AppTheme.dangerRed, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              "${isPos ? '+' : ''}${idx.changePercent.toStringAsFixed(2)}%",
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isPos ? AppTheme.successGreen : AppTheme.dangerRed),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 24),
 
-            // Buy asset banner
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.neonCyan.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(16),
+            // Section 2: Search & Filter Tabs
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: TextField(
+                  controller: _stockSearchController,
+                  onChanged: (val) => setState(() => _stockSearchQuery = val),
+                  decoration: InputDecoration(
+                    hintText: "Search US, Swiss, Asian stocks, ETFs or Gold...",
+                    hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                    prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.neonPink),
+                    suffixIcon: _stockSearchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _stockSearchController.clear();
+                              setState(() => _stockSearchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
               ),
+            ),
+            const SizedBox(height: 14),
+
+            // Category Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  const Expanded(
-                    child: Text(
-                      "Buy this asset long-term without fees via investment plan.",
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
+                  _buildCategoryChip('All', '🌍 All Assets'),
+                  _buildCategoryChip('Watchlist', '⭐ Watchlist (${_watchlistSymbols.length})'),
+                  _buildCategoryChip('US', '🇺🇸 US Stocks'),
+                  _buildCategoryChip('Europe', '🇨🇭 Swiss & Europe'),
+                  _buildCategoryChip('Asia', '🌏 Asian Markets'),
+                  _buildCategoryChip('ETF', '📊 Global ETFs'),
+                  _buildCategoryChip('Commodity', '🥇 Metals & Vaults'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Section 3: Popular & Trending Stocks List
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _selectedStockCategory == 'Watchlist' 
+                        ? "Watchlist Assets" 
+                        : "Popular Global Stocks (${filteredStocks.length})",
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
                   ),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.neonCyan,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                    child: const Text("LEARN MORE", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11)),
+                  Text(
+                    "Real Quotes",
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.neonPink),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 10),
+
+            if (filteredStocks.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 12),
+                      Text(
+                        _selectedStockCategory == 'Watchlist' 
+                            ? "No stocks in watchlist yet.\nTap the star icon on any stock to add it!"
+                            : "No stocks found matching '$_stockSearchQuery'.",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: filteredStocks.length,
+                itemBuilder: (context, index) {
+                  final stock = filteredStocks[index];
+                  final isWatchlisted = _watchlistSymbols.contains(stock.symbol);
+                  final isPos = stock.changePercent >= 0;
+                  final changeColor = isPos ? AppTheme.successGreen : AppTheme.dangerRed;
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StockDetailsScreen(
+                            stock: stock,
+                            isWatchlisted: isWatchlisted,
+                            onToggleWatchlist: () => _toggleWatchlist(stock.symbol),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                stock.logoUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    stock.symbol[0],
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.neonPink),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(stock.flag, style: const TextStyle(fontSize: 14)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      stock.symbol,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.darkNavy),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: stock.dataSourceType == 'LIVE_API' ? Colors.blue[50] : Colors.amber[50],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        stock.dataSourceType == 'LIVE_API' ? 'LIVE' : 'SNAPSHOT',
+                                        style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: stock.dataSourceType == 'LIVE_API' ? Colors.blue[800] : Colors.amber[900]),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  stock.name,
+                                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                "${stock.currency} ${stock.price.toStringAsFixed(2)}",
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.darkNavy),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "${isPos ? '+' : ''}${stock.changePercent.toStringAsFixed(2)}%",
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: changeColor),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
+                              color: isWatchlisted ? Colors.amber : Colors.grey[400],
+                              size: 22,
+                            ),
+                            onPressed: () => _toggleWatchlist(stock.symbol),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            const SizedBox(height: 24),
+
+            // Section 4: Foreign Investment Categories Grid
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                "Foreign Investment Categories",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 2.3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                children: [
+                  _buildInvestmentCategoryCard("🇺🇸 US Tech Stocks", "Apple, Microsoft, Nvidia", Icons.computer_rounded, const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
+                  _buildInvestmentCategoryCard("🇨🇭 Swiss Dividend Blue", "Nestlé, Roche, UBS", Icons.account_balance_outlined, const Color(0xFFFCE4EC), AppTheme.neonPink),
+                  _buildInvestmentCategoryCard("🌏 Asian Growth Leaders", "DBS, Reliance, Singtel", Icons.public_rounded, const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
+                  _buildInvestmentCategoryCard("📊 Global Index ETFs", "S&P 500 & Vanguard Swiss", Icons.pie_chart_outline_rounded, const Color(0xFFFFF3E0), const Color(0xFFE65100)),
+                  _buildInvestmentCategoryCard("🏛️ Sovereign & Corporate", "Swiss & US Treasury Bonds", Icons.shield_outlined, const Color(0xFFF3E5F5), const Color(0xFF7B1FA2)),
+                  _buildInvestmentCategoryCard("🥇 Zurich Gold Vaults", "Allocated Physical Bullion", Icons.monetization_on_outlined, const Color(0xFFFFF8E1), const Color(0xFFF57F17)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Section 5: Market News & Financial Analysis
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text(
+                    "Global Financial News",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
+                  ),
+                  Text("Live Feed", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.neonPink)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: newsList.length,
+              itemBuilder: (context, index) {
+                final news = newsList[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey[200],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            news.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.newspaper_rounded, color: AppTheme.neonPink),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.neonPink.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    news.category,
+                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.neonPink),
+                                  ),
+                                ),
+                                Text(
+                                  news.time,
+                                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              news.title,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.darkNavy, height: 1.3),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              news.source,
+                              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Educational Banner Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppTheme.neonPink, AppTheme.neonBurgundy]),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: AppTheme.neonPink.withOpacity(0.25), blurRadius: 10)],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lightbulb_outline_rounded, color: Colors.white, size: 36),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            "Swiss Investment Academy",
+                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "Learn how to manage FX risk & build a tax-efficient multi-currency portfolio.",
+                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String key, String label) {
+    final isSelected = _selectedStockCategory == key;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedStockCategory = key),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.darkNavy : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppTheme.darkNavy : Colors.grey[300]!),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: isSelected ? Colors.white : AppTheme.darkNavy,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvestmentCategoryCard(String title, String subtitle, IconData icon, Color bgColor, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.darkNavy),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
