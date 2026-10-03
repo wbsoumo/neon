@@ -795,7 +795,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                                 <label>Full Legal Name (First, Middle, Last) *</label>
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-user"></i>
-                                    <input type="text" name="full_name" class="form-control" placeholder="e.g. Soumojit Saha" required>
+                                    <input type="text" name="full_name" class="form-control" placeholder="e.g. Alexander Weber" required>
                                 </div>
                             </div>
 
@@ -1041,7 +1041,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                                 <label>Nominee Full Name</label>
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-user"></i>
-                                    <input type="text" name="nominee_name" class="form-control" placeholder="e.g. Sophia Saha">
+                                    <input type="text" name="nominee_name" class="form-control" placeholder="e.g. Sophia Weber">
                                 </div>
                             </div>
 
