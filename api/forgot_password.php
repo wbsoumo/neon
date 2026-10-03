@@ -40,9 +40,27 @@ try {
             exit;
         }
 
-        // Check if matching user application exists
-        $stmt = $pdo->prepare("SELECT app_id, email, full_name FROM applications WHERE email = :identity OR phone = :identity LIMIT 1");
-        $stmt->execute([':identity' => $identity]);
+        // Extract digits for mobile lookup matching (last 10 digits)
+        $cleanIdentityDigits = preg_replace('/\D/', '', $identity);
+        $last10Digits = strlen($cleanIdentityDigits) >= 10 ? substr($cleanIdentityDigits, -10) : $cleanIdentityDigits;
+
+        // Check if matching user application exists (supports last 10 digits phone matching)
+        if (!empty($last10Digits) && !str_contains($identity, '@')) {
+            $stmt = $pdo->prepare("
+                SELECT app_id, email, full_name FROM applications 
+                WHERE email = :identity 
+                   OR phone = :identity 
+                   OR RIGHT(REGEXP_REPLACE(phone, '[^0-9]', ''), 10) = :last10 
+                LIMIT 1
+            ");
+            $stmt->execute([
+                ':identity' => $identity,
+                ':last10'   => $last10Digits
+            ]);
+        } else {
+            $stmt = $pdo->prepare("SELECT app_id, email, full_name FROM applications WHERE email = :identity OR phone = :identity LIMIT 1");
+            $stmt->execute([':identity' => $identity]);
+        }
         $user = $stmt->fetch();
 
         if (!$user) {

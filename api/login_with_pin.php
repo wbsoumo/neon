@@ -48,9 +48,27 @@ if (!preg_match('/^\d{4}$/', $pin)) {
 try {
     $pdo = get_db_connection();
     
-    // Find application by phone number or email
-    $stmt = $pdo->prepare("SELECT * FROM applications WHERE phone = :identity OR email = :identity LIMIT 1");
-    $stmt->execute([':identity' => $identity]);
+    // Extract digits for mobile lookup matching (last 10 digits)
+    $cleanIdentityDigits = preg_replace('/\D/', '', $identity);
+    $last10Digits = strlen($cleanIdentityDigits) >= 10 ? substr($cleanIdentityDigits, -10) : $cleanIdentityDigits;
+
+    // Find application by phone number or email (supports matching last 10 digits regardless of country code)
+    if (!empty($last10Digits) && !str_contains($identity, '@')) {
+        $stmt = $pdo->prepare("
+            SELECT * FROM applications 
+            WHERE phone = :identity 
+               OR email = :identity 
+               OR RIGHT(REGEXP_REPLACE(phone, '[^0-9]', ''), 10) = :last10 
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':identity' => $identity,
+            ':last10'   => $last10Digits
+        ]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM applications WHERE phone = :identity OR email = :identity LIMIT 1");
+        $stmt->execute([':identity' => $identity]);
+    }
     $application = $stmt->fetch();
     
     if (!$application) {
