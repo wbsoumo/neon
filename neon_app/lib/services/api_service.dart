@@ -6,7 +6,7 @@ import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 
 class ApiService {
-  static const String baseUrl = "http://neonfinswiss.world/api";
+  static const String baseUrl = "https://neonfinswiss.world/api";
   static const String _userKey = "saved_neon_user";
   static const String _sessionKey = "saved_session_id";
 
