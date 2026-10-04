@@ -480,14 +480,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                              child: Text(
-                                "$symbol${displayedBalance.toStringAsFixed(2)}",
+                              child: FittedBox(
                                 key: ValueKey(_selectedHeaderCurrency),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "$symbol${displayedBalance.toStringAsFixed(2)}",
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
                                 ),
                               ),
                             ),

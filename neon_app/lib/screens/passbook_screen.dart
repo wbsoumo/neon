@@ -320,9 +320,14 @@ class _PassbookScreenState extends State<PassbookScreen> with SingleTickerProvid
                                 style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                "CHF ${_accountBalanceChf.toStringAsFixed(2)}",
-                                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "CHF ${_accountBalanceChf.toStringAsFixed(2)}",
+                                  maxLines: 1,
+                                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                                ),
                               ),
                             ],
                           ),
