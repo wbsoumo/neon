@@ -88,59 +88,8 @@ try {
             ':expires_at' => $expiresAt
         ]);
 
-        // Send OTP via Email using branded HTML Template
-        $title = "Reset Password Verification Code";
-        $htmlBody = '<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Password Reset OTP</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
-<tr>
-<td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.08);">
-<tr>
-<td align="center" style="padding:35px 20px;background:linear-gradient(135deg,#0e1c36,#1a365d);">
-<img src="https://deccanfinltd.world/assets/img/logo.png" width="80" style="display:block;margin-bottom:10px;">
-<h1 style="margin:10px 0 5px;color:#fff;font-size:30px;">Deccan Finance</h1>
-<p style="margin:0;color:#e7e7ff;font-size:15px;">Secure. Simple. Trusted.</p>
-</td>
-</tr>
-<tr>
-<td style="padding:40px;text-align:center;">
-<h2 style="margin-top:0;color:#222;font-size:24px;">Verification Code</h2>
-<p style="color:#555;font-size:16px;line-height:28px;text-align:left;">Hello <strong>' . htmlspecialchars($name) . '</strong>,</p>
-<p style="color:#555;font-size:16px;line-height:28px;text-align:left;">We received a request to reset the password for your Deccan Finance account. Please use the following One-Time Password (OTP) to verify your request:</p>
-<div style="background:#f0f4f8;border:2px dashed #ccd6dd;border-radius:12px;padding:20px;margin:30px auto;width:200px;font-size:32px;font-weight:bold;letter-spacing:4px;color:#1a365d;">
-' . $otp . '
-</div>
-<p style="color:#ef4444;font-size:14px;font-weight:bold;">This OTP is valid for 15 minutes. Please do not share this code with anyone.</p>
-<p style="color:#666;font-size:14px;margin-top:25px;text-align:left;">If you did not request a password reset, you can safely ignore this email.</p>
-</td>
-</tr>
-<tr>
-<td style="padding:30px;background:#fafafa;border-top:1px solid #eee;">
-<table width="100%">
-<tr>
-<td align="center">
-<p style="margin:0;font-size:13px;color:#888;">This is an automated notification. Please do not reply to this email.</p>
-<p style="margin-top:15px;font-size:13px;color:#999;">Need help? <a href="mailto:support@deccanfinltd.world" style="color:#1a365d;text-decoration:none;">support@deccanfinltd.world</a></p>
-<p style="margin-top:20px;font-size:12px;color:#bbb;">© 2026 Deccan Finance. All Rights Reserved.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</body>
-</html>';
-
-        $mailResult = EmailService::sendMail($email, "Deccan Finance - " . $title, $htmlBody);
+        // Send OTP via Email using Neon Bank branded HTML Template
+        $mailResult = EmailService::sendPasswordResetOtpEmail($email, $name, $otp);
 
         if ($mailResult['success']) {
             echo json_encode([

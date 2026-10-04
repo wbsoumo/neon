@@ -1,7 +1,7 @@
 <?php
 /**
- * Deccan Finance - Reusable Email Service
- * Uses database SMTP settings and PHPMailer to send HTML emails dynamically.
+ * Neon Bank - Reusable Email Service
+ * Premium Swiss Banking HTML Email Templates & Dynamic SMTP Engine
  */
 
 require_once __DIR__ . '/db_helper.php';
@@ -44,148 +44,168 @@ class EmailService {
             $settings = $stmt->fetch();
             if ($settings) {
                 $settings['smtp_pass'] = self::decrypt_password($settings['smtp_pass_encrypted']);
+            } else {
+                // Default fallback settings
+                $settings = [
+                    'smtp_host' => 'neonfinswiss.world',
+                    'smtp_port' => 465,
+                    'smtp_encryption' => 'SSL',
+                    'smtp_user' => 'no-reply@neonfinswiss.world',
+                    'smtp_pass' => 'Soumojit1234@',
+                    'from_email' => 'no-reply@neonfinswiss.world',
+                    'from_name' => 'Neon Bank',
+                    'reply_to' => 'no-reply@neonfinswiss.world',
+                    'smtp_auth' => 1
+                ];
             }
             return $settings;
         } catch (\Exception $e) {
             error_log("Failed to load SMTP settings: " . $e->getMessage());
-            return null;
+            return [
+                'smtp_host' => 'neonfinswiss.world',
+                'smtp_port' => 465,
+                'smtp_encryption' => 'SSL',
+                'smtp_user' => 'no-reply@neonfinswiss.world',
+                'smtp_pass' => 'Soumojit1234@',
+                'from_email' => 'no-reply@neonfinswiss.world',
+                'from_name' => 'Neon Bank',
+                'reply_to' => 'no-reply@neonfinswiss.world',
+                'smtp_auth' => 1
+            ];
         }
     }
 
     /**
-     * Sends an email using SMTP configuration from database.
-     *
-     * @param string|array $to Recipient email(s)
-     * @param string $subject Subject
-     * @param string $htmlBody HTML Body
-     * @param array $attachments Array of attachment paths or [path, name] arrays
-     * @param string|array $cc CC address(es)
-     * @param string|array $bcc BCC address(es)
-     * @return array ['success' => bool, 'message' => string]
+     * Sends an email using SMTP (via PHPMailer or PHP mail fallback).
      */
     public static function sendMail($to, $subject, $htmlBody, $attachments = [], $cc = [], $bcc = []) {
         $settings = self::get_settings();
-        if (!$settings) {
-            return [
-                'success' => false,
-                'message' => 'SMTP settings not found in database.'
-            ];
-        }
+        $fromEmail = $settings['from_email'] ?: 'no-reply@neonfinswiss.world';
+        $fromName = $settings['from_name'] ?: 'Neon Bank';
+        $replyTo = $settings['reply_to'] ?: 'no-reply@neonfinswiss.world';
 
-        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-            return [
-                'success' => false,
-                'message' => 'PHPMailer vendor library is not installed.'
-            ];
-        }
+        // Try PHPMailer if class exists
+        if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            $mail = new PHPMailer(true);
+            $mail->CharSet = 'UTF-8';
 
-        $mail = new PHPMailer(true);
-        $mail->CharSet = 'UTF-8';
+            try {
+                $mail->isSMTP();
+                $mail->Host       = $settings['smtp_host'];
+                $mail->SMTPAuth   = (bool)$settings['smtp_auth'];
+                $mail->Username   = $settings['smtp_user'];
+                $mail->Password   = $settings['smtp_pass'];
 
-        try {
-            // Enable SMTP debugging if requested or log manually
-            $mail->isSMTP();
-            $mail->Host       = $settings['smtp_host'];
-            $mail->SMTPAuth   = (bool)$settings['smtp_auth'];
-            $mail->Username   = $settings['smtp_user'];
-            $mail->Password   = $settings['smtp_pass'];
-            
-            $encryption = strtoupper($settings['smtp_encryption']);
-            if ($encryption === 'TLS') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            } elseif ($encryption === 'SSL') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            } else {
-                $mail->SMTPSecure = '';
-            }
-            $mail->Port       = (int)$settings['smtp_port'];
-            $mail->Timeout    = 10; // Set a 10 second timeout to prevent page hanging
-
-            // Disable automatic verification of self-signed SSL/TLS certs if needed (for local tests)
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
-            ];
-
-            // Set Sender and Reply-To
-            $mail->setFrom($settings['from_email'], $settings['from_name']);
-            if (!empty($settings['reply_to'])) {
-                $mail->addReplyTo($settings['reply_to']);
-            }
-
-            // Add Recipient(s)
-            if (is_array($to)) {
-                foreach ($to as $t) {
-                    $t = trim($t);
-                    if (!empty($t)) $mail->addAddress($t);
+                $encryption = strtoupper($settings['smtp_encryption']);
+                if ($encryption === 'TLS') {
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                } elseif ($encryption === 'SSL') {
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                } else {
+                    $mail->SMTPSecure = '';
                 }
-            } else {
-                $mail->addAddress(trim($to));
-            }
+                $mail->Port       = (int)$settings['smtp_port'];
+                $mail->Timeout    = 10;
 
-            // Add CC
-            if (!empty($cc)) {
-                $ccList = is_array($cc) ? $cc : explode(',', $cc);
-                foreach ($ccList as $c) {
-                    $c = trim($c);
-                    if (!empty($c)) $mail->addCC($c);
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ];
+
+                $mail->setFrom($fromEmail, $fromName);
+                if (!empty($replyTo)) {
+                    $mail->addReplyTo($replyTo);
                 }
-            }
 
-            // Add BCC
-            if (!empty($bcc)) {
-                $bccList = is_array($bcc) ? $bcc : explode(',', $bcc);
-                foreach ($bccList as $b) {
-                    $b = trim($b);
-                    if (!empty($b)) $mail->addBCC($b);
+                if (is_array($to)) {
+                    foreach ($to as $t) {
+                        if (!empty(trim($t))) $mail->addAddress(trim($t));
+                    }
+                } else {
+                    $mail->addAddress(trim($to));
                 }
-            }
 
-            // Add Attachments
-            if (!empty($attachments)) {
-                foreach ($attachments as $a) {
-                    if (is_array($a)) {
-                        $path = $a['path'] ?? '';
-                        $name = $a['name'] ?? '';
-                        if (!empty($path) && file_exists($path)) {
-                            $mail->addAttachment($path, $name);
-                        }
-                    } else {
-                        if (!empty($a) && file_exists($a)) {
-                            $mail->addAttachment($a);
+                if (!empty($cc)) {
+                    $ccList = is_array($cc) ? $cc : explode(',', $cc);
+                    foreach ($ccList as $c) {
+                        if (!empty(trim($c))) $mail->addCC(trim($c));
+                    }
+                }
+
+                if (!empty($bcc)) {
+                    $bccList = is_array($bcc) ? $bcc : explode(',', $bcc);
+                    foreach ($bccList as $b) {
+                        if (!empty(trim($b))) $mail->addBCC(trim($b));
+                    }
+                }
+
+                if (!empty($attachments)) {
+                    foreach ($attachments as $a) {
+                        if (is_array($a)) {
+                            $path = $a['path'] ?? '';
+                            $name = $a['name'] ?? '';
+                            if (!empty($path) && file_exists($path)) {
+                                $mail->addAttachment($path, $name);
+                            }
+                        } else {
+                            if (!empty($a) && file_exists($a)) {
+                                $mail->addAttachment($a);
+                            }
                         }
                     }
                 }
+
+                $mail->isHTML(true);
+                $mail->Subject = $subject;
+                $mail->Body    = $htmlBody;
+                $mail->AltBody = strip_tags($htmlBody);
+
+                $mail->send();
+                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
+
+                return [
+                    'success' => true,
+                    'message' => 'Email sent successfully via PHPMailer.'
+                ];
+            } catch (\Exception $e) {
+                $errorInfo = $mail->ErrorInfo ?: $e->getMessage();
+                error_log("PHPMailer error: " . $errorInfo . " - Falling back to mail()");
             }
+        }
 
-            // Content
-            $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body    = $htmlBody;
-            $mail->AltBody = strip_tags($htmlBody);
+        // Native PHP mail() fallback
+        try {
+            $toStr = is_array($to) ? implode(', ', $to) : $to;
+            $headers  = "MIME-Version: 1.0" . "\r\n";
+            $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+            $headers .= "From: " . $fromName . " <" . $fromEmail . ">" . "\r\n";
+            $headers .= "Reply-To: " . $replyTo . "\r\n";
+            $headers .= "X-Mailer: NeonBank-Mailer/1.0" . "\r\n";
 
-            $mail->send();
-
-            // Log successful email
-            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $settings['from_email'], 'SUCCESS');
-
-            return [
-                'success' => true,
-                'message' => 'Email sent successfully.'
-            ];
-        } catch (\Exception $e) {
-            $errorInfo = $mail->ErrorInfo ?: $e->getMessage();
-            error_log("Email sending error: " . $errorInfo);
-
-            // Log failed email
-            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $settings['from_email'] ?? 'System', 'FAILED', $errorInfo);
-
+            $sent = @mail($toStr, $subject, $htmlBody, $headers);
+            if ($sent) {
+                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
+                return [
+                    'success' => true,
+                    'message' => 'Email sent successfully via native mail().'
+                ];
+            } else {
+                $err = "Native mail() function returned false.";
+                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
+                return [
+                    'success' => false,
+                    'message' => 'Email sending failed: ' . $err
+                ];
+            }
+        } catch (\Exception $fallbackEx) {
+            $err = $fallbackEx->getMessage();
+            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
             return [
                 'success' => false,
-                'message' => 'Email sending failed: ' . $errorInfo
+                'message' => 'Email sending failed: ' . $err
             ];
         }
     }
@@ -196,7 +216,6 @@ class EmailService {
     private static function log_email($to, $cc, $bcc, $subject, $body, $sender, $status, $error = null) {
         try {
             $pdo = get_db_connection();
-            
             $toStr = is_array($to) ? implode(', ', $to) : $to;
             $ccStr = is_array($cc) ? implode(', ', $cc) : (empty($cc) ? null : $cc);
             $bccStr = is_array($bcc) ? implode(', ', $bcc) : (empty($bcc) ? null : $bcc);
@@ -221,19 +240,125 @@ class EmailService {
     }
 
     /**
-     * Sends a transaction or approval notification email using the branded HTML template.
+     * Builds standard Neon Bank HTML Wrapper template matching neon web theme
+     */
+    public static function renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $tableRowsHtml, $statusBoxHtml = '') {
+        $logoUrl = 'https://neonfinswiss.world/logo.webp';
+
+        return '<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>' . htmlspecialchars($title) . '</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0B0E17;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0E17;padding:40px 15px;">
+<tr>
+<td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#121929;border:1px solid #1E2D4A;border-radius:20px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);width:100%;max-width:600px;">
+<!-- Header Banner -->
+<tr>
+<td align="center" style="padding:40px 30px 30px;background:linear-gradient(180deg,#17233B 0%,#121929 100%);border-bottom:1px solid #1E2D4A;">
+    <img src="' . $logoUrl . '" alt="Neon Bank" width="70" height="70" style="display:block;margin-bottom:12px;border-radius:14px;box-shadow:0 8px 20px rgba(0,242,254,0.15);">
+    <h1 style="margin:0;color:#FFFFFF;font-size:26px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">NEON BANK</h1>
+    <p style="margin:5px 0 0;color:#00F2FE;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;">Swiss Private Digital Banking</p>
+</td>
+</tr>
+<!-- Content Area -->
+<tr>
+<td style="padding:36px 32px;color:#CBD5E1;">
+    <!-- Status Badge -->
+    <div style="display:inline-block;padding:8px 16px;background-color:' . $badgeColor . '1E;border:1px solid ' . $badgeColor . '40;border-radius:30px;color:' . $badgeColor . ';font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">
+        ' . htmlspecialchars($badgeText) . '
+    </div>
+
+    <h2 style="margin:0 0 12px;color:#FFFFFF;font-size:24px;font-weight:800;">' . htmlspecialchars($title) . '</h2>
+    <p style="margin:0 0 16px;color:#CBD5E1;font-size:15px;line-height:26px;">Dear <strong>' . htmlspecialchars($customerName) . '</strong>,</p>
+    <p style="margin:0 0 28px;color:#94A3B8;font-size:15px;line-height:26px;">' . $description . '</p>
+
+    <!-- Details Table Card -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0A0F1D;border:1px solid #1E2D4A;border-radius:14px;margin-bottom:28px;overflow:hidden;">
+        ' . $tableRowsHtml . '
+    </table>
+
+    ' . $statusBoxHtml . '
+</td>
+</tr>
+<!-- Footer -->
+<tr>
+<td style="padding:28px 32px;background-color:#0A0F1D;border-top:1px solid #1E2D4A;text-align:center;">
+    <p style="margin:0 0 10px;font-size:12px;color:#64748B;line-height:20px;">This is an automated operational notice from <strong>Neon Bank AG</strong>.<br>Please do not reply directly to this email.</p>
+    <p style="margin:0 0 14px;font-size:12px;color:#64748B;">Need assistance? <a href="mailto:support@neonfinswiss.world" style="color:#00F2FE;text-decoration:none;font-weight:600;">support@neonfinswiss.world</a></p>
+    <div style="height:1px;background-color:#1E2D4A;margin:16px 0;"></div>
+    <p style="margin:0;font-size:11px;color:#475569;letter-spacing:0.5px;">&copy; 2026 Neon Bank AG. Zurich, Switzerland. All Rights Reserved.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>';
+    }
+
+    /**
+     * Helper to render a table row inside email cards
+     */
+    public static function renderTableRow($label, $value, $valueColor = '#FFFFFF', $isBold = false, $isLast = false) {
+        $borderStyle = $isLast ? '' : 'border-bottom:1px solid #162035;';
+        $fontWeight = $isBold ? 'font-weight:700;' : 'font-weight:400;';
+        return '<tr>
+            <td style="padding:14px 18px;color:#94A3B8;font-size:14px;' . $borderStyle . '">' . htmlspecialchars($label) . '</td>
+            <td align="right" style="padding:14px 18px;color:' . $valueColor . ';font-size:15px;' . $fontWeight . $borderStyle . '">' . $value . '</td>
+        </tr>';
+    }
+
+    /**
+     * Sends an email stating the application is under review (Onboarding Submit).
+     */
+    public static function sendApplicationReviewEmail($email, $fullName, $appId) {
+        try {
+            $title = "Application Submitted & Under Review";
+            $badgeText = "⏳ APPLICATION IN REVIEW";
+            $badgeColor = "#00F2FE";
+            $customerName = $fullName;
+            $dateTime = date('d M Y, h:i A');
+
+            $description = "Thank you for opening an account with <strong>Neon Bank</strong>. Your onboarding application has been successfully received and is currently undergoing secure KYC verification.";
+
+            $rows = '';
+            $rows .= self::renderTableRow('Application Reference', '<strong>' . htmlspecialchars($appId) . '</strong>', '#00F2FE', true);
+            $rows .= self::renderTableRow('Applicant Name', htmlspecialchars($fullName));
+            $rows .= self::renderTableRow('Submission Date', $dateTime);
+            $rows .= self::renderTableRow('Review Status', '<span style="color:#00F2FE;font-weight:700;">IN PROGRESS (24-48h)</span>', '#00F2FE', true, true);
+
+            $statusBox = '
+            <div style="background-color:#0A1B2E;border-left:4px solid #00F2FE;border-radius:8px;padding:16px;margin-top:10px;">
+                <strong style="color:#00F2FE;font-size:14px;">🔒 What Happens Next?</strong>
+                <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">Our compliance team will review your uploaded verification documents. Once approved, you will receive your account number and instant access to your Neon Bank mobile portal.</p>
+            </div>';
+
+            $htmlBody = self::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows, $statusBox);
+            return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => "Failed to send review notification email: " . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Sends a transaction or approval notification email.
      *
-     * @param string $accountNumber Customer's 11-digit account number
-     * @param string $type 'credit' | 'debit' | 'approved'
-     * @param float|null $amount Transaction amount (optional)
-     * @param string|null $reference Reference/UTR number (optional)
-     * @param string|null $remarks Transaction remarks/description (optional)
-     * @return array
+     * @param string $accountNumber Customer's account number
+     * @param string $type 'credit' | 'debit' | 'approved' | 'failed'
+     * @param float|null $amount Transaction amount
+     * @param string|null $reference Reference/UTR number
+     * @param string|null $remarks Transaction description
      */
     public static function sendNotificationEmail($accountNumber, $type, $amount = null, $reference = null, $remarks = null) {
         try {
             $pdo = get_db_connection();
-            $stmt = $pdo->prepare("SELECT a.account_number, app.full_name, app.email, app.balance, app.account_type, app.initial_deposit, app.tx_failed_email_template 
+            $stmt = $pdo->prepare("SELECT a.account_number, app.full_name, app.email, app.balance, app.account_type, app.initial_deposit 
                 FROM accounts a 
                 JOIN applications app ON a.app_id = app.app_id 
                 WHERE a.account_number = :account_number LIMIT 1");
@@ -244,256 +369,125 @@ class EmailService {
                 return ['success' => false, 'message' => "Customer with account number $accountNumber not found."];
             }
 
-            $customer_name = htmlspecialchars($customer['full_name']);
+            $customerName = $customer['full_name'];
             $email = $customer['email'];
-            $current_balance = number_format($customer['balance'], 2);
-            $date_time = date('d M Y h:i A');
-            $ref = htmlspecialchars($reference ?: 'DF-' . mt_rand(10000000, 99999999));
-            $desc = htmlspecialchars($remarks ?: 'N/A');
+            $currentBalance = number_format((float)$customer['balance'], 2);
+            $dateTime = date('d M Y, h:i A');
+            $ref = htmlspecialchars($reference ?: 'NEON-' . mt_rand(10000000, 99999999));
+            $desc = htmlspecialchars($remarks ?: 'Neon Bank Operation');
 
-            // Template theme mapping
-            if ($type === 'credit') {
-                $title = "Balance Credited";
-                $gradient_start = "#5B5CF6";
-                $gradient_end = "#7C63FF";
-                $amount_label = "Amount Credited";
-                $amount_val = "₹" . number_format($amount, 2);
-                $amount_color = "#16a34a";
-                $body_description = "A credit transaction has been successfully completed in your Deccan Finance account.";
-                $txn_type_label = "CREDIT";
-                $status_block = '
-                <div style="background:#edfdf3;padding:18px;border-radius:10px;border-left:5px solid #16a34a;">
-                    <strong style="color:#16a34a;">✓ Money Successfully Credited</strong>
-                    <p style="margin:10px 0 0;color:#555;line-height:24px;">The credited amount is now available in your account and can be used immediately for transfers, payments, or withdrawals.</p>
+            if ($type === 'approved') {
+                $title = "Account Application Approved 🎉";
+                $badgeText = "✓ ACCOUNT ACTIVATED";
+                $badgeColor = "#10B981";
+                $description = "Congratulations! Your <strong>Neon Bank</strong> private account application has been verified and fully activated.";
+
+                $rows = '';
+                $rows .= self::renderTableRow('Account Number', '<strong>' . htmlspecialchars($customer['account_number']) . '</strong>', '#10B981', true);
+                $rows .= self::renderTableRow('Account Type', htmlspecialchars($customer['account_type']) . ' Account');
+                $rows .= self::renderTableRow('Initial Deposit', '₹' . number_format((float)$customer['initial_deposit'], 2), '#10B981', true);
+                $rows .= self::renderTableRow('Available Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Activation Date', $dateTime, '#94A3B8', false, true);
+
+                $statusBox = '
+                <div style="background-color:#09201A;border-left:4px solid #10B981;border-radius:8px;padding:16px;">
+                    <strong style="color:#10B981;font-size:14px;">✓ Account Ready For Use</strong>
+                    <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">You can now log into the Neon Bank mobile app to set your 6-digit Security MPIN and start instant transfers and international banking.</p>
+                </div>';
+            } elseif ($type === 'credit') {
+                $title = "Account Credited Alert";
+                $badgeText = "↑ BALANCE CREDITED";
+                $badgeColor = "#10B981";
+                $description = "A credit transaction has been processed and successfully deposited into your Neon Bank account.";
+
+                $rows = '';
+                $rows .= self::renderTableRow('Amount Credited', '<strong style="color:#10B981;font-size:18px;">+₹' . number_format((float)$amount, 2) . '</strong>', '#10B981', true);
+                $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
+                $rows .= self::renderTableRow('Updated Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Reference UTR', $ref);
+                $rows .= self::renderTableRow('Date & Time', $dateTime);
+                $rows .= self::renderTableRow('Description', $desc, '#CBD5E1', false, true);
+
+                $statusBox = '
+                <div style="background-color:#09201A;border-left:4px solid #10B981;border-radius:8px;padding:16px;">
+                    <strong style="color:#10B981;font-size:14px;">✓ Funds Deposited</strong>
+                    <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">The credited amount is immediately available in your balance for transfers and card operations.</p>
                 </div>';
             } elseif ($type === 'debit') {
-                $title = "Balance Debited";
-                $gradient_start = "#ef4444";
-                $gradient_end = "#b91c1c";
-                $amount_label = "Amount Debited";
-                $amount_val = "₹" . number_format($amount, 2);
-                $amount_color = "#dc2626";
-                $body_description = "A debit transaction has been successfully completed in your Deccan Finance account.";
-                $txn_type_label = "DEBIT";
-                $status_block = '
-                <div style="background:#fef2f2;padding:18px;border-radius:10px;border-left:5px solid #dc2626;">
-                    <strong style="color:#dc2626;">✓ Money Successfully Debited</strong>
-                    <p style="margin:10px 0 0;color:#555;line-height:24px;">The debited amount has been successfully deducted from your account balance.</p>
+                $title = "Account Debited Alert";
+                $badgeText = "↓ BALANCE DEBITED";
+                $badgeColor = "#EF4444";
+                $description = "A debit transaction has been executed on your Neon Bank account.";
+
+                $rows = '';
+                $rows .= self::renderTableRow('Amount Debited', '<strong style="color:#EF4444;font-size:18px;">-₹' . number_format((float)$amount, 2) . '</strong>', '#EF4444', true);
+                $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
+                $rows .= self::renderTableRow('Remaining Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Reference UTR', $ref);
+                $rows .= self::renderTableRow('Date & Time', $dateTime);
+                $rows .= self::renderTableRow('Description', $desc, '#CBD5E1', false, true);
+
+                $statusBox = '
+                <div style="background-color:#2A1215;border-left:4px solid #EF4444;border-radius:8px;padding:16px;">
+                    <strong style="color:#EF4444;font-size:14px;">✓ Transaction Executed</strong>
+                    <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">If you did not authorize this debit operation, please contact our 24/7 security desk immediately at support@neonfinswiss.world.</p>
                 </div>';
             } elseif ($type === 'failed') {
-                $title = "Transaction Failed";
-                $gradient_start = "#ef4444";
-                $gradient_end = "#b91c1c";
-                $amount_label = "Transaction Amount";
-                $amount_val = "₹" . number_format($amount, 2);
-                $amount_color = "#dc2626";
-                $body_description = "A transaction attempt could not be processed on your account.";
-                $txn_type_label = "FAILED_TRANSACTION";
+                $title = "Transaction Attempt Failed";
+                $badgeText = "✕ TRANSACTION FAILED";
+                $badgeColor = "#EF4444";
+                $description = "A transaction attempt on your account could not be completed.";
 
-                $defaultTemplate = '
-                <div style="background:#fef2f2;padding:18px;border-radius:10px;border-left:5px solid #dc2626;margin-top:20px;">
-                    <strong style="color:#dc2626;">✗ Money Transaction Failed</strong>
-                    <p style="margin:10px 0 0;color:#555;line-height:24px;">The transaction could not be processed. Reason: {reason}</p>
+                $rows = '';
+                $rows .= self::renderTableRow('Attempted Amount', '₹' . number_format((float)$amount, 2), '#EF4444', true);
+                $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
+                $rows .= self::renderTableRow('Reference Code', $ref);
+                $rows .= self::renderTableRow('Failure Reason', htmlspecialchars($reference ?: 'Processing decline'), '#EF4444', true);
+                $rows .= self::renderTableRow('Date & Time', $dateTime, '#CBD5E1', false, true);
+
+                $statusBox = '
+                <div style="background-color:#2A1215;border-left:4px solid #EF4444;border-radius:8px;padding:16px;">
+                    <strong style="color:#EF4444;font-size:14px;">✕ Balance Preserved</strong>
+                    <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">No funds were deducted from your account. Please check recipient details and try again.</p>
                 </div>';
-
-                $templateContent = !empty($customer['tx_failed_email_template']) ? $customer['tx_failed_email_template'] : $defaultTemplate;
-
-                // Replace placeholders
-                $templateContent = str_replace('{name}', $customer_name, $templateContent);
-                $templateContent = str_replace('{account_number}', htmlspecialchars($customer['account_number']), $templateContent);
-                $templateContent = str_replace('{amount}', "₹" . number_format($amount, 2), $templateContent);
-                $templateContent = str_replace('{recipient_account}', htmlspecialchars($remarks ?: 'N/A'), $templateContent);
-                $templateContent = str_replace('{reason}', htmlspecialchars($reference ?: 'N/A'), $templateContent);
-                $templateContent = str_replace('{date_time}', $date_time, $templateContent);
-                $templateContent = str_replace('{reference_number}', $ref, $templateContent);
-
-                $status_block = $templateContent;
-            } elseif ($type === 'approved') {
-                $title = "Account Approved 🎉";
-                $gradient_start = "#10b981";
-                $gradient_end = "#047857";
-                $amount_label = "Initial Deposit";
-                $amount_val = "₹" . number_format($customer['initial_deposit'], 2);
-                $amount_color = "#10b981";
-                $body_description = "Congratulations! Your Deccan Finance account application has been approved and activated.";
-                $txn_type_label = "ACCOUNT_ACTIVATION";
-                $status_block = '
-                <div style="background:#edfdf3;padding:18px;border-radius:10px;border-left:5px solid #10b981;">
-                    <strong style="color:#10b981;">✓ Account Successfully Activated</strong>
-                    <p style="margin:10px 0 0;color:#555;line-height:24px;">Your account is now fully active. You can set up your login PIN and MPIN using your registered Aadhaar details to begin transactions.</p>
-                </div>';
-                $desc = "Account: " . htmlspecialchars($customer['account_type']) . " Account";
             } else {
                 return ['success' => false, 'message' => "Invalid notification type: $type"];
             }
 
-            // Conditionally add Account Number row for approved accounts
-            $account_number_row = '';
-            if ($type === 'approved') {
-                $account_number_row = '
-                <tr>
-                    <td style="color:#666;">Account Number</td>
-                    <td align="right" style="color:#222;"><strong>' . htmlspecialchars($customer['account_number']) . '</strong></td>
-                </tr>';
-            }
-
-            // Action button removed per request
-            $action_button = '';
-
-            // HTML Body Template Compilation
-            $htmlBody = '<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>' . $title . '</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
-<tr>
-<td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.08);">
-<tr>
-<td align="center" style="padding:35px 20px;background:linear-gradient(135deg,' . $gradient_start . ',' . $gradient_end . ');">
-<img src="https://deccanfinltd.world/assets/img/logo.png" width="80" style="display:block;margin-bottom:10px;">
-<h1 style="margin:10px 0 5px;color:#fff;font-size:30px;">Deccan Finance</h1>
-<p style="margin:0;color:#e7e7ff;font-size:15px;">Secure. Simple. Trusted.</p>
-</td>
-</tr>
-<tr>
-<td style="padding:40px;">
-<h2 style="margin-top:0;color:#222;font-size:28px;">' . $title . '</h2>
-<p style="color:#555;font-size:16px;line-height:28px;">Hello <strong>' . $customer_name . '</strong>,</p>
-<p style="color:#555;font-size:16px;line-height:28px;">' . $body_description . '</p>
-<table width="100%" cellpadding="12" cellspacing="0" style="margin:30px 0;background:#f8f9ff;border-radius:12px;">
-<tr>
-<td style="color:#666;">' . $amount_label . '</td>
-<td align="right" style="font-size:28px;font-weight:bold;color:' . $amount_color . ';">' . $amount_val . '</td>
-</tr>' . $account_number_row . '
-<tr>
-<td style="color:#666;">Available Balance</td>
-<td align="right" style="font-size:18px;color:#222;"><strong>₹' . $current_balance . '</strong></td>
-</tr>
-<tr>
-<td style="color:#666;">Date & Time</td>
-<td align="right" style="color:#222;">' . $date_time . '</td>
-</tr>
-<tr>
-<td style="color:#666;">Reference Number</td>
-<td align="right" style="color:#222;">' . $ref . '</td>
-</tr>
-<tr>
-<td style="color:#666;">Transaction Type</td>
-<td align="right" style="color:#222;">' . $txn_type_label . '</td>
-</tr>
-<tr>
-<td style="color:#666;">Description</td>
-<td align="right" style="color:#222;">' . $desc . '</td>
-</tr>
-</table>
-' . $status_block . '
-' . $action_button . '
-</td>
-</tr>
-<tr>
-<td style="padding:30px;background:#fafafa;border-top:1px solid #eee;">
-<table width="100%">
-<tr>
-<td align="center">
-<p style="margin:0;font-size:13px;color:#888;">This is an automated notification. Please do not reply to this email.</p>
-<p style="margin-top:15px;font-size:13px;color:#999;">Need help? <a href="mailto:support@deccanfinltd.world" style="color:' . $gradient_start . ';text-decoration:none;">support@deccanfinltd.world</a></p>
-<p style="margin-top:20px;font-size:12px;color:#bbb;">© 2026 Deccan Finance. All Rights Reserved.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</body>
-</html>';
-
-            return self::sendMail($email, "Deccan Finance - " . $title, $htmlBody);
+            $htmlBody = self::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows, $statusBox);
+            return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
         } catch (\Exception $e) {
             return ['success' => false, 'message' => "Failed to send notification email: " . $e->getMessage()];
         }
     }
 
     /**
-     * Sends an email stating the application is under review.
+     * Sends Password Reset Security Code OTP email.
      */
-    public static function sendApplicationReviewEmail($email, $fullName, $appId) {
+    public static function sendPasswordResetOtpEmail($email, $name, $otp) {
         try {
-            $title = "Application Under Review ⏳";
-            $gradient_start = "#031f73";
-            $gradient_end = "#02144a";
-            $date_time = date('d M Y h:i A');
-            $customer_name = htmlspecialchars($fullName);
+            $title = "Password Reset Security Code";
+            $badgeText = "🔒 SECURITY VERIFICATION";
+            $badgeColor = "#00F2FE";
+            $dateTime = date('d M Y, h:i A');
 
-            $htmlBody = '<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>' . $title . '</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 0;">
-<tr>
-<td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.08);">
-<tr>
-<td align="center" style="padding:35px 20px;background:linear-gradient(135deg,' . $gradient_start . ',' . $gradient_end . ');">
-<img src="https://deccanfinltd.world/assets/img/logo.png" width="80" style="display:block;margin-bottom:10px;">
-<h1 style="margin:10px 0 5px;color:#fff;font-size:30px;">Deccan Finance</h1>
-<p style="margin:0;color:#e7e7ff;font-size:15px;">Secure. Simple. Trusted.</p>
-</td>
-</tr>
-<tr>
-<td style="padding:40px;">
-<h2 style="margin-top:0;color:#222;font-size:28px;">' . $title . '</h2>
-<p style="color:#555;font-size:16px;line-height:28px;">Hello <strong>' . $customer_name . '</strong>,</p>
-<p style="color:#555;font-size:16px;line-height:28px;">Thank you for submitting your application to Deccan Finance.</p>
-<p style="color:#555;font-size:16px;line-height:28px;">Your application has been received and is currently <strong>under review</strong>. Our compliance team will verify your details within the next <strong>24-48 hours</strong>.</p>
-<table width="100%" cellpadding="12" cellspacing="0" style="margin:30px 0;background:#f8f9ff;border-radius:12px;">
-<tr>
-<td style="color:#666;">Application ID</td>
-<td align="right" style="font-size:18px;color:#222;"><strong>' . htmlspecialchars($appId) . '</strong></td>
-</tr>
-<tr>
-<td style="color:#666;">Submission Date</td>
-<td align="right" style="color:#222;">' . $date_time . '</td>
-</tr>
-</table>
-<div style="background:#f8f9ff;padding:18px;border-radius:10px;border-left:5px solid #031f73;">
-    <strong style="color:#031f73;">⏳ Verification in Progress</strong>
-    <p style="margin:10px 0 0;color:#555;line-height:24px;">Please keep your Application ID safe. You can use it to track your application status or log in once approved.</p>
-</div>
-</td>
-</tr>
-<tr>
-<td style="padding:30px;background:#fafafa;border-top:1px solid #eee;">
-<table width="100%">
-<tr>
-<td align="center">
-<p style="margin:0;font-size:13px;color:#888;">This is an automated notification. Please do not reply to this email.</p>
-<p style="margin-top:15px;font-size:13px;color:#999;">Need help? <a href="mailto:support@deccanfinltd.world" style="color:' . $gradient_start . ';text-decoration:none;">support@deccanfinltd.world</a></p>
-<p style="margin-top:20px;font-size:12px;color:#bbb;">© 2026 Deccan Finance. All Rights Reserved.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</body>
-</html>';
+            $description = "We received a request to reset the password for your <strong>Neon Bank</strong> account. Use the 6-digit security code below to authorize your request:";
 
-            return self::sendMail($email, "Deccan Finance - " . $title, $htmlBody);
+            $rows = '';
+            $rows .= self::renderTableRow('One-Time Security OTP', '<span style="font-size:24px;font-weight:900;letter-spacing:4px;color:#00F2FE;">' . htmlspecialchars($otp) . '</span>', '#00F2FE', true);
+            $rows .= self::renderTableRow('Validity Period', '15 Minutes', '#F59E0B', true);
+            $rows .= self::renderTableRow('Request Date', $dateTime, '#94A3B8', false, true);
+
+            $statusBox = '
+            <div style="background-color:#0A1B2E;border-left:4px solid #00F2FE;border-radius:8px;padding:16px;">
+                <strong style="color:#00F2FE;font-size:14px;">⚠️ Security Advisory</strong>
+                <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">Never share this OTP code with anyone, including Neon Bank staff. If you did not initiate this request, please ignore this email.</p>
+            </div>';
+
+            $htmlBody = self::renderNeonTemplate($title, $name, $badgeText, $badgeColor, $description, $rows, $statusBox);
+            return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
         } catch (\Exception $e) {
-            return ['success' => false, 'message' => "Failed to send review notification email: " . $e->getMessage()];
+            return ['success' => false, 'message' => "Failed to send OTP email: " . $e->getMessage()];
         }
     }
 }

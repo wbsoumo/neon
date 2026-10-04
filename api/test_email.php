@@ -1,122 +1,59 @@
 <?php
 /**
- * Deccan Finance - Test AWS SES SMTP Email Delivery
- * Scope: Public/Authenticated/Admin
+ * Neon Bank - Test Email Delivery Endpoint
+ * Sends a test email to the specified address or default target.
  */
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/email_service.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
+$to = isset($_GET['to']) ? trim($_GET['to']) : (isset($_POST['to']) ? trim($_POST['to']) : 'globaltrade1072@gmail.com');
 
-// Get parameters
-$to = isset($_GET['to']) ? trim($_GET['to']) : (isset($_POST['to']) ? trim($_POST['to']) : '');
-$subject = isset($_GET['subject']) ? trim($_GET['subject']) : (isset($_POST['subject']) ? trim($_POST['subject']) : '');
-$body = isset($_GET['body']) ? trim($_GET['body']) : (isset($_POST['body']) ? trim($_POST['body']) : '');
-$debugMode = (isset($_GET['debug']) && $_GET['debug'] == '1') || (isset($_POST['debug']) && $_POST['debug'] == '1');
-
-if (empty($to)) {
+if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => 'Recipient email address (to) is required. Usage: /api/test_email.php?to=test@example.com&debug=1'
+        'message' => 'Valid recipient email address (to) is required.'
     ]);
     exit;
 }
 
-if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Invalid recipient email address format.'
-    ]);
-    exit;
-}
+// Build a sample Neon Bank test email template
+$title = "Neon Bank Email Service System Test";
+$customerName = "Alexander Weber";
+$badgeText = "✓ SYSTEM VERIFICATION SUCCESSFUL";
+$badgeColor = "#00F2FE";
+$description = "This is an automated test notification confirming that <strong>Neon Bank</strong> email service is active and correctly configured with <strong>no-reply@neonfinswiss.world</strong> credentials.";
 
-$mail = new PHPMailer(true);
-$mail->CharSet = 'UTF-8';
-$debugBuffer = [];
+$rows = '';
+$rows .= EmailService::renderTableRow('Test Recipient', htmlspecialchars($to), '#00F2FE', true);
+$rows .= EmailService::renderTableRow('Sender Address', 'no-reply@neonfinswiss.world');
+$rows .= EmailService::renderTableRow('SMTP Gateway Host', 'neonfinswiss.world:465 (SSL)');
+$rows .= EmailService::renderTableRow('Dispatch Timestamp', date('d M Y, h:i:s A'));
+$rows .= EmailService::renderTableRow('Security Status', '<span style="color:#10B981;font-weight:700;">TLS/SSL AUTHENTICATED</span>', '#10B981', true, true);
 
-try {
-    // Enable SMTP Debugging if requested
-    if ($debugMode) {
-        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
-        $mail->Debugoutput = function($str, $level) use (&$debugBuffer) {
-            $debugBuffer[] = trim($str);
-        };
-    } else {
-        $mail->SMTPDebug = SMTP::DEBUG_OFF;
-    }
+$statusBox = '
+<div style="background-color:#0A1B2E;border-left:4px solid #00F2FE;border-radius:8px;padding:16px;">
+    <strong style="color:#00F2FE;font-size:14px;">⚡ System Status Normal</strong>
+    <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">Automated transactional emails for onboarding submissions, application approvals, payouts, P2P transfers, and password resets are active.</p>
+</div>';
 
-    // SMTP Server Settings from Database Settings
-    $settings = EmailService::get_settings();
-    if (!$settings) {
-        throw new Exception('SMTP settings not found in database.');
-    }
+$htmlBody = EmailService::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows, $statusBox);
 
-    $mail->isSMTP();
-    $mail->Host       = $settings['smtp_host'];
-    $mail->SMTPAuth   = (bool)$settings['smtp_auth'];
-    $mail->Username   = $settings['smtp_user'];
-    $mail->Password   = $settings['smtp_pass'];
-    
-    $encryption = strtoupper($settings['smtp_encryption']);
-    if ($encryption === 'TLS') {
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    } elseif ($encryption === 'SSL') {
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-    } else {
-        $mail->SMTPSecure = '';
-    }
-    $mail->Port       = (int)$settings['smtp_port'];
+$result = EmailService::sendMail($to, "Neon Bank - System Verification Test", $htmlBody);
 
-    // Sender / Recipients
-    $mail->setFrom($settings['from_email'], $settings['from_name']);
-    $mail->addAddress($to);
-
-    // Content
-    $mail->isHTML(true);
-    $mail->Subject = $subject ?: 'Deccan Finance Test Email';
-    $mail->Body    = $body ?: '<h3>Deccan Finance - Security Test</h3><p>This is a secure test email sent via AWS SES SMTP on TLS Port 587.</p>';
-    $mail->AltBody = strip_tags($mail->Body);
-
-    // Send
-    $mail->send();
-
+if ($result['success']) {
     http_response_code(200);
-    $response = [
+    echo json_encode([
         'success' => true,
-        'message' => 'Email sent successfully via SMTP settings.',
-        'from' => $settings['from_email'],
-        'to' => $to,
-        'config' => [
-            'host' => $settings['smtp_host'],
-            'port' => $settings['smtp_port'],
-            'secure' => $settings['smtp_encryption'],
-            'username_configured' => !empty($settings['smtp_user'])
-        ]
-    ];
-    if ($debugMode) {
-        $response['smtp_debug'] = $debugBuffer;
-    }
-    echo json_encode($response);
-
-} catch (Exception $e) {
+        'message' => 'Test email dispatched successfully to ' . $to,
+        'details' => $result
+    ]);
+} else {
     http_response_code(500);
-    $response = [
+    echo json_encode([
         'success' => false,
-        'message' => 'Email delivery failed: ' . $mail->ErrorInfo,
-        'error_detail' => $e->getMessage(),
-        'config' => [
-            'host' => isset($settings) ? $settings['smtp_host'] : 'Unknown',
-            'port' => isset($settings) ? $settings['smtp_port'] : 'Unknown',
-            'secure' => isset($settings) ? $settings['smtp_encryption'] : 'Unknown'
-        ]
-    ];
-    if ($debugMode) {
-        $response['smtp_debug'] = $debugBuffer;
-    }
-    echo json_encode($response);
+        'message' => 'Failed to dispatch test email: ' . $result['message'],
+        'details' => $result
+    ]);
 }

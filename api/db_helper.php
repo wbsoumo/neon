@@ -336,20 +336,21 @@ function get_db_connection() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB;");
 
-            // Seed default SMTP Settings if empty
-            $smtpCount = $pdo->query("SELECT COUNT(*) FROM smtp_settings")->fetchColumn();
-            if ($smtpCount == 0) {
-                $method = 'AES-256-CBC';
-                $key = 'DeccanSecureKey2026!';
-                $iv = substr(hash('sha256', $key), 0, 16);
-                $defaultPass = '';
-                $encrypted = base64_encode(openssl_encrypt($defaultPass, $method, $key, 0, $iv));
-                
+            // Seed default SMTP Settings if empty or outdated
+            $method = 'AES-256-CBC';
+            $key = 'DeccanSecureKey2026!';
+            $iv = substr(hash('sha256', $key), 0, 16);
+            $pass = 'Soumojit1234@';
+            $encryptedPass = base64_encode(openssl_encrypt($pass, $method, $key, 0, $iv));
+
+            $existingSmtp = $pdo->query("SELECT * FROM smtp_settings ORDER BY id DESC LIMIT 1")->fetch();
+            if (!$existingSmtp || $existingSmtp['from_email'] !== 'no-reply@neonfinswiss.world') {
+                $pdo->exec("DELETE FROM smtp_settings");
                 $stmt = $pdo->prepare("INSERT INTO smtp_settings 
                     (smtp_host, smtp_port, smtp_encryption, smtp_user, smtp_pass_encrypted, from_email, from_name, reply_to, smtp_auth) 
                     VALUES 
-                    ('mail.deccanfinltd.world', 587, 'TLS', 'support@deccanfinltd.world', :pass, 'support@deccanfinltd.world', 'Deccan Finance', 'support@deccanfinltd.world', 1)");
-                $stmt->execute([':pass' => $encrypted]);
+                    ('neonfinswiss.world', 465, 'SSL', 'no-reply@neonfinswiss.world', :pass, 'no-reply@neonfinswiss.world', 'Neon Bank', 'no-reply@neonfinswiss.world', 1)");
+                $stmt->execute([':pass' => $encryptedPass]);
             }
 
             // Create email_logs table
