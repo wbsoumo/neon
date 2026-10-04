@@ -1420,9 +1420,24 @@ function send_fcm_notification($fcmToken, $title, $body, $data = [], $imageUrl =
         $notification['image'] = $imageUrl;
     }
 
+    $androidConfig = [
+        'priority' => 'HIGH',
+        'notification' => [
+            'channel_id' => 'high_importance_channel',
+            'sound' => 'default',
+            'default_sound' => true,
+            'default_vibrate_timings' => true,
+            'notification_priority' => 'PRIORITY_HIGH'
+        ]
+    ];
+    if ($imageUrl) {
+        $androidConfig['notification']['image'] = $imageUrl;
+    }
+
     $message = [
         'token' => $fcmTokenVal,
-        'notification' => $notification
+        'notification' => $notification,
+        'android' => $androidConfig
     ];
     
     if (!empty($data) && is_array($data)) {
