@@ -6,3 +6,4 @@ build/
 app/build/
 .idea/
 .kotlin/
+api/config/firebase_service_account.json
