@@ -180,40 +180,13 @@ class EmailService {
             return $socketRes;
         }
 
-        // Final Native PHP mail() fallback
-        try {
-            $toStr = is_array($to) ? implode(', ', $to) : $to;
-            $headers  = "MIME-Version: 1.0" . "\r\n";
-            $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-            $headers .= "From: " . $fromName . " <" . $fromEmail . ">" . "\r\n";
-            $headers .= "Reply-To: " . $replyTo . "\r\n";
-            $headers .= "X-Mailer: NeonBank-Mailer/1.0" . "\r\n";
-
-            $sent = @mail($toStr, $subject, $htmlBody, $headers);
-            if ($sent) {
-                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
-                return [
-                    'success' => true,
-                    'engine' => 'mail()',
-                    'socket_error' => $socketRes['message'] ?? 'Socket connection failed',
-                    'message' => 'Email dispatched via fallback sendmail.'
-                ];
-            } else {
-                $err = "Native mail() function returned false.";
-                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
-                return [
-                    'success' => false,
-                    'message' => 'Email sending failed: ' . $err
-                ];
-            }
-        } catch (\Throwable $fallbackEx) {
-            $err = $fallbackEx->getMessage();
-            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
-            return [
-                'success' => false,
-                'message' => 'Email sending failed: ' . $err
-            ];
-        }
+        // Return exact SMTP socket error if direct SMTP failed
+        self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $socketRes['message'] ?? 'Socket SMTP failed');
+        return [
+            'success' => false,
+            'engine' => 'Socket SMTP',
+            'message' => $socketRes['message'] ?? 'Direct SMTP socket delivery failed.'
+        ];
     }
 
     /**
