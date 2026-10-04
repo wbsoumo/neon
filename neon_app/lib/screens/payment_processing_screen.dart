@@ -95,7 +95,7 @@ class PaymentProcessingScreen extends StatelessWidget {
                         const Text("AMOUNT TRANSFERRED", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.textMuted, letterSpacing: 1.1)),
                         const SizedBox(height: 4),
                         Text(
-                          "${responseData['currency'] == 'CHF' ? 'CHF' : '₹'} ${amount.toStringAsFixed(2)}",
+                          "CHF ${amount.toStringAsFixed(2)}",
                           style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -0.5),
                         ),
                         if (responseData['amount_inr'] != null) ...[
