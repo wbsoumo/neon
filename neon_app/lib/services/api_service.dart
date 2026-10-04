@@ -117,10 +117,22 @@ class ApiService {
   // 1. AUTHENTICATION (STRICT LIVE API ONLY)
   // ==========================================
 
-  // Fetch current FCM Token safely
+  // Fetch current FCM Token safely with explicit notification permission prompt
   static Future<String> getFcmToken() async {
     try {
-      final token = await FirebaseMessaging.instance.getToken();
+      final messaging = FirebaseMessaging.instance;
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+      debugPrint("[FCM] User notification permission status: ${settings.authorizationStatus}");
+
+      final token = await messaging.getToken();
       if (token != null && token.isNotEmpty) {
         debugPrint("[FCM] Token acquired: $token");
         return token;
