@@ -335,7 +335,6 @@ class EmailService {
             return ['success' => false, 'message' => "SMTP delivery error: $sendResp"];
         }
     }
-    }
 
     /**
      * Logs email transaction into email_logs table.
