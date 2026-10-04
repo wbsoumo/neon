@@ -31,7 +31,7 @@ class NeonFinanceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Neon Finance',
+      title: 'Neon',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const AnimatedNeonSplashScreen(),
