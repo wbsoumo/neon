@@ -134,7 +134,7 @@ class _PassbookScreenState extends State<PassbookScreen> with SingleTickerProvid
     
     // Simulate refresh / refetch user session if user details provided
     if (widget.user != null && widget.user!.appId.isNotEmpty) {
-      final updated = await ApiService.getUserProfile(widget.user!.appId, sessionId: widget.user!.sessionId);
+      final updated = await ApiService.getUserDetails(widget.user!.appId, sessionId: widget.user!.sessionId);
       if (updated != null && mounted) {
         setState(() {
           _accountBalanceChf = updated.balance > 0 ? updated.balance : _accountBalanceChf;
