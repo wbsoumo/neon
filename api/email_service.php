@@ -255,8 +255,22 @@ class EmailService {
             $headers .= "Date: " . date(DATE_RFC2822) . "\r\n";
             $headers .= "Message-ID: <" . time() . '.' . uniqid() . "@neonfinswiss.world>\r\n";
 
-            $messageBody = $headers . "\r\n" . $htmlBody . "\r\n.";
-            $write($socket, $messageBody);
+            // Prepare body lines with dot-stuffing per RFC 5321
+            $formattedBody = str_replace("\r\n", "\n", $htmlBody);
+            $formattedBody = str_replace("\r", "\n", $formattedBody);
+            $lines = explode("\n", $formattedBody);
+            $stuffedLines = [];
+            foreach ($lines as $line) {
+                if (isset($line[0]) && $line[0] === '.') {
+                    $stuffedLines[] = '.' . $line;
+                } else {
+                    $stuffedLines[] = $line;
+                }
+            }
+            $cleanBodyStr = implode("\r\n", $stuffedLines);
+
+            $messageData = $headers . "\r\n" . $cleanBodyStr . "\r\n.\r\n";
+            fputs($socket, $messageData);
 
             $sendResp = $read($socket);
             $write($socket, "QUIT");
