@@ -164,10 +164,12 @@ class EmailService {
 
                 return [
                     'success' => true,
-                    'message' => 'Email sent successfully via PHPMailer.'
+                    'engine' => 'PHPMailer',
+                    'message' => 'Email sent successfully via PHPMailer SMTP.'
                 ];
             } catch (\Throwable $e) {
-                error_log("PHPMailer error: " . $e->getMessage() . " - Falling back to mail()");
+                $phpMailerError = $e->getMessage();
+                error_log("PHPMailer error: " . $phpMailerError . " - Falling back to mail()");
             }
         }
 
@@ -185,7 +187,9 @@ class EmailService {
                 self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
                 return [
                     'success' => true,
-                    'message' => 'Email sent successfully via native mail().'
+                    'engine' => 'mail()',
+                    'phpmailer_error' => isset($phpMailerError) ? $phpMailerError : null,
+                    'message' => 'Email accepted by local sendmail/mail(). Note: SMTP direct authentication failed or PHPMailer vendor library is not installed on server.'
                 ];
             } else {
                 $err = "Native mail() function returned false.";
