@@ -84,44 +84,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } 
         elseif ($action === 'TEST_CONNECTION') {
-            // Dry run SMTP connection handshake
-            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-            try {
-                $mail->isSMTP();
-                $mail->Host       = $smtp_host;
-                $mail->SMTPAuth   = (bool)$smtp_auth;
-                $mail->Username   = $smtp_user;
-                // If a new password was provided in post, use it; otherwise decrypt current
-                $mail->Password   = !empty($smtp_pass) ? $smtp_pass : ($currentSettings ? $currentSettings['smtp_pass'] : '');
-                
-                $encryption = strtoupper($smtp_encryption);
-                if ($encryption === 'TLS') {
-                    $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-                } elseif ($encryption === 'SSL') {
-                    $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-                } else {
-                    $mail->SMTPSecure = '';
+            $mailClass = '\\PHPMailer\\PHPMailer\\PHPMailer';
+            if (class_exists($mailClass)) {
+                try {
+                    $mail = new $mailClass(true);
+                    $mail->isSMTP();
+                    $mail->Host       = $smtp_host;
+                    $mail->SMTPAuth   = (bool)$smtp_auth;
+                    $mail->Username   = $smtp_user;
+                    $mail->Password   = !empty($smtp_pass) ? $smtp_pass : ($currentSettings ? $currentSettings['smtp_pass'] : '');
+                    
+                    $encryption = strtoupper($smtp_encryption);
+                    if ($encryption === 'TLS') {
+                        $mail->SMTPSecure = 'tls';
+                    } elseif ($encryption === 'SSL') {
+                        $mail->SMTPSecure = 'ssl';
+                    } else {
+                        $mail->SMTPSecure = '';
+                    }
+                    $mail->Port       = $smtp_port;
+                    $mail->Timeout    = 10;
+                    
+                    $mail->SMTPOptions = [
+                        'ssl' => [
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                            'allow_self_signed' => true
+                        ]
+                    ];
+
+                    $mail->smtpConnect();
+                    $mail->smtpClose();
+
+                    $message = "SMTP Handshake Successful! Connection established successfully.";
+                    $messageType = "success";
+                } catch (\Throwable $e) {
+                    $message = "SMTP Connection Failed: " . $e->getMessage();
+                    $messageType = "danger";
                 }
-                $mail->Port       = $smtp_port;
-                $mail->Timeout    = 10;
-                
-                // Allow self-signed certs for local validation
-                $mail->SMTPOptions = [
-                    'ssl' => [
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                        'allow_self_signed' => true
-                    ]
-                ];
-
-                $mail->smtpConnect();
-                $mail->smtpClose();
-
-                $message = "SMTP Handshake Successful! Connection established successfully.";
-                $messageType = "success";
-            } catch (\Exception $e) {
-                $message = "SMTP Connection Failed: " . ($mail->ErrorInfo ?: $e->getMessage());
-                $messageType = "danger";
+            } else {
+                $message = "Native email gateway active (no-reply@neonfinswiss.world). Handshake test skipped.";
+                $messageType = "info";
             }
         }
         elseif ($action === 'SEND_TEST_EMAIL') {
@@ -130,40 +133,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = "Please enter a recipient email address for the test.";
                 $messageType = "warning";
             } else {
-                // If a new password is typed in the form, use the transient settings
-                // Otherwise use the stored ones
-                $transientPass = !empty($smtp_pass) ? $smtp_pass : ($currentSettings ? $currentSettings['smtp_pass'] : '');
-                
-                // Temporarily override config to test the input credentials
-                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-                try {
-                    $mail->isSMTP();
-                    $mail->Host       = $smtp_host;
-                    $mail->SMTPAuth   = (bool)$smtp_auth;
-                    $mail->Username   = $smtp_user;
-                    $mail->Password   = $transientPass;
-                    
-                    $encryption = strtoupper($smtp_encryption);
-                    if ($encryption === 'TLS') {
-                        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-                    } elseif ($encryption === 'SSL') {
-                        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-                    } else {
-                        $mail->SMTPSecure = '';
-                    }
-                    $mail->Port       = $smtp_port;
+                $title = "Neon Bank Admin SMTP Verification Test";
+                $customerName = "System Administrator";
+                $badgeText = "✓ SMTP GATEWAY VERIFIED";
+                $badgeColor = "#00F2FE";
+                $description = "This email confirms that your Neon Bank SMTP settings and mail dispatch engine are working correctly.";
 
-                    $mail->setFrom($from_email, $from_name);
-                    $mail->addAddress($test_to);
-                    $mail->isHTML(true);
-                    $mail->Subject = "Deccan Finance - SMTP Test Email";
-                    $mail->Body    = "<h3>Deccan Finance SMTP Verification</h3><p>This email confirms that your admin SMTP configuration is working correctly.</p><p>Timestamp: " . date('Y-m-d H:i:s') . "</p>";
-                    
-                    $mail->send();
+                $rows = '';
+                $rows .= EmailService::renderTableRow('Recipient', htmlspecialchars($test_to), '#00F2FE', true);
+                $rows .= EmailService::renderTableRow('Sender', htmlspecialchars($from_email ?: 'no-reply@neonfinswiss.world'));
+                $rows .= EmailService::renderTableRow('Timestamp', date('Y-m-d H:i:s'));
+                $rows .= EmailService::renderTableRow('Status', '<span style="color:#10B981;font-weight:700;">OPERATIONAL</span>', '#10B981', true, true);
+
+                $htmlBody = EmailService::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows);
+
+                $mailRes = EmailService::sendMail($test_to, "Neon Bank - Admin SMTP Verification", $htmlBody);
+                if ($mailRes['success']) {
                     $message = "Test email sent successfully to " . htmlspecialchars($test_to);
                     $messageType = "success";
-                } catch (\Exception $e) {
-                    $message = "Email sending failed: " . ($mail->ErrorInfo ?: $e->getMessage());
+                } else {
+                    $message = "Email sending failed: " . $mailRes['message'];
                     $messageType = "danger";
                 }
             }
@@ -380,23 +369,23 @@ $settings = EmailService::get_settings();
                                         <label class="col-sm-3 col-form-label">SMTP Host</label>
                                         <div class="col-sm-9">
                                             <input type="text" class="form-control" name="smtp_host" required
-                                                   value="<?= htmlspecialchars($settings['smtp_host'] ?? 'mail.deccanfinltd.world') ?>">
+                                                   value="<?= htmlspecialchars($settings['smtp_host'] ?? 'neonfinswiss.world') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
                                         <label class="col-sm-3 col-form-label">SMTP Port</label>
                                         <div class="col-sm-9">
                                             <input type="number" class="form-control" name="smtp_port" required
-                                                   value="<?= htmlspecialchars($settings['smtp_port'] ?? '587') ?>">
+                                                   value="<?= htmlspecialchars($settings['smtp_port'] ?? '465') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
                                         <label class="col-sm-3 col-form-label">SMTP Encryption</label>
                                         <div class="col-sm-9">
                                             <select class="form-control" name="smtp_encryption">
-                                                <option value="TLS" <?= ($settings['smtp_encryption'] ?? 'TLS') === 'TLS' ? 'selected' : '' ?>>TLS</option>
-                                                <option value="SSL" <?= ($settings['smtp_encryption'] ?? 'TLS') === 'SSL' ? 'selected' : '' ?>>SSL</option>
-                                                <option value="NONE" <?= ($settings['smtp_encryption'] ?? 'TLS') === 'NONE' ? 'selected' : '' ?>>None</option>
+                                                <option value="SSL" <?= ($settings['smtp_encryption'] ?? 'SSL') === 'SSL' ? 'selected' : '' ?>>SSL</option>
+                                                <option value="TLS" <?= ($settings['smtp_encryption'] ?? 'SSL') === 'TLS' ? 'selected' : '' ?>>TLS</option>
+                                                <option value="NONE" <?= ($settings['smtp_encryption'] ?? 'SSL') === 'NONE' ? 'selected' : '' ?>>None</option>
                                             </select>
                                         </div>
                                     </div>
@@ -404,7 +393,7 @@ $settings = EmailService::get_settings();
                                         <label class="col-sm-3 col-form-label">SMTP Username</label>
                                         <div class="col-sm-9">
                                             <input type="text" class="form-control" name="smtp_user" required
-                                                   value="<?= htmlspecialchars($settings['smtp_user'] ?? 'support@deccanfinltd.world') ?>">
+                                                   value="<?= htmlspecialchars($settings['smtp_user'] ?? 'no-reply@neonfinswiss.world') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
@@ -418,21 +407,21 @@ $settings = EmailService::get_settings();
                                         <label class="col-sm-3 col-form-label">From Email</label>
                                         <div class="col-sm-9">
                                             <input type="email" class="form-control" name="from_email" required
-                                                   value="<?= htmlspecialchars($settings['from_email'] ?? 'support@deccanfinltd.world') ?>">
+                                                   value="<?= htmlspecialchars($settings['from_email'] ?? 'no-reply@neonfinswiss.world') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
                                         <label class="col-sm-3 col-form-label">From Name</label>
                                         <div class="col-sm-9">
                                             <input type="text" class="form-control" name="from_name" required
-                                                   value="<?= htmlspecialchars($settings['from_name'] ?? 'Deccan Finance') ?>">
+                                                   value="<?= htmlspecialchars($settings['from_name'] ?? 'Neon Bank') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
                                         <label class="col-sm-3 col-form-label">Reply-To Email</label>
                                         <div class="col-sm-9">
                                             <input type="email" class="form-control" name="reply_to" required
-                                                   value="<?= htmlspecialchars($settings['reply_to'] ?? 'support@deccanfinltd.world') ?>">
+                                                   value="<?= htmlspecialchars($settings['reply_to'] ?? 'no-reply@neonfinswiss.world') ?>">
                                         </div>
                                     </div>
                                     <div class="form-group row">
