@@ -2055,6 +2055,21 @@ if ($filter === 'SAVINGS') {
     let currentAppId = null;
     let activeApp = null;
 
+    function getAppImgUrl(path) {
+        if (!path || path.trim() === '') return 'https://via.placeholder.com/300x180?text=No+Document';
+        path = path.trim();
+        if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:image')) {
+            return path;
+        }
+        if (path.startsWith('uploads/')) {
+            return '../' + path;
+        }
+        if (path.startsWith('/uploads/')) {
+            return '..' + path;
+        }
+        return '../uploads/' + path.replace(/^[\.\/]+/, '');
+    }
+
     function viewApplication(appBase64) {
         let app;
         try {
@@ -2176,10 +2191,10 @@ if ($filter === 'SAVINGS') {
                     <div class="card card-outline card-warning">
                         <div class="card-body text-center p-3">
                             <h6 class="font-weight-bold text-navy mb-2"><i class="fas fa-camera mr-1"></i> Portrait Photo Capture</h6>
-                            <img src="../${app.photo_path}" class="detail-img-frame rounded-circle mb-3" style="width: 130px; height: 130px; object-fit: cover;">
+                            <img src="${getAppImgUrl(app.photo_path)}" class="detail-img-frame rounded-circle mb-3" style="width: 130px; height: 130px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/130?text=No+Photo'">
                             
                             <h6 class="font-weight-bold text-navy mb-2"><i class="fas fa-signature mr-1"></i> Drawn Signature</h6>
-                            <img src="../${app.signature_path}" class="detail-img-frame" style="width: 100%; height: 90px; object-fit: contain;">
+                            <img src="${getAppImgUrl(app.signature_path)}" class="detail-img-frame" style="width: 100%; height: 90px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/200x90?text=No+Signature'">
                         </div>
                     </div>
                 </div>
@@ -2194,11 +2209,11 @@ if ($filter === 'SAVINGS') {
                             <div class="row text-center">
                                 <div class="col-sm-6 mb-2">
                                     <div class="font-weight-bold text-muted small mb-1">PAN Card / Business ID</div>
-                                    <img src="../${app.doc_pan_path}" class="detail-img-frame" style="width: 100%; height: 180px; object-fit: cover;">
+                                    <img src="${getAppImgUrl(app.doc_pan_path)}" class="detail-img-frame" style="width: 100%; height: 180px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x180?text=No+PAN+Card'">
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="font-weight-bold text-muted small mb-1">Aadhaar Card / Address Proof</div>
-                                    <img src="../${app.doc_aadhaar_path}" class="detail-img-frame" style="width: 100%; height: 180px; object-fit: cover;">
+                                    <img src="${getAppImgUrl(app.doc_aadhaar_path)}" class="detail-img-frame" style="width: 100%; height: 180px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x180?text=No+Aadhaar+Card'">
                                 </div>
                             </div>
                         </div>

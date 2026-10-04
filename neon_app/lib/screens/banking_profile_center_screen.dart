@@ -348,6 +348,19 @@ class _BankingProfileCenterScreenState extends State<BankingProfileCenterScreen>
     );
   }
 
+  Widget _buildAvatarFallback() {
+    return Container(
+      color: AppTheme.neonPink,
+      width: 68,
+      height: 68,
+      alignment: Alignment.center,
+      child: Text(
+        _currentUser.fullName.isNotEmpty ? _currentUser.fullName[0].toUpperCase() : 'N',
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 26),
+      ),
+    );
+  }
+
   Widget _buildMenuTile(IconData icon, String title, String subtitle, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -403,11 +416,21 @@ class _BankingProfileCenterScreenState extends State<BankingProfileCenterScreen>
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 32,
+                    radius: 34,
                     backgroundColor: AppTheme.neonPink,
-                    child: Text(
-                      _currentUser.fullName.isNotEmpty ? _currentUser.fullName[0].toUpperCase() : 'N',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 26),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(34),
+                      child: _currentUser.photoPath.isNotEmpty
+                          ? Image.network(
+                              _currentUser.photoPath.startsWith('http')
+                                  ? _currentUser.photoPath
+                                  : "https://neonfinswiss.world/${_currentUser.photoPath}",
+                              width: 68,
+                              height: 68,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildAvatarFallback(),
+                            )
+                          : _buildAvatarFallback(),
                     ),
                   ),
                   const SizedBox(width: 16),
