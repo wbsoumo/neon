@@ -210,10 +210,20 @@ try {
         $updatedSenderUser = get_application_by_id($senderAppId);
         $newBalance = (float)$updatedSenderUser['balance'];
 
-        // Send email notifications
+        // Send email notifications with base CHF amount and converted INR payout amount
         try {
             require_once 'email_service.php';
-            EmailService::sendNotificationEmail($senderAccount['account_number'], 'debit', $amount, $orderId, $remarks ?: 'Payout Transfer to ' . $beneficiaryName);
+            // Calculate or fetch converted INR amount for email display
+            $chfToInrRate = get_chf_to_inr_rate();
+            $amountInr = $amount * $chfToInrRate;
+            EmailService::sendNotificationEmail(
+                $senderAccount['account_number'], 
+                'payout', 
+                $amount, 
+                $orderId, 
+                $remarks ?: 'Payout Transfer to ' . $beneficiaryName,
+                $amountInr
+            );
         } catch (Exception $mailEx) {
             error_log("Failed to send Payout transfer email: " . $mailEx->getMessage());
         }

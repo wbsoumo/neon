@@ -428,7 +428,7 @@ class EmailService {
     /**
      * Sends a transaction or approval notification email.
      */
-    public static function sendNotificationEmail($accountNumber, $type, $amount = null, $reference = null, $remarks = null) {
+    public static function sendNotificationEmail($accountNumber, $type, $amount = null, $reference = null, $remarks = null, $amountInr = null) {
         try {
             $pdo = get_db_connection();
             $stmt = $pdo->prepare("SELECT a.account_number, app.full_name, app.email, app.balance, app.account_type, app.initial_deposit 
@@ -444,7 +444,7 @@ class EmailService {
 
             $customerName = $customer['full_name'];
             $email = $customer['email'];
-            $currentBalance = number_format((float)$customer['balance'], 2);
+            $currentBalanceChf = number_format((float)$customer['balance'], 2);
             $dateTime = date('d M Y, h:i A');
             $ref = htmlspecialchars($reference ?: 'NEON-' . mt_rand(10000000, 99999999));
             $desc = htmlspecialchars($remarks ?: 'Neon Bank Operation');
@@ -458,8 +458,8 @@ class EmailService {
                 $rows = '';
                 $rows .= self::renderTableRow('Account Number', '<strong>' . htmlspecialchars($customer['account_number']) . '</strong>', '#10B981', true);
                 $rows .= self::renderTableRow('Account Type', htmlspecialchars($customer['account_type']) . ' Account');
-                $rows .= self::renderTableRow('Initial Deposit', '₹' . number_format((float)$customer['initial_deposit'], 2), '#10B981', true);
-                $rows .= self::renderTableRow('Available Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Initial Deposit', 'CHF ' . number_format((float)$customer['initial_deposit'], 2), '#10B981', true);
+                $rows .= self::renderTableRow('Available Balance', '<strong>CHF ' . $currentBalanceChf . '</strong>', '#FFFFFF', true);
                 $rows .= self::renderTableRow('Activation Date', $dateTime, '#94A3B8', false, true);
 
                 $statusBox = '
@@ -474,9 +474,9 @@ class EmailService {
                 $description = "A credit transaction has been processed and successfully deposited into your Neon Bank account.";
 
                 $rows = '';
-                $rows .= self::renderTableRow('Amount Credited', '<strong style="color:#10B981;font-size:18px;">+₹' . number_format((float)$amount, 2) . '</strong>', '#10B981', true);
+                $rows .= self::renderTableRow('Amount Credited', '<strong style="color:#10B981;font-size:18px;">+CHF ' . number_format((float)$amount, 2) . '</strong>', '#10B981', true);
                 $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
-                $rows .= self::renderTableRow('Updated Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Updated Balance', '<strong>CHF ' . $currentBalanceChf . '</strong>', '#FFFFFF', true);
                 $rows .= self::renderTableRow('Reference UTR', $ref);
                 $rows .= self::renderTableRow('Date & Time', $dateTime);
                 $rows .= self::renderTableRow('Description', $desc, '#CBD5E1', false, true);
@@ -486,17 +486,22 @@ class EmailService {
                     <strong style="color:#10B981;font-size:14px;">✓ Funds Deposited</strong>
                     <p style="margin:8px 0 0;color:#94A3B8;font-size:13px;line-height:22px;">The credited amount is immediately available in your balance for transfers and card operations.</p>
                 </div>';
-            } elseif ($type === 'debit') {
-                $title = "Account Debited Alert";
+            } elseif ($type === 'debit' || $type === 'payout') {
+                $title = ($type === 'payout' || str_contains(strtolower($desc), 'payout')) ? "Payout Transfer Executed" : "Account Debited Alert";
                 $badgeText = "↓ BALANCE DEBITED";
                 $badgeColor = "#EF4444";
                 $description = "A debit transaction has been executed on your Neon Bank account.";
 
                 $rows = '';
-                $rows .= self::renderTableRow('Amount Debited', '<strong style="color:#EF4444;font-size:18px;">-₹' . number_format((float)$amount, 2) . '</strong>', '#EF4444', true);
+                $rows .= self::renderTableRow('Amount Debited (Base)', '<strong style="color:#EF4444;font-size:18px;">-CHF ' . number_format((float)$amount, 2) . '</strong>', '#EF4444', true);
+                
+                if ($amountInr !== null && (float)$amountInr > 0) {
+                    $rows .= self::renderTableRow('Converted Payout Amount', '<strong style="color:#00F2FE;font-size:16px;">₹ ' . number_format((float)$amountInr, 2) . ' INR</strong>', '#00F2FE', true);
+                }
+                
                 $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
-                $rows .= self::renderTableRow('Remaining Balance', '<strong>₹' . $currentBalance . '</strong>', '#FFFFFF', true);
-                $rows .= self::renderTableRow('Reference UTR', $ref);
+                $rows .= self::renderTableRow('Remaining Balance', '<strong>CHF ' . $currentBalanceChf . '</strong>', '#FFFFFF', true);
+                $rows .= self::renderTableRow('Reference UTR / ID', $ref);
                 $rows .= self::renderTableRow('Date & Time', $dateTime);
                 $rows .= self::renderTableRow('Description', $desc, '#CBD5E1', false, true);
 
@@ -512,7 +517,10 @@ class EmailService {
                 $description = "A transaction attempt on your account could not be completed.";
 
                 $rows = '';
-                $rows .= self::renderTableRow('Attempted Amount', '₹' . number_format((float)$amount, 2), '#EF4444', true);
+                $rows .= self::renderTableRow('Attempted Amount', 'CHF ' . number_format((float)$amount, 2), '#EF4444', true);
+                if ($amountInr !== null && (float)$amountInr > 0) {
+                    $rows .= self::renderTableRow('Converted Payout Amount', '₹ ' . number_format((float)$amountInr, 2) . ' INR', '#CBD5E1');
+                }
                 $rows .= self::renderTableRow('Account Number', htmlspecialchars($customer['account_number']));
                 $rows .= self::renderTableRow('Reference Code', $ref);
                 $rows .= self::renderTableRow('Failure Reason', htmlspecialchars($reference ?: 'Processing decline'), '#EF4444', true);
