@@ -783,7 +783,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                "${isCredit ? '+' : '-'} ₹${txn.amount.toStringAsFixed(2)}",
+                                "${isCredit ? '+' : '-'} CHF ${txn.amount.toStringAsFixed(2)}",
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 15,
@@ -1349,7 +1349,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "₹ ${amount.toStringAsFixed(2)}",
+                          "CHF ${amount.toStringAsFixed(2)}",
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: mode == "P2P" ? AppTheme.neonPink : AppTheme.neonBlue),
                         ),
                       ],
