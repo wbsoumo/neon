@@ -21,6 +21,11 @@ $isLimited = is_rate_limited($ip, 3, 10);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Deccan Finance - Open Digital Account</title>
     
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <!-- Deccan Finance CSS Toolkit -->
     <link rel="stylesheet" href="https://assets.rmb.co.za/css/firstrand.toolkit.min.css" type="text/css">
     <link rel="stylesheet" href="https://assets.rmb.co.za/fonts/fonts.css" type="text/css">
@@ -30,9 +35,10 @@ $isLimited = is_rate_limited($ip, 3, 10);
     <style>
         body {
             background-color: #f4f6f9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
         .header.inverted {
             background-color: #031f73;
