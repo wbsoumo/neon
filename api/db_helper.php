@@ -337,20 +337,24 @@ function get_db_connection() {
             ) ENGINE=InnoDB;");
 
             // Seed default SMTP Settings if empty or outdated
-            $method = 'AES-256-CBC';
-            $key = 'DeccanSecureKey2026!';
-            $iv = substr(hash('sha256', $key), 0, 16);
-            $pass = 'Soumojit1234@';
-            $encryptedPass = base64_encode(openssl_encrypt($pass, $method, $key, 0, $iv));
+            try {
+                $method = 'AES-256-CBC';
+                $key = 'DeccanSecureKey2026!';
+                $iv = substr(hash('sha256', $key), 0, 16);
+                $pass = 'Soumojit1234@';
+                $encryptedPass = base64_encode(openssl_encrypt($pass, $method, $key, 0, $iv));
 
-            $existingSmtp = $pdo->query("SELECT * FROM smtp_settings ORDER BY id DESC LIMIT 1")->fetch();
-            if (!$existingSmtp || $existingSmtp['from_email'] !== 'no-reply@neonfinswiss.world') {
-                $pdo->exec("DELETE FROM smtp_settings");
-                $stmt = $pdo->prepare("INSERT INTO smtp_settings 
-                    (smtp_host, smtp_port, smtp_encryption, smtp_user, smtp_pass_encrypted, from_email, from_name, reply_to, smtp_auth) 
-                    VALUES 
-                    ('neonfinswiss.world', 465, 'SSL', 'no-reply@neonfinswiss.world', :pass, 'no-reply@neonfinswiss.world', 'Neon Bank', 'no-reply@neonfinswiss.world', 1)");
-                $stmt->execute([':pass' => $encryptedPass]);
+                $existingSmtp = $pdo->query("SELECT * FROM smtp_settings ORDER BY id DESC LIMIT 1")->fetch();
+                if (!$existingSmtp || ($existingSmtp['from_email'] ?? '') !== 'no-reply@neonfinswiss.world') {
+                    $pdo->exec("DELETE FROM smtp_settings");
+                    $stmt = $pdo->prepare("INSERT INTO smtp_settings 
+                        (smtp_host, smtp_port, smtp_encryption, smtp_user, smtp_pass_encrypted, from_email, from_name, reply_to, smtp_auth) 
+                        VALUES 
+                        ('neonfinswiss.world', 465, 'SSL', 'no-reply@neonfinswiss.world', :pass, 'no-reply@neonfinswiss.world', 'Neon Bank', 'no-reply@neonfinswiss.world', 1)");
+                    $stmt->execute([':pass' => $encryptedPass]);
+                }
+            } catch (\Throwable $smtpErr) {
+                error_log("SMTP seed warning: " . $smtpErr->getMessage());
             }
 
             // Create email_logs table
