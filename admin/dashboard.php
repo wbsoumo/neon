@@ -216,6 +216,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $updatedSender = get_application_by_id($senderAppId);
             $newBalance = (float)$updatedSender['balance'];
 
+            // Send transactional email notifications
+            try {
+                require_once '../api/email_service.php';
+                EmailService::sendNotificationEmail($senderAccount['account_number'], 'debit', $amount, $txnRecord['utr_id'], 'P2P Transfer to ' . $recipientAcc);
+                EmailService::sendNotificationEmail($recipientAcc, 'credit', $amount, $txnRecord['utr_id'], 'P2P Transfer from ' . $senderAccount['account_number']);
+            } catch (Exception $mailEx) {
+                error_log("Failed to send P2P test emails: " . $mailEx->getMessage());
+            }
+
             log_admin_activity($username, 'EXECUTE_P2P_TEST', "Executed P2P test transfer of $amount INR from $senderAppId to account $recipientAcc");
 
             echo json_encode([
