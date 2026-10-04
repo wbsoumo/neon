@@ -40,14 +40,36 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
   final TextEditingController _searchController = TextEditingController();
 
   final List<Map<String, dynamic>> _savedAddresses = [];
-
   String? _currentGpsAreaName;
+  bool _isLoadingAddresses = true;
 
   @override
   void initState() {
     super.initState();
+    _loadCachedAddressesLocally();
     _fetchDbAddresses();
     _detectCurrentLocationArea();
+  }
+
+  Future<void> _loadCachedAddressesLocally() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedStr = prefs.getString('cached_local_saved_addresses');
+      if (cachedStr != null && cachedStr.isNotEmpty) {
+        final List parsed = jsonDecode(cachedStr);
+        if (mounted) {
+          setState(() {
+            _savedAddresses.clear();
+            for (var item in parsed) {
+              _savedAddresses.add(Map<String, dynamic>.from(item));
+            }
+            if (_savedAddresses.isNotEmpty) {
+              _isLoadingAddresses = false;
+            }
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _detectCurrentLocationArea() async {
@@ -180,7 +202,14 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
         for (int i = 0; i < _savedAddresses.length; i++) {
           _savedAddresses[i]['is_nearest'] = (i == 0);
         }
+        _isLoadingAddresses = false;
       });
+
+      if (_savedAddresses.isNotEmpty) {
+        try {
+          prefs.setString('cached_local_saved_addresses', jsonEncode(_savedAddresses));
+        } catch (_) {}
+      }
     }
   }
 
@@ -495,6 +524,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
                                 ),
                               );
                             }
+                            await ApiService.saveUserSelectedAddress(addr['address'] ?? '');
                             widget.onAddressSelected?.call(addr['address'] ?? '');
                             Navigator.pop(context);
                           }
@@ -757,247 +787,214 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          // Header with Back button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const Text(
-                  "Select delivery location",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final double keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
+    final bool isKeyboardOpen = keyboardPadding > 0;
 
-          // Live OpenStreetMap Interactive Map view
-          Expanded(
-            flex: 4,
-            child: ClipRRect(
-              child: Stack(
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardPadding),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.92,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Header with Back button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
                 children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: const LatLng(23.412600, 88.429200),
-                      initialZoom: 15.5,
-                      onPositionChanged: (position, hasGesture) {
-                        if (position.center != null) {
-                          setState(() {
-                            _currentCenter = position.center!;
-                          });
-                          _onMapMoved(position.center!);
-                        }
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.sonarbanglamart.app',
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                    onPressed: () => Navigator.pop(context),
                   ),
-
-                  // Center Pin Marker with clean "Move pin to exact location" tooltip badge
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.85),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.touch_app, color: Color(0XFF29B6F6), size: 14),
-                              SizedBox(width: 6),
-                              Text(
-                                "Move pin to exact location",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0XFFE53935).withOpacity(0.2),
-                                border: Border.all(color: const Color(0XFFE53935).withOpacity(0.5), width: 1.5),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.location_on,
-                              size: 46,
-                              color: Color(0XFFE53935),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-
-                  // Current Location button
-                  Positioned(
-                    bottom: 16,
-                    right: 16,
-                    child: GestureDetector(
-                      onTap: () async {
-                        setState(() {
-                          _isGeocoding = true;
-                        });
-
-                        double? targetLat;
-                        double? targetLng;
-
-                        // 1. Native Hardware GPS Device Location Request for Android & iOS
-                        try {
-                          bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-                          if (!serviceEnabled) {
-                            debugPrint("Location services disabled on device.");
-                          } else {
-                            LocationPermission permission = await Geolocator.checkPermission();
-                            if (permission == LocationPermission.denied) {
-                              permission = await Geolocator.requestPermission();
-                            }
-
-                            if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-                              Position position = await Geolocator.getCurrentPosition(
-                                locationSettings: const LocationSettings(
-                                  accuracy: LocationAccuracy.high,
-                                  timeLimit: Duration(seconds: 7),
-                                ),
-                              );
-                              targetLat = position.latitude;
-                              targetLng = position.longitude;
-                              debugPrint("Native Hardware GPS LatLng obtained: $targetLat, $targetLng");
-                            }
-                          }
-                        } catch (e) {
-                          debugPrint("Geolocator native GPS error: $e");
-                        }
-
-                        // 2. Multi-provider network IP fallback if GPS is denied or unavailable
-                        if (targetLat == null || targetLng == null) {
-                          try {
-                            final res1 = await http.get(Uri.parse('https://ipwho.is/')).timeout(const Duration(seconds: 3));
-                            if (res1.statusCode == 200) {
-                              final d1 = jsonDecode(res1.body);
-                              targetLat = double.tryParse(d1['latitude']?.toString() ?? '');
-                              targetLng = double.tryParse(d1['longitude']?.toString() ?? '');
-                            }
-                          } catch (_) {}
-
-                          if (targetLat == null || targetLng == null) {
-                            try {
-                              final res2 = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 3));
-                              if (res2.statusCode == 200) {
-                                final d2 = jsonDecode(res2.body);
-                                targetLat = double.tryParse(d2['latitude']?.toString() ?? '');
-                                targetLng = double.tryParse(d2['longitude']?.toString() ?? '');
-                              }
-                            } catch (_) {}
-                          }
-                        }
-
-                        // 3. Final default fallback if everything failed
-                        targetLat ??= 23.412600;
-                        targetLng ??= 88.429200;
-
-                        final LatLng newPos = LatLng(targetLat, targetLng);
-                        _mapController.move(newPos, 16.5);
-                        setState(() {
-                          _currentCenter = newPos;
-                        });
-                        await _reverseGeocode(newPos);
-
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Located exact current location successfully"),
-                              backgroundColor: Color(0XFF0C831F),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.my_location, color: Color(0XFF0C831F), size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              "Current Location",
-                              style: TextStyle(
-                                color: Color(0XFF0C831F),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  const Text(
+                    "Select delivery location",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          // Bottom form inputs
-          Expanded(
-            flex: 6,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
-              child: Column(
+            // Live OpenStreetMap Interactive Map view
+            Expanded(
+              flex: isKeyboardOpen ? 2 : 4,
+              child: ClipRRect(
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: const LatLng(23.412600, 88.429200),
+                        initialZoom: 15.5,
+                        onPositionChanged: (position, hasGesture) {
+                          if (position.center != null) {
+                            setState(() {
+                              _currentCenter = position.center!;
+                            });
+                            _onMapMoved(position.center!);
+                          }
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.sonarbanglamart.app',
+                        ),
+                      ],
+                    ),
+
+                    // Center Pin Marker with clean "Move pin to exact location" tooltip badge
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isKeyboardOpen)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.touch_app, color: Color(0XFF29B6F6), size: 14),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    "Move pin to exact location",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: isKeyboardOpen ? 36 : 60,
+                                height: isKeyboardOpen ? 36 : 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0XFFE53935).withOpacity(0.2),
+                                  border: Border.all(color: const Color(0XFFE53935).withOpacity(0.5), width: 1.5),
+                                ),
+                              ),
+                              Icon(
+                                Icons.location_on,
+                                size: isKeyboardOpen ? 28 : 46,
+                                color: const Color(0XFFE53935),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Current Location button
+                    if (!isKeyboardOpen)
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () async {
+                            setState(() {
+                              _isGeocoding = true;
+                            });
+
+                            double? targetLat;
+                            double? targetLng;
+
+                            try {
+                              bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                              if (serviceEnabled) {
+                                LocationPermission permission = await Geolocator.checkPermission();
+                                if (permission == LocationPermission.denied) {
+                                  permission = await Geolocator.requestPermission();
+                                }
+
+                                if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+                                  Position position = await Geolocator.getCurrentPosition(
+                                    locationSettings: const LocationSettings(
+                                      accuracy: LocationAccuracy.high,
+                                      timeLimit: Duration(seconds: 7),
+                                    ),
+                                  );
+                                  targetLat = position.latitude;
+                                  targetLng = position.longitude;
+                                }
+                              }
+                            } catch (_) {}
+
+                            targetLat ??= 23.412600;
+                            targetLng ??= 88.429200;
+
+                            final LatLng newPos = LatLng(targetLat, targetLng);
+                            _mapController.move(newPos, 16.5);
+                            setState(() {
+                              _currentCenter = newPos;
+                            });
+                            await _reverseGeocode(newPos);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.my_location, color: Color(0XFF0C831F), size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Current Location",
+                                  style: TextStyle(
+                                    color: Color(0XFF0C831F),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom form inputs
+            Expanded(
+              flex: isKeyboardOpen ? 8 : 6,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(18),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
@@ -1239,7 +1236,8 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
                               ),
                             );
                           }
-                          widget.onAddressSelected?.call(_locationName);
+                          await ApiService.saveUserSelectedAddress(finalAddrText);
+                          widget.onAddressSelected?.call(finalAddrText);
                           Navigator.pop(context);
                         }
                       },
@@ -1260,8 +1258,9 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTagChip(String label, IconData icon) {
     final bool isSelected = _selectedType == label;

@@ -206,9 +206,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                       final String createdAt = ord['created_at']?.toString() ?? 'Recently';
                       final List itemsList = ord['items'] as List? ?? [];
 
+                      final String orderType = ord['order_type']?.toString().toLowerCase() ?? 'delivery';
+                      final bool isPickup = orderType == 'pickup';
+
                       // Delivery Headline text matching design
-                      String deliveryHeader = "Arrived in 10 minutes";
-                      if (!isDelivered) {
+                      String deliveryHeader = isPickup ? "Store Pickup Order" : "Arrived in 10 minutes";
+                      if (isPickup) {
+                        final String store = ord['store_name']?.toString() ?? ord['pickup_details']?['store_name']?.toString() ?? 'Sonarbangla Mart';
+                        deliveryHeader = "Store Pickup • $store";
+                      } else if (!isDelivered) {
                         if (status == 'Pending') deliveryHeader = "Order Placed • Driver assigning soon...";
                         else if (status == 'Out for Delivery') deliveryHeader = "On the way • Delivery soon";
                         else deliveryHeader = "Status: $status";
@@ -239,10 +245,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                     // Status Check Circle Icon
                                     CircleAvatar(
                                       radius: 16,
-                                      backgroundColor: isDelivered ? const Color(0XFFE8F5E9) : const Color(0XFFFFF8E1),
+                                      backgroundColor: isPickup
+                                          ? const Color(0XFFF3E5F5)
+                                          : (isDelivered ? const Color(0XFFE8F5E9) : const Color(0XFFFFF8E1)),
                                       child: Icon(
-                                        isDelivered ? Icons.check : Icons.access_time_filled_rounded,
-                                        color: isDelivered ? const Color(0XFF0C831F) : const Color(0XFFF57F17),
+                                        isPickup
+                                            ? Icons.storefront_rounded
+                                            : (isDelivered ? Icons.check : Icons.access_time_filled_rounded),
+                                        color: isPickup
+                                            ? Colors.purple[800]
+                                            : (isDelivered ? const Color(0XFF0C831F) : const Color(0XFFF57F17)),
                                         size: 18,
                                       ),
                                     ),
@@ -278,19 +290,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: isDelivered
-                                            ? const Color(0XFFE8F5E9)
-                                            : const Color(0XFFE3F2FD),
+                                        color: isPickup
+                                            ? const Color(0XFFF3E5F5)
+                                            : (isDelivered
+                                                ? const Color(0XFFE8F5E9)
+                                                : const Color(0XFFE3F2FD)),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        status,
+                                        isPickup ? "PICKUP" : status,
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: isDelivered
-                                              ? const Color(0XFF0C831F)
-                                              : Colors.blue[800],
+                                          color: isPickup
+                                              ? Colors.purple[800]
+                                              : (isDelivered
+                                                  ? const Color(0XFF0C831F)
+                                                  : Colors.blue[800]),
                                         ),
                                       ),
                                     ),

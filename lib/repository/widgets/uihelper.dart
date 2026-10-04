@@ -30,29 +30,35 @@ class UiHelper {
       return buildFallback();
     }
 
-    // 1. Fix: Any image string containing "uploads/" should point to admin.sbmartquick.com
-    if (cleanUrl.contains('uploads/')) {
+    if (cleanUrl.contains('sbmartquick.com/uploads/')) {
       final String uploadPath = cleanUrl.substring(cleanUrl.indexOf('uploads/'));
       cleanUrl = 'https://admin.sbmartquick.com/$uploadPath';
+    } else if (cleanUrl.contains('uploads/')) {
+      final String uploadPath = cleanUrl.substring(cleanUrl.indexOf('uploads/'));
+      cleanUrl = 'https://admin.sbmartquick.com/$uploadPath';
+    } else if (cleanUrl.contains('storage/')) {
+      final String storagePath = cleanUrl.substring(cleanUrl.indexOf('storage/'));
+      cleanUrl = 'https://admin.sbmartquick.com/$storagePath';
+    } else if (cleanUrl.startsWith('/')) {
+      cleanUrl = 'https://admin.sbmartquick.com$cleanUrl';
     }
 
-    // 2. Handle Network Images (HTTP / HTTPS)
+    // 2. Handle Network Images (HTTP / HTTPS) with Disk-Persistent Caching
     if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
       final String encodedUrl = cleanUrl.contains(' ') ? Uri.encodeFull(cleanUrl) : cleanUrl;
-      return Image.network(
-        encodedUrl,
+      return CachedNetworkImage(
+        imageUrl: encodedUrl,
         width: width,
         height: height,
         fit: fit,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return SkeletonLoader(
-            width: width ?? double.infinity,
-            height: height ?? double.infinity,
-            borderRadius: 8,
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        placeholder: (context, url) => SkeletonLoader(
+          width: width ?? double.infinity,
+          height: height ?? double.infinity,
+          borderRadius: 8,
+        ),
+        errorWidget: (context, url, error) {
           debugPrint("UiHelper.CustomImage error loading $encodedUrl: $error");
           return buildFallback();
         },

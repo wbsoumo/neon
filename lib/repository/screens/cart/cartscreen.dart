@@ -115,14 +115,14 @@ class _CartScreenState extends State<CartScreen> {
 
     if (!mounted) return;
 
-    String currentLoc = homeLocation ?? "";
+    String currentLoc = (homeLocation != null && homeLocation.isNotEmpty) ? homeLocation : "";
     if (currentLoc.isEmpty && store != null) {
       currentLoc = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}".trim();
     }
 
     bool hasSaved = false;
     String matchedAddress = currentLoc;
-    String tag = store?['name'] ?? 'Selected Area';
+    String tag = store?['name'] ?? 'Selected Location';
 
     if (addresses.isNotEmpty) {
       _savedAddresses = addresses;
@@ -135,9 +135,6 @@ class _CartScreenState extends State<CartScreen> {
           break;
         }
       }
-      if (matched == null && addresses.isNotEmpty) {
-        matched = addresses.first;
-      }
       if (matched != null) {
         matchedAddress = matched['address_details'] ?? currentLoc;
         tag = matched['address_type'] ?? matched['custom_type_name'] ?? 'Home';
@@ -146,9 +143,9 @@ class _CartScreenState extends State<CartScreen> {
     }
 
     setState(() {
-      _selectedDeliveryAddress = matchedAddress.isNotEmpty ? matchedAddress : (currentLoc.isNotEmpty ? currentLoc : "No address selected");
-      _selectedDeliveryTag = tag;
-      _hasSavedAddressInArea = hasSaved;
+      _selectedDeliveryAddress = matchedAddress.isNotEmpty ? matchedAddress : (currentLoc.isNotEmpty ? currentLoc : "Select Location");
+      _selectedDeliveryTag = hasSaved ? tag : (store?['name'] ?? 'Selected Location');
+      _hasSavedAddressInArea = _selectedDeliveryAddress.isNotEmpty && _selectedDeliveryAddress != "Select Location";
     });
   }
 
@@ -1509,313 +1506,316 @@ class _CartScreenState extends State<CartScreen> {
           ),
 
           // 6. STICKY BOTTOM ADDRESS BANNER & CASH ON DELIVERY PAYMENT BAR
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, -3),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Delivery Address Pill (Only shown when Home Delivery Mode is active)
-                if (!_isPickupSelected)
-                  InkWell(
-                    onTap: () {
-                      AddressSelectionBottomSheet.show(
-                        context,
-                        onAddressSelected: (newAddr) async {
-                          final store = await ApiService.fetchSelectedStore();
-                          if (mounted) {
-                            setState(() {
+          SafeArea(
+            top: false,
+            bottom: true,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, -3),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Delivery Address Pill (Only shown when Home Delivery Mode is active)
+                  if (!_isPickupSelected)
+                    InkWell(
+                      onTap: () {
+                        AddressSelectionBottomSheet.show(
+                          context,
+                          onAddressSelected: (newAddr) async {
+                            await _fetchUserAddresses();
+                            final store = await ApiService.fetchSelectedStore();
+                            if (mounted) {
                               if (newAddr.isNotEmpty) {
-                                _selectedDeliveryAddress = newAddr;
-                                _hasSavedAddressInArea = true;
-                              } else if (store != null) {
-                                _selectedDeliveryAddress = "${store['address'] ?? ''}${store['city'] != null ? ', ${store['city']}' : ''}";
-                                _selectedDeliveryTag = store['name'] ?? 'Selected Location';
+                                setState(() {
+                                  _selectedDeliveryAddress = newAddr;
+                                  _hasSavedAddressInArea = true;
+                                });
                               }
-                            });
-                            if (store != null) {
-                              _checkStockAvailabilityForStore(store['id'] ?? 1);
+                              if (store != null) {
+                                _checkStockAvailabilityForStore(store['id'] ?? 1);
+                              }
                             }
-                          }
-                        },
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      color: _hasSavedAddressInArea ? const Color(0XFFFDFDFD) : const Color(0XFFFFF8E1),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor: _hasSavedAddressInArea ? const Color(0XFFF7CB45) : Colors.orange,
-                                child: Icon(
-                                  _hasSavedAddressInArea ? Icons.location_on : Icons.add_location_alt,
-                                  color: Colors.black87,
-                                  size: 14,
+                          },
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        color: _hasSavedAddressInArea ? const Color(0XFFFDFDFD) : const Color(0XFFFFF8E1),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: _hasSavedAddressInArea ? const Color(0XFFF7CB45) : Colors.orange,
+                                  child: Icon(
+                                    _hasSavedAddressInArea ? Icons.location_on : Icons.add_location_alt,
+                                    color: Colors.black87,
+                                    size: 14,
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _hasSavedAddressInArea ? "Delivering to $_selectedDeliveryTag" : "No saved address for $_selectedDeliveryTag",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          color: _hasSavedAddressInArea ? Colors.black : Colors.deepOrange,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        _selectedDeliveryAddress,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: _hasSavedAddressInArea ? Colors.transparent : const Color(0XFF0C831F),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    _hasSavedAddressInArea ? "Change" : "+ Add New Address",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: _hasSavedAddressInArea ? const Color(0XFF0C831F) : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  const Divider(height: 1),
+
+                  // Sticky Payment Bar - CASH ON DELIVERY ONLY FOR NOW
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0XFFE8F5E9),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
+                              child: const Icon(Icons.payments_outlined, color: Color(0XFF0C831F), size: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "PAY USING",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black45,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  "Cash on Delivery",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        // Green Place Order Button with Backend Sync
+                        GestureDetector(
+                          onTap: () async {
+                            if (_cart.items.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Your cart is empty! Add items first.")),
+                              );
+                              return;
+                            }
+
+                            if (!_isPickupSelected && !_hasSavedAddressInArea) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: Colors.redAccent,
+                                  content: Text("No delivery address saved for this location area. Please add an address to place your order."),
+                                ),
+                              );
+                              AddressSelectionBottomSheet.show(
+                                context,
+                                onAddressSelected: (newAddr) async {
+                                  await _fetchUserAddresses();
+                                  if (newAddr.isNotEmpty && mounted) {
+                                    setState(() {
+                                      _selectedDeliveryAddress = newAddr;
+                                      _hasSavedAddressInArea = true;
+                                    });
+                                  }
+                                },
+                              );
+                              return;
+                            }
+
+                            final activeStore = ApiService.memoryCachedStore;
+                            final int currentStoreId = activeStore?['id'] ?? 1;
+
+                            // Show smooth order placement dialog with pre-loaded Lottie & typing animation
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) {
+                                return _OrderPlacementProgressDialog(
+                                  isPickup: _isPickupSelected,
+                                  onPlaceOrderAction: () async {
+                                    final itemsList = _cart.items.values.map((it) {
+                                      final cleanIdStr = it.id.replaceAll(RegExp(r'^[a-zA-Z_]+'), '');
+                                      int prodId = int.tryParse(cleanIdStr) ?? int.tryParse(it.id) ?? 1;
+
+                                      return {
+                                        "product_id": prodId,
+                                        "name": it.name,
+                                        "price": it.price,
+                                        "quantity": it.quantity,
+                                        "total": it.price * it.quantity,
+                                      };
+                                    }).toList();
+
+                                    final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
+
+                                    final prefs = await SharedPreferences.getInstance();
+                                    final savedPhone = prefs.getString('user_phone') ?? '';
+                                    final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
+
+                                    if (!_isPickupSelected && _selectedDeliveryAddress.isNotEmpty && savedPhone.isNotEmpty) {
+                                      if (!_savedAddresses.any((a) => (a['address_details'] ?? '') == _selectedDeliveryAddress)) {
+                                        await ApiService.saveUserAddress(
+                                          userPhone: savedPhone,
+                                          addressType: _selectedDeliveryTag.isNotEmpty ? _selectedDeliveryTag : "Home",
+                                          addressDetails: _selectedDeliveryAddress,
+                                          receiverName: savedName,
+                                          receiverPhone: savedPhone,
+                                          latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                                          longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+                                        );
+                                      }
+                                    }
+
+                                    return await ApiService.createOrder(
+                                      userName: savedName,
+                                      userPhone: savedPhone,
+                                      deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
+                                      latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
+                                      longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
+                                      items: itemsList,
+                                      storeId: currentStoreId,
+                                      paymentMethod: "Cash on Delivery",
+                                      orderType: _isPickupSelected ? "pickup" : "delivery",
+                                      pickupDate: formattedDate,
+                                      pickupTime: _selectedPickupTimeSlot,
+                                    );
+                                  },
+                                  onOrderSuccess: (ordNum, orderData) {
+                                    _cart.clearCart();
+                                    widget.onBackTap?.call();
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => OrderStatusScreen(
+                                          orderNumber: ordNum,
+                                          initialOrderData: orderData is Map<String, dynamic> ? orderData : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0XFF0C831F),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _hasSavedAddressInArea ? "Delivering to $_selectedDeliveryTag" : "No saved address for $_selectedDeliveryTag",
-                                      style: TextStyle(
-                                        fontSize: 13,
+                                      "₹${((_isPickupSelected ? (subtotal + _cart.handlingFee) : _cart.grandTotal) - _couponDiscountAmount).clamp(0.0, 999999.0).toStringAsFixed(0)}",
+                                      style: const TextStyle(
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w900,
-                                        color: _hasSavedAddressInArea ? Colors.black : Colors.deepOrange,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      _selectedDeliveryAddress,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.black54,
+                                    const Text(
+                                      "TOTAL",
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white70,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: _hasSavedAddressInArea ? Colors.transparent : const Color(0XFF0C831F),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  _hasSavedAddressInArea ? "Change" : "+ Add New Address",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _hasSavedAddressInArea ? const Color(0XFF0C831F) : Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                const Divider(height: 1),
-
-                // Sticky Payment Bar - CASH ON DELIVERY ONLY FOR NOW
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0XFFE8F5E9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.payments_outlined, color: Color(0XFF0C831F), size: 18),
-                          ),
-                          const SizedBox(width: 8),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "PAY USING",
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black45,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              Text(
-                                "Cash on Delivery",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      // Green Place Order Button with Backend Sync
-                      GestureDetector(
-                        onTap: () async {
-                          if (_cart.items.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Your cart is empty! Add items first.")),
-                            );
-                            return;
-                          }
-
-                          if (!_isPickupSelected && !_hasSavedAddressInArea) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                backgroundColor: Colors.redAccent,
-                                content: Text("No delivery address saved for this location area. Please add an address to place your order."),
-                              ),
-                            );
-                            AddressSelectionBottomSheet.show(
-                              context,
-                              onAddressSelected: (newAddr) async {
-                                if (newAddr.isNotEmpty && mounted) {
-                                  setState(() {
-                                    _selectedDeliveryAddress = newAddr;
-                                    _hasSavedAddressInArea = true;
-                                  });
-                                }
-                              },
-                            );
-                            return;
-                          }
-
-                          final activeStore = ApiService.memoryCachedStore;
-                          final int currentStoreId = activeStore?['id'] ?? 1;
-
-                          // Show smooth order placement dialog with pre-loaded Lottie & typing animation
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (ctx) {
-                              return _OrderPlacementProgressDialog(
-                                isPickup: _isPickupSelected,
-                                onPlaceOrderAction: () async {
-                                  final itemsList = _cart.items.values.map((it) {
-                                    final cleanIdStr = it.id.replaceAll(RegExp(r'^[a-zA-Z_]+'), '');
-                                    int prodId = int.tryParse(cleanIdStr) ?? int.tryParse(it.id) ?? 1;
-
-                                    return {
-                                      "product_id": prodId,
-                                      "name": it.name,
-                                      "price": it.price,
-                                      "quantity": it.quantity,
-                                      "total": it.price * it.quantity,
-                                    };
-                                  }).toList();
-
-                                  final formattedDate = "${_selectedPickupDate.year}-${_selectedPickupDate.month.toString().padLeft(2, '0')}-${_selectedPickupDate.day.toString().padLeft(2, '0')}";
-
-                                  final prefs = await SharedPreferences.getInstance();
-                                  final savedPhone = prefs.getString('user_phone') ?? '';
-                                  final savedName = prefs.getString('user_name') ?? (savedPhone.isNotEmpty ? "Customer ($savedPhone)" : "Customer");
-
-                                  if (!_isPickupSelected && _selectedDeliveryAddress.isNotEmpty && savedPhone.isNotEmpty) {
-                                    if (!_savedAddresses.any((a) => (a['address_details'] ?? '') == _selectedDeliveryAddress)) {
-                                      await ApiService.saveUserAddress(
-                                        userPhone: savedPhone,
-                                        addressType: _selectedDeliveryTag.isNotEmpty ? _selectedDeliveryTag : "Home",
-                                        addressDetails: _selectedDeliveryAddress,
-                                        receiverName: savedName,
-                                        receiverPhone: savedPhone,
-                                        latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
-                                        longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
-                                      );
-                                    }
-                                  }
-
-                                  return await ApiService.createOrder(
-                                    userName: savedName,
-                                    userPhone: savedPhone,
-                                    deliveryAddress: _isPickupSelected ? "Self Pickup at Store" : _selectedDeliveryAddress,
-                                    latitude: double.tryParse(activeStore?['latitude']?.toString() ?? '23.4013') ?? 23.4013,
-                                    longitude: double.tryParse(activeStore?['longitude']?.toString() ?? '88.5010') ?? 88.5010,
-                                    items: itemsList,
-                                    storeId: currentStoreId,
-                                    paymentMethod: "Cash on Delivery",
-                                    orderType: _isPickupSelected ? "pickup" : "delivery",
-                                    pickupDate: formattedDate,
-                                    pickupTime: _selectedPickupTimeSlot,
-                                  );
-                                },
-                                onOrderSuccess: (ordNum, orderData) {
-                                  _cart.clearCart();
-                                  widget.onBackTap?.call();
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => OrderStatusScreen(
-                                        orderNumber: ordNum,
-                                        initialOrderData: orderData is Map<String, dynamic> ? orderData : null,
+                                const SizedBox(width: 16),
+                                const Row(
+                                  children: [
+                                    Text(
+                                      "Place Order",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                        child: Container(
-                          height: 46,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0XFF0C831F),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "₹${((_isPickupSelected ? (subtotal + _cart.handlingFee) : _cart.grandTotal) - _couponDiscountAmount).clamp(0.0, 999999.0).toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const Text(
-                                    "TOTAL",
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              const Row(
-                                children: [
-                                  Text(
-                                    "Place Order",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.arrow_right_sharp, color: Colors.white, size: 20),
-                                ],
-                              ),
-                            ],
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_right_sharp, color: Colors.white, size: 20),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

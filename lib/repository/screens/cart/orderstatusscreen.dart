@@ -5,6 +5,8 @@ import 'package:lottie/lottie.dart' hide Marker;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:blinkit_series/repository/widgets/uihelper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderStatusScreen extends StatefulWidget {
   final String orderNumber;
@@ -357,7 +359,174 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
 
                     const SizedBox(height: 14),
 
-                    // 2. Delivery Partner Section Card
+                    // 2. Delivery Partner Section Card (Delivery Mode Only)
+                    if (orderType.toLowerCase() != 'pickup') ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0XFFE8F5E9),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.two_wheeler, color: Color(0XFF0C831F), size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Delivery Partner",
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
+                                    ),
+                                    Text(
+                                      showAssignedRider ? "Delivery executive assigned." : "Your delivery partner will be assigned soon.",
+                                      style: const TextStyle(fontSize: 11, color: Colors.black45),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0XFFF3F9F5),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0XFFE0F2F1)),
+                              ),
+                              child: showAssignedRider
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            _buildLottieAnimation(
+                                              'assets/animations/bike_delivery.json',
+                                              width: 58,
+                                              height: 58,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    riderName,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    riderPhone,
+                                                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            ElevatedButton.icon(
+                                              onPressed: () => _makePhoneCall(riderPhone),
+                                              icon: const Icon(Icons.call, size: 16, color: Colors.white),
+                                              label: const Text(
+                                                "Call",
+                                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0XFF0C831F),
+                                                elevation: 0,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (statusLower == 'out for delivery') ...[
+                                          const SizedBox(height: 12),
+                                          const Divider(height: 1, color: Color(0XFFE0F2F1)),
+                                          const SizedBox(height: 10),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () => _openLiveMapTrackingBottomSheet(context, riderName, riderPhone),
+                                              icon: const Icon(Icons.map, size: 18, color: Colors.white),
+                                              label: const Text(
+                                                "Track Order on Map >",
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0XFF0C831F),
+                                                elevation: 1,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        _buildLottieAnimation(
+                                          'assets/animations/delivery_search.json',
+                                          width: 58,
+                                          height: 58,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: const [
+                                              Text(
+                                                "Looking for the best delivery partner...",
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                              SizedBox(height: 3),
+                                              Text(
+                                                "Our store executive is accepting your order and will assign a partner shortly.",
+                                                style: TextStyle(fontSize: 11, color: Colors.black54),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // 3. Location / Store Pickup Address Card
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -377,180 +546,15 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0XFFE8F5E9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.two_wheeler, color: Color(0XFF0C831F), size: 18),
+                              Icon(
+                                orderType.toLowerCase() == 'pickup' ? Icons.storefront_rounded : Icons.location_on,
+                                color: const Color(0XFF0C831F),
+                                size: 22,
                               ),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    "Delivery Partner",
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
-                                  ),
-                                  Text(
-                                    showAssignedRider ? "Delivery executive assigned." : "Your delivery partner will be assigned soon.",
-                                    style: const TextStyle(fontSize: 11, color: Colors.black45),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Inner Container
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0XFFF3F9F5),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0XFFE0F2F1)),
-                            ),
-                            child: showAssignedRider
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          // Bike Animation when Out for Delivery & Rider Assigned
-                                          _buildLottieAnimation(
-                                            'assets/animations/bike_delivery.json',
-                                            width: 58,
-                                            height: 58,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  riderName,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w900,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  riderPhone,
-                                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          ElevatedButton.icon(
-                                            onPressed: () => _makePhoneCall(riderPhone),
-                                            icon: const Icon(Icons.call, size: 16, color: Colors.white),
-                                            label: const Text(
-                                              "Call",
-                                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0XFF0C831F),
-                                              elevation: 0,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (statusLower == 'out for delivery') ...[
-                                        const SizedBox(height: 12),
-                                        const Divider(height: 1, color: Color(0XFFE0F2F1)),
-                                        const SizedBox(height: 10),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton.icon(
-                                            onPressed: () => _openLiveMapTrackingBottomSheet(context, riderName, riderPhone),
-                                            icon: const Icon(Icons.map, size: 18, color: Colors.white),
-                                            label: const Text(
-                                              "Track Order on Map >",
-                                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0XFF0C831F),
-                                              elevation: 1,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              padding: const EdgeInsets.symmetric(vertical: 12),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      // Search Animation when Looking for Best Delivery Partner
-                                      _buildLottieAnimation(
-                                        'assets/animations/delivery_search.json',
-                                        width: 58,
-                                        height: 58,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: const [
-                                            Text(
-                                              "Looking for the best delivery partner...",
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                            SizedBox(height: 3),
-                                            Text(
-                                              "Our store executive is accepting your order and will assign a partner shortly.",
-                                              style: TextStyle(fontSize: 11, color: Colors.black54),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // 3. Delivery Address & Instructions Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.location_on, color: Color(0XFF0C831F), size: 20),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
-                                "Delivery Address",
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
+                                orderType.toLowerCase() == 'pickup' ? "Store Pickup Location" : "Delivery Address",
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black),
                               ),
                             ],
                           ),
@@ -565,21 +569,123 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  (_order?['address_type']?.toString().toUpperCase() ?? 'HOME'),
+                                  orderType.toLowerCase() == 'pickup' ? 'PICKUP' : (_order?['address_type']?.toString().toUpperCase() ?? 'HOME'),
                                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0XFF0C831F)),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(
-                                  _order?['delivery_address']?.toString() ??
-                                  _order?['address']?.toString() ??
-                                  "Sonarbangla Mart, Sector V, Salt Lake, Kolkata - 700091",
-                                  style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500, height: 1.3),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      orderType.toLowerCase() == 'pickup'
+                                          ? (_order?['store_name']?.toString() ?? _order?['pickup_details']?['store_name']?.toString() ?? "Sonarbangla Mart (Krishnanagar Store)")
+                                          : (_order?['delivery_address']?.toString() ?? "Sonarbangla Mart"),
+                                      style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      orderType.toLowerCase() == 'pickup'
+                                          ? (_order?['store_address']?.toString() ?? _order?['pickup_details']?['store_address']?.toString() ?? "Holding 42, Main Road, Krishnanagar, Nadia - 741101")
+                                          : (_order?['delivery_address']?.toString() ?? "Krishnanagar"),
+                                      style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500, height: 1.3),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
+
+                          // 3 Options for Store Pickup Mode: Call Store, Directions, Store Hours
+                          if (orderType.toLowerCase() == 'pickup') ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final String storePhone = _order?['store_phone']?.toString() ?? _order?['pickup_details']?['store_phone']?.toString() ?? "8016222991";
+                                      final Uri uri = Uri.parse("tel:$storePhone");
+                                      try {
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri);
+                                        } else {
+                                          _makePhoneCall(storePhone);
+                                        }
+                                      } catch (_) {
+                                        _makePhoneCall(storePhone);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.call, size: 16, color: Color(0XFF0C831F)),
+                                    label: const Text("Call Store", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0XFF0C831F))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0XFF0C831F)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final String lat = (_order?['store_lat'] ?? _order?['pickup_details']?['store_lat'] ?? "23.4013").toString();
+                                      final String lng = (_order?['store_lng'] ?? _order?['pickup_details']?['store_lng'] ?? "88.5010").toString();
+                                      final String googleMapUrl = "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
+                                      final Uri uri = Uri.parse(googleMapUrl);
+                                      try {
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                        } else {
+                                          await launchUrl(uri);
+                                        }
+                                      } catch (_) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text("Location: Lat $lat, Lng $lng")),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.near_me, size: 16, color: Color(0XFF0C831F)),
+                                    label: const Text("Directions", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0XFF0C831F))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0XFF0C831F)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text("Store Operating Hours"),
+                                          content: const Text("Open Daily: 06:00 AM - 11:00 PM\n\nPlease arrive during slot time for instant pickup."),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx),
+                                              child: const Text("OK", style: TextStyle(color: Color(0XFF0C831F), fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.access_time, size: 16, color: Color(0XFF0C831F)),
+                                    label: const Text("Hours", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0XFF0C831F))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0XFF0C831F)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+
                           const SizedBox(height: 12),
                           Container(
                             padding: const EdgeInsets.all(10),
@@ -589,12 +695,16 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                               border: Border.all(color: Colors.black.withOpacity(0.05)),
                             ),
                             child: Row(
-                              children: const [
-                                Icon(Icons.notifications_active_outlined, size: 16, color: Colors.black54),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Instructions: Ring the doorbell & leave package at door.",
-                                  style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500),
+                              children: [
+                                const Icon(Icons.notifications_active_outlined, size: 16, color: Colors.black54),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    orderType.toLowerCase() == 'pickup'
+                                        ? "Instructions: Show Order #${widget.orderNumber} at pickup counter."
+                                        : "Instructions: Ring the doorbell & leave package at door.",
+                                    style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500),
+                                  ),
                                 ),
                               ],
                             ),
@@ -645,10 +755,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                               separatorBuilder: (c, i) => const SizedBox(height: 14),
                               itemBuilder: (context, index) {
                                 final item = items[index];
-                                final String name = item['product_name']?.toString() ?? 'Item';
+                                final String name = item['product_name']?.toString() ?? item['name']?.toString() ?? item['title']?.toString() ?? item['item_name']?.toString() ?? 'Item';
                                 final double price = double.tryParse(item['price']?.toString() ?? '0') ?? 0.0;
                                 final int qty = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
-                                final String img = item['product_image']?.toString() ?? item['image']?.toString() ?? item['img']?.toString() ?? '';
+                                final String img = item['product_image']?.toString() ?? item['image']?.toString() ?? item['img']?.toString() ?? item['product_img']?.toString() ?? '';
 
                                 return Row(
                                   children: [
@@ -656,15 +766,18 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
                                     Container(
                                       width: 48,
                                       height: 48,
-                                      padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: const Color(0XFFF5F6F8),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(color: Colors.black.withOpacity(0.05)),
                                       ),
-                                      child: img.startsWith('http')
-                                          ? Image.network(img, fit: BoxFit.contain, errorBuilder: (c, o, s) => const Icon(Icons.shopping_bag_outlined, color: Colors.grey))
-                                          : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 24),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: UiHelper.CustomImage(
+                                          img: img,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
 

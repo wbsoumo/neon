@@ -351,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var p in _liveProducts) {
       final img = p['image']?.toString();
       if (img != null && (img.startsWith('http://') || img.startsWith('https://'))) {
-        precacheImage(NetworkImage(img), context).catchError((_) {});
+        precacheImage(CachedNetworkImageProvider(img), context).catchError((_) {});
       }
     }
   }
@@ -1006,9 +1006,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           return InkWell(
                             onTap: () {
-                              setState(() {
-                                _selectedCategoryIndex = index;
-                              });
+                              if (index == 0) {
+                                setState(() {
+                                  _selectedCategoryIndex = 0;
+                                });
+                              } else {
+                                final String catName = cat["name"]?.toString() ?? "Category";
+                                final matchedCat = _liveCategories.firstWhere(
+                                  (c) => (c['name']?.toString() ?? '').toLowerCase().trim() == catName.toLowerCase().trim(),
+                                  orElse: () => <String, dynamic>{},
+                                );
+                                final int? catId = matchedCat.isNotEmpty
+                                    ? (matchedCat['id'] is int ? matchedCat['id'] : int.tryParse(matchedCat['id']?.toString() ?? ''))
+                                    : null;
+                                final String catImg = matchedCat['image']?.toString() ?? matchedCat['asset']?.toString() ?? "";
+
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryProductsScreen(
+                                      categoryName: catName,
+                                      categoryImg: catImg,
+                                      categoryId: catId,
+                                    ),
+                                  ),
+                                );
+                              }
                             },
                             splashColor: Colors.transparent,
                             highlightColor: Colors.transparent,
@@ -1359,10 +1381,11 @@ class _HomeScreenState extends State<HomeScreen> {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
+          color: const Color(0XFFF5F5F5),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.06),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -1408,15 +1431,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     _base64ImageCache.putIfAbsent(imgUrl, () => base64Decode(imgUrl.split(',').last)),
                     key: ValueKey(imgUrl),
                     width: double.infinity,
-                    height: 165,
-                    fit: BoxFit.cover,
+                    height: 180,
+                    fit: BoxFit.contain,
                     gaplessPlayback: true,
                   )
                 : UiHelper.CustomImage(
                     img: imgUrl,
                     width: double.infinity,
-                    height: 165,
-                    fit: BoxFit.cover,
+                    height: 180,
+                    fit: BoxFit.contain,
                   ),
           ),
         ),
@@ -1427,7 +1450,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Column(
         children: [
           SizedBox(
-            height: 165,
+            height: 180,
             child: buildSingleBannerItem(activeSliders[0]),
           ),
           const SizedBox(height: 8),
@@ -1438,7 +1461,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 165,
+          height: 180,
           child: PageView.builder(
             controller: _sliderPageController,
             physics: const BouncingScrollPhysics(),
