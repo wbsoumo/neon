@@ -126,11 +126,13 @@ class EmailService {
                 ]
             ]);
 
-            $socket = @stream_socket_client($remote, $errno, $errstr, 8, STREAM_CLIENT_CONNECT, $context);
+            $socket = @stream_socket_client($remote, $errno, $errstr, 2, STREAM_CLIENT_CONNECT, $context);
             if (!$socket) {
                 $lastErr = "Connection to $remote failed: $errstr ($errno)";
                 continue;
             }
+
+            stream_set_timeout($socket, 2);
 
             $read = function($sock) {
                 $response = '';
