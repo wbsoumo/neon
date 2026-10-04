@@ -328,7 +328,20 @@ class _HomeScreenState extends State<HomeScreen> {
     if (syncData != null && syncData['versions'] != null) {
       final prefs = await SharedPreferences.getInstance();
       final String? cachedProdVer = prefs.getString('cache_products_version_v1');
+      final String? cachedSliderVer = prefs.getString('cache_sliders_version_v1');
       final String serverProdVer = syncData['versions']['products']?.toString() ?? '';
+      final String serverSliderVer = syncData['versions']['sliders']?.toString() ?? '';
+
+      if (forceRefresh || cachedSliderVer == null || cachedSliderVer != serverSliderVer) {
+        final freshSliders = await ApiService.fetchSliders(forceRefresh: true);
+        if (mounted && freshSliders.isNotEmpty) {
+          setState(() {
+            _sliders = freshSliders;
+          });
+          _startSliderAutoTimer();
+          prefs.setString('cache_sliders_version_v1', serverSliderVer);
+        }
+      }
 
       // Only perform background fetch if version changed or force refresh is true
       if (forceRefresh || cachedProdVer == null || cachedProdVer != serverProdVer) {
@@ -1432,14 +1445,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: ValueKey(imgUrl),
                     width: double.infinity,
                     height: 180,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.fill,
                     gaplessPlayback: true,
                   )
                 : UiHelper.CustomImage(
                     img: imgUrl,
                     width: double.infinity,
                     height: 180,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.fill,
                   ),
           ),
         ),
