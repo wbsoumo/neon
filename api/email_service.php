@@ -167,28 +167,31 @@ class EmailService {
                 }
             }
 
-            $write($socket, "AUTH LOGIN");
-            $authResp = $read($socket);
-            if (substr($authResp, 0, 3) !== '334') {
-                fclose($socket);
-                $lastErr = "AUTH LOGIN rejected on $remote: $authResp";
-                continue;
-            }
+            // Local cPanel Exim allows unauthenticated local relay on 127.0.0.1 port 25 for local domain senders
+            if ($attempt['host'] !== '127.0.0.1' && $attempt['host'] !== 'localhost') {
+                $write($socket, "AUTH LOGIN");
+                $authResp = $read($socket);
+                if (substr($authResp, 0, 3) !== '334') {
+                    fclose($socket);
+                    $lastErr = "AUTH LOGIN rejected on $remote: $authResp";
+                    continue;
+                }
 
-            $write($socket, base64_encode($user));
-            $userResp = $read($socket);
-            if (substr($userResp, 0, 3) !== '334') {
-                fclose($socket);
-                $lastErr = "Username rejected on $remote: $userResp";
-                continue;
-            }
+                $write($socket, base64_encode($user));
+                $userResp = $read($socket);
+                if (substr($userResp, 0, 3) !== '334') {
+                    fclose($socket);
+                    $lastErr = "Username rejected on $remote: $userResp";
+                    continue;
+                }
 
-            $write($socket, base64_encode($pass));
-            $passResp = $read($socket);
-            if (substr($passResp, 0, 3) !== '235') {
-                fclose($socket);
-                $lastErr = "Password rejected on $remote: $passResp";
-                continue;
+                $write($socket, base64_encode($pass));
+                $passResp = $read($socket);
+                if (substr($passResp, 0, 3) !== '235') {
+                    fclose($socket);
+                    $lastErr = "Password rejected on $remote: $passResp";
+                    continue;
+                }
             }
 
             $write($socket, "MAIL FROM: <$from>");
