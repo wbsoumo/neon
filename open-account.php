@@ -48,7 +48,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/webp" href="logo.webp">
 
     <style>
         :root {
@@ -601,7 +601,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
     <header class="neon-header">
         <div class="header-content">
             <a href="index.php" class="brand-logo">
-                <img src="https://deccanfinltd.world/assets/img/logo.png" alt="Neon Bank Logo">
+                <img src="logo.webp" alt="Neon Bank Logo">
                 <span class="brand-name">NEON <span>BANK</span></span>
             </a>
             <a href="choose-account.php" class="back-link">

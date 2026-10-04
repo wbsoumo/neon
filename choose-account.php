@@ -30,7 +30,7 @@ $isLimited = is_rate_limited($ip, 3, 10);
     <link rel="stylesheet" href="https://assets.rmb.co.za/css/firstrand.toolkit.min.css" type="text/css">
     <link rel="stylesheet" href="https://assets.rmb.co.za/fonts/fonts.css" type="text/css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css" type="text/css">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/webp" href="logo.webp">
     
     <style>
         body {
@@ -191,8 +191,8 @@ $isLimited = is_rate_limited($ip, 3, 10);
     <!-- Header -->
     <header class="header inverted">
         <div class="container" style="padding-top:10px; padding-bottom:10px;">
-            <a href="index.html">
-                <img src="logo.png" alt="Deccan Finance Logo" class="logo">
+            <a href="index.php">
+                <img src="logo.webp" alt="Neon Bank Logo" class="logo">
             </a>
         </div>
     </header>
