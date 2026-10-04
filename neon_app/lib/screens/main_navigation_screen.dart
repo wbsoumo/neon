@@ -557,8 +557,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                               MaterialPageRoute(
                                 builder: (_) => PassbookScreen(
                                   accountNumber: _user.accountNumber,
-                                  balance: _user.balance,
+                                  balance: _mainBalanceChf > 0 ? _mainBalanceChf : (_user.balance * _inrToChfRate),
                                   transactions: _transactions,
+                                  user: _user,
                                 ),
                               ),
                             );
