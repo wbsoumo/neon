@@ -80,20 +80,48 @@ class EmailService {
         $fromName = !empty($settings['from_name']) ? $settings['from_name'] : 'Neon Bank';
         $replyTo = !empty($settings['reply_to']) ? $settings['reply_to'] : 'no-reply@neonfinswiss.world';
 
-        // 1. Direct Socket SSL SMTP Dispatcher (cPanel Port 465 SSL Authenticated)
+        // 1. Direct Socket SSL SMTP Dispatcher (cPanel Port 465 / 587 SSL Authenticated)
         $socketRes = self::sendSocketSmtp($to, $subject, $htmlBody, $settings);
         if ($socketRes['success']) {
             self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
             return $socketRes;
         }
 
-        // Return error details if direct SMTP fails
-        self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $socketRes['message'] ?? 'Socket SMTP failed');
-        return [
-            'success' => false,
-            'engine' => 'Socket SMTP',
-            'message' => $socketRes['message'] ?? 'Direct SMTP socket delivery failed.'
-        ];
+        // 2. Native PHP mail() fallback with proper envelope headers for cPanel exim
+        try {
+            $toStr = is_array($to) ? implode(', ', $to) : $to;
+            $headers  = "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+            $headers .= "From: " . $fromName . " <" . $fromEmail . ">\r\n";
+            $headers .= "Reply-To: " . $replyTo . "\r\n";
+            $headers .= "X-Mailer: NeonBank-Mailer/2.0\r\n";
+
+            // Pass -f parameter to set proper envelope sender
+            $sent = @mail($toStr, $subject, $htmlBody, $headers, "-f" . $fromEmail);
+            if ($sent) {
+                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
+                return [
+                    'success' => true,
+                    'engine' => 'mail() (-f ' . $fromEmail . ')',
+                    'socket_error' => $socketRes['message'] ?? 'Socket SMTP blocked by firewall',
+                    'message' => 'Email accepted by cPanel local mail agent (-f envelope sender).'
+                ];
+            } else {
+                $err = "Native mail() function returned false.";
+                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
+                return [
+                    'success' => false,
+                    'message' => 'Email sending failed: ' . $err
+                ];
+            }
+        } catch (\Throwable $fallbackEx) {
+            $err = $fallbackEx->getMessage();
+            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
+            return [
+                'success' => false,
+                'message' => 'Email sending failed: ' . $err
+            ];
+        }
     }
 
     /**
