@@ -6,6 +6,9 @@
 
 header('Content-Type: application/json');
 
+// Force version marker
+header('X-Neon-Email-Version: 2.0');
+
 require_once __DIR__ . '/db_helper.php';
 require_once __DIR__ . '/email_service.php';
 
