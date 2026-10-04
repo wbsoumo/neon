@@ -2248,27 +2248,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 4,
+                    Row(
                       children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            "CHF ${balanceChf.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "CHF ${balanceChf.toStringAsFixed(2)}",
+                              maxLines: 1,
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppTheme.successGreen.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(
-                            "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
-                            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 11),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
+                              maxLines: 1,
+                              style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 11),
+                            ),
                           ),
                         ),
                       ],
