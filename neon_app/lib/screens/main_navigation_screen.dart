@@ -834,15 +834,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text(
-                    "INTERNATIONAL FINANCE SERVICES",
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "INTERNATIONAL FINANCE SERVICES",
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
                     ),
                   ),
+                  SizedBox(width: 8),
                   Text(
                     "Swiss Banking Portal",
                     style: TextStyle(
@@ -2241,13 +2248,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      cross: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        Text(
-                          "CHF ${balanceChf.toStringAsFixed(2)}",
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "CHF ${balanceChf.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.darkNavy),
+                          ),
                         ),
-                        const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -2256,7 +2268,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ),
                           child: Text(
                             "+${gainChf.toStringAsFixed(2)} CHF (+16.67%)",
-                            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 12),
+                            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 11),
                           ),
                         ),
                       ],
