@@ -5,13 +5,11 @@
  */
 
 require_once __DIR__ . '/db_helper.php';
+
 $autoload_file = dirname(__DIR__) . '/vendor/autoload.php';
 if (file_exists($autoload_file)) {
     require_once $autoload_file;
 }
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class EmailService {
     // Encryption settings
@@ -42,10 +40,9 @@ class EmailService {
             $pdo = get_db_connection();
             $stmt = $pdo->query("SELECT * FROM smtp_settings ORDER BY id DESC LIMIT 1");
             $settings = $stmt->fetch();
-            if ($settings) {
+            if ($settings && !empty($settings['smtp_pass_encrypted'])) {
                 $settings['smtp_pass'] = self::decrypt_password($settings['smtp_pass_encrypted']);
             } else {
-                // Default fallback settings
                 $settings = [
                     'smtp_host' => 'neonfinswiss.world',
                     'smtp_port' => 465,
@@ -59,8 +56,7 @@ class EmailService {
                 ];
             }
             return $settings;
-        } catch (\Exception $e) {
-            error_log("Failed to load SMTP settings: " . $e->getMessage());
+        } catch (\Throwable $e) {
             return [
                 'smtp_host' => 'neonfinswiss.world',
                 'smtp_port' => 465,
@@ -80,16 +76,16 @@ class EmailService {
      */
     public static function sendMail($to, $subject, $htmlBody, $attachments = [], $cc = [], $bcc = []) {
         $settings = self::get_settings();
-        $fromEmail = $settings['from_email'] ?: 'no-reply@neonfinswiss.world';
-        $fromName = $settings['from_name'] ?: 'Neon Bank';
-        $replyTo = $settings['reply_to'] ?: 'no-reply@neonfinswiss.world';
+        $fromEmail = !empty($settings['from_email']) ? $settings['from_email'] : 'no-reply@neonfinswiss.world';
+        $fromName = !empty($settings['from_name']) ? $settings['from_name'] : 'Neon Bank';
+        $replyTo = !empty($settings['reply_to']) ? $settings['reply_to'] : 'no-reply@neonfinswiss.world';
 
-        // Try PHPMailer if class exists
-        if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-            $mail = new PHPMailer(true);
-            $mail->CharSet = 'UTF-8';
-
+        $phpmailerClass = '\\PHPMailer\\PHPMailer\\PHPMailer';
+        if (class_exists($phpmailerClass)) {
             try {
+                $mail = new $phpmailerClass(true);
+                $mail->CharSet = 'UTF-8';
+
                 $mail->isSMTP();
                 $mail->Host       = $settings['smtp_host'];
                 $mail->SMTPAuth   = (bool)$settings['smtp_auth'];
@@ -98,9 +94,9 @@ class EmailService {
 
                 $encryption = strtoupper($settings['smtp_encryption']);
                 if ($encryption === 'TLS') {
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->SMTPSecure = 'tls';
                 } elseif ($encryption === 'SSL') {
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                    $mail->SMTPSecure = 'ssl';
                 } else {
                     $mail->SMTPSecure = '';
                 }
@@ -170,9 +166,8 @@ class EmailService {
                     'success' => true,
                     'message' => 'Email sent successfully via PHPMailer.'
                 ];
-            } catch (\Exception $e) {
-                $errorInfo = $mail->ErrorInfo ?: $e->getMessage();
-                error_log("PHPMailer error: " . $errorInfo . " - Falling back to mail()");
+            } catch (\Throwable $e) {
+                error_log("PHPMailer error: " . $e->getMessage() . " - Falling back to mail()");
             }
         }
 
@@ -200,7 +195,7 @@ class EmailService {
                     'message' => 'Email sending failed: ' . $err
                 ];
             }
-        } catch (\Exception $fallbackEx) {
+        } catch (\Throwable $fallbackEx) {
             $err = $fallbackEx->getMessage();
             self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $err);
             return [
@@ -234,7 +229,7 @@ class EmailService {
                 ':status' => $status,
                 ':error' => $error
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log("Failed to log email transaction: " . $e->getMessage());
         }
     }
@@ -341,19 +336,13 @@ class EmailService {
 
             $htmlBody = self::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows, $statusBox);
             return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'message' => "Failed to send review notification email: " . $e->getMessage()];
         }
     }
 
     /**
      * Sends a transaction or approval notification email.
-     *
-     * @param string $accountNumber Customer's account number
-     * @param string $type 'credit' | 'debit' | 'approved' | 'failed'
-     * @param float|null $amount Transaction amount
-     * @param string|null $reference Reference/UTR number
-     * @param string|null $remarks Transaction description
      */
     public static function sendNotificationEmail($accountNumber, $type, $amount = null, $reference = null, $remarks = null) {
         try {
@@ -456,7 +445,7 @@ class EmailService {
 
             $htmlBody = self::renderNeonTemplate($title, $customerName, $badgeText, $badgeColor, $description, $rows, $statusBox);
             return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'message' => "Failed to send notification email: " . $e->getMessage()];
         }
     }
@@ -486,7 +475,7 @@ class EmailService {
 
             $htmlBody = self::renderNeonTemplate($title, $name, $badgeText, $badgeColor, $description, $rows, $statusBox);
             return self::sendMail($email, "Neon Bank - " . $title, $htmlBody);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'message' => "Failed to send OTP email: " . $e->getMessage()];
         }
     }
