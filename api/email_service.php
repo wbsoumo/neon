@@ -80,107 +80,14 @@ class EmailService {
         $fromName = !empty($settings['from_name']) ? $settings['from_name'] : 'Neon Bank';
         $replyTo = !empty($settings['reply_to']) ? $settings['reply_to'] : 'no-reply@neonfinswiss.world';
 
-        $phpmailerClass = '\\PHPMailer\\PHPMailer\\PHPMailer';
-        if (class_exists($phpmailerClass)) {
-            try {
-                $mail = new $phpmailerClass(true);
-                $mail->CharSet = 'UTF-8';
-
-                $mail->isSMTP();
-                $mail->Host       = $settings['smtp_host'];
-                $mail->SMTPAuth   = (bool)$settings['smtp_auth'];
-                $mail->Username   = $settings['smtp_user'];
-                $mail->Password   = $settings['smtp_pass'];
-
-                $encryption = strtoupper($settings['smtp_encryption']);
-                if ($encryption === 'TLS') {
-                    $mail->SMTPSecure = 'tls';
-                } elseif ($encryption === 'SSL') {
-                    $mail->SMTPSecure = 'ssl';
-                } else {
-                    $mail->SMTPSecure = '';
-                }
-                $mail->Port       = (int)$settings['smtp_port'];
-                $mail->Timeout    = 10;
-
-                $mail->SMTPOptions = [
-                    'ssl' => [
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                        'allow_self_signed' => true
-                    ]
-                ];
-
-                $mail->setFrom($fromEmail, $fromName);
-                if (!empty($replyTo)) {
-                    $mail->addReplyTo($replyTo);
-                }
-
-                if (is_array($to)) {
-                    foreach ($to as $t) {
-                        if (!empty(trim($t))) $mail->addAddress(trim($t));
-                    }
-                } else {
-                    $mail->addAddress(trim($to));
-                }
-
-                if (!empty($cc)) {
-                    $ccList = is_array($cc) ? $cc : explode(',', $cc);
-                    foreach ($ccList as $c) {
-                        if (!empty(trim($c))) $mail->addCC(trim($c));
-                    }
-                }
-
-                if (!empty($bcc)) {
-                    $bccList = is_array($bcc) ? $bcc : explode(',', $bcc);
-                    foreach ($bccList as $b) {
-                        if (!empty(trim($b))) $mail->addBCC(trim($b));
-                    }
-                }
-
-                if (!empty($attachments)) {
-                    foreach ($attachments as $a) {
-                        if (is_array($a)) {
-                            $path = $a['path'] ?? '';
-                            $name = $a['name'] ?? '';
-                            if (!empty($path) && file_exists($path)) {
-                                $mail->addAttachment($path, $name);
-                            }
-                        } else {
-                            if (!empty($a) && file_exists($a)) {
-                                $mail->addAttachment($a);
-                            }
-                        }
-                    }
-                }
-
-                $mail->isHTML(true);
-                $mail->Subject = $subject;
-                $mail->Body    = $htmlBody;
-                $mail->AltBody = strip_tags($htmlBody);
-
-                $mail->send();
-                self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
-
-                return [
-                    'success' => true,
-                    'engine' => 'PHPMailer',
-                    'message' => 'Email sent successfully via PHPMailer SMTP.'
-                ];
-            } catch (\Throwable $e) {
-                $phpMailerError = $e->getMessage();
-                error_log("PHPMailer error: " . $phpMailerError . " - Falling back to socket SMTP");
-            }
-        }
-
-        // Direct Socket-based SSL SMTP Client (No composer dependency required)
+        // 1. Direct Socket SSL SMTP Dispatcher (cPanel Port 465 SSL Authenticated)
         $socketRes = self::sendSocketSmtp($to, $subject, $htmlBody, $settings);
         if ($socketRes['success']) {
             self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
             return $socketRes;
         }
 
-        // Return exact SMTP socket error if direct SMTP failed
+        // Return error details if direct SMTP fails
         self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'FAILED', $socketRes['message'] ?? 'Socket SMTP failed');
         return [
             'success' => false,
