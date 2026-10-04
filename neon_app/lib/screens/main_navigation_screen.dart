@@ -102,6 +102,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _fetchExchangeRatesAndStockData();
     _fetchSpaces();
     _fetchRecentNeonRecipients();
+    ApiService.syncFcmToken(_user.appId);
   }
 
   Future<void> _initDataAndCheckMpin() async {

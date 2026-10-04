@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 
@@ -116,9 +117,45 @@ class ApiService {
   // 1. AUTHENTICATION (STRICT LIVE API ONLY)
   // ==========================================
 
+  // Fetch current FCM Token safely
+  static Future<String> getFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        debugPrint("[FCM] Token acquired: $token");
+        return token;
+      }
+    } catch (e) {
+      debugPrint("[FCM] Could not get token: $e");
+    }
+    return '';
+  }
+
+  // Update FCM token on backend server
+  static Future<void> syncFcmToken(String appId) async {
+    if (appId.isEmpty) return;
+    try {
+      final token = await getFcmToken();
+      if (token.isNotEmpty) {
+        await http.post(
+          Uri.parse("$baseUrl/update_fcm_token.php"),
+          body: {
+            "app_id": appId,
+            "fcm_token": token,
+            "fmc_token": token,
+          },
+        ).timeout(const Duration(seconds: 5));
+        debugPrint("[FCM] Synced token for $appId");
+      }
+    } catch (e) {
+      debugPrint("[FCM] Sync error: $e");
+    }
+  }
+
   // Login with Mobile/Email & Password against live MySQL database
   static Future<Map<String, dynamic>> loginWithCredentials(String identity, String password) async {
     try {
+      final fcmToken = await getFcmToken();
       final response = await http.post(
         Uri.parse("$baseUrl/login.php"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -127,6 +164,8 @@ class ApiService {
           "email": identity,
           "username": identity,
           "password": password,
+          "fcm_token": fcmToken,
+          "fmc_token": fcmToken,
         },
       ).timeout(const Duration(seconds: 10));
 
@@ -143,9 +182,15 @@ class ApiService {
   // Login with Mobile & 6-Digit MPIN
   static Future<Map<String, dynamic>> loginWithPin(String phone, String pin) async {
     try {
+      final fcmToken = await getFcmToken();
       final response = await http.post(
         Uri.parse("$baseUrl/login_with_pin.php"),
-        body: {"phone": phone, "pin": pin},
+        body: {
+          "phone": phone,
+          "pin": pin,
+          "fcm_token": fcmToken,
+          "fmc_token": fcmToken,
+        },
       ).timeout(const Duration(seconds: 10));
 
       return json.decode(response.body);
