@@ -134,7 +134,7 @@ class _PassbookScreenState extends State<PassbookScreen> with SingleTickerProvid
     
     // Simulate refresh / refetch user session if user details provided
     if (widget.user != null && widget.user!.appId.isNotEmpty) {
-      final updated = await ApiService.fetchUserProfile(widget.user!.appId, sessionId: widget.user!.sessionId);
+      final updated = await ApiService.getUserProfile(widget.user!.appId, sessionId: widget.user!.sessionId);
       if (updated != null && mounted) {
         setState(() {
           _accountBalanceChf = updated.balance > 0 ? updated.balance : _accountBalanceChf;
@@ -297,7 +297,7 @@ class _PassbookScreenState extends State<PassbookScreen> with SingleTickerProvid
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.emerald[600]?.withValues(alpha: 0.9),
+                            color: AppTheme.successGreen.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text("ACTIVE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 0.5)),
