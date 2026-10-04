@@ -169,11 +169,18 @@ class EmailService {
                 ];
             } catch (\Throwable $e) {
                 $phpMailerError = $e->getMessage();
-                error_log("PHPMailer error: " . $phpMailerError . " - Falling back to mail()");
+                error_log("PHPMailer error: " . $phpMailerError . " - Falling back to socket SMTP");
             }
         }
 
-        // Native PHP mail() fallback
+        // Direct Socket-based SSL SMTP Client (No composer dependency required)
+        $socketRes = self::sendSocketSmtp($to, $subject, $htmlBody, $settings);
+        if ($socketRes['success']) {
+            self::log_email($to, $cc, $bcc, $subject, $htmlBody, $fromEmail, 'SUCCESS');
+            return $socketRes;
+        }
+
+        // Final Native PHP mail() fallback
         try {
             $toStr = is_array($to) ? implode(', ', $to) : $to;
             $headers  = "MIME-Version: 1.0" . "\r\n";
@@ -188,8 +195,8 @@ class EmailService {
                 return [
                     'success' => true,
                     'engine' => 'mail()',
-                    'phpmailer_error' => isset($phpMailerError) ? $phpMailerError : null,
-                    'message' => 'Email accepted by local sendmail/mail(). Note: SMTP direct authentication failed or PHPMailer vendor library is not installed on server.'
+                    'socket_error' => $socketRes['message'] ?? 'Socket connection failed',
+                    'message' => 'Email dispatched via fallback sendmail.'
                 ];
             } else {
                 $err = "Native mail() function returned false.";
@@ -207,6 +214,127 @@ class EmailService {
                 'message' => 'Email sending failed: ' . $err
             ];
         }
+    }
+
+    /**
+     * Direct Socket SMTP Dispatcher for SSL/TLS
+     */
+    private static function sendSocketSmtp($to, $subject, $htmlBody, $settings) {
+        $host = $settings['smtp_host'] ?? 'neonfinswiss.world';
+        $port = (int)($settings['smtp_port'] ?? 465);
+        $user = $settings['smtp_user'] ?? 'no-reply@neonfinswiss.world';
+        $pass = $settings['smtp_pass'] ?? 'Soumojit1234@';
+        $from = $settings['from_email'] ?? 'no-reply@neonfinswiss.world';
+        $fromName = $settings['from_name'] ?? 'Neon Bank';
+        $replyTo = $settings['reply_to'] ?? $from;
+
+        $targetTo = is_array($to) ? $to[0] : $to;
+        $scheme = ($port === 465 || strtoupper($settings['smtp_encryption'] ?? '') === 'SSL') ? 'ssl://' : '';
+        $remote = $scheme . $host . ':' . $port;
+
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ]);
+
+        $socket = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $context);
+        if (!$socket) {
+            return ['success' => false, 'message' => "Socket connection to $remote failed: $errstr ($errno)"];
+        }
+
+        $read = function($sock) {
+            $response = '';
+            while ($line = fgets($sock, 512)) {
+                $response .= $line;
+                if (substr($line, 3, 1) === ' ') break;
+            }
+            return $response;
+        };
+
+        $write = function($sock, $cmd) {
+            fputs($sock, $cmd . "\r\n");
+        };
+
+        $welcome = $read($socket);
+        if (substr($welcome, 0, 3) !== '220') {
+            fclose($socket);
+            return ['success' => false, 'message' => "Invalid SMTP welcome response: $welcome"];
+        }
+
+        $write($socket, "EHLO neonfinswiss.world");
+        $ehlo = $read($socket);
+
+        $write($socket, "AUTH LOGIN");
+        $authResp = $read($socket);
+        if (substr($authResp, 0, 3) !== '334') {
+            fclose($socket);
+            return ['success' => false, 'message' => "AUTH LOGIN rejected: $authResp"];
+        }
+
+        $write($socket, base64_encode($user));
+        $userResp = $read($socket);
+        if (substr($userResp, 0, 3) !== '334') {
+            fclose($socket);
+            return ['success' => false, 'message' => "SMTP Username rejected: $userResp"];
+        }
+
+        $write($socket, base64_encode($pass));
+        $passResp = $read($socket);
+        if (substr($passResp, 0, 3) !== '235') {
+            fclose($socket);
+            return ['success' => false, 'message' => "SMTP Authentication failed: $passResp"];
+        }
+
+        $write($socket, "MAIL FROM: <$from>");
+        $mailResp = $read($socket);
+        if (substr($mailResp, 0, 3) !== '250') {
+            fclose($socket);
+            return ['success' => false, 'message' => "MAIL FROM rejected: $mailResp"];
+        }
+
+        $write($socket, "RCPT TO: <$targetTo>");
+        $rcptResp = $read($socket);
+        if (substr($rcptResp, 0, 3) !== '250') {
+            fclose($socket);
+            return ['success' => false, 'message' => "RCPT TO rejected: $rcptResp"];
+        }
+
+        $write($socket, "DATA");
+        $dataResp = $read($socket);
+        if (substr($dataResp, 0, 3) !== '354') {
+            fclose($socket);
+            return ['success' => false, 'message' => "DATA command rejected: $dataResp"];
+        }
+
+        $headers  = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$from>\r\n";
+        $headers .= "To: <$targetTo>\r\n";
+        $headers .= "Reply-To: <$replyTo>\r\n";
+        $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
+        $headers .= "Date: " . date(DATE_RFC2822) . "\r\n";
+        $headers .= "Message-ID: <" . time() . '.' . uniqid() . "@neonfinswiss.world>\r\n";
+
+        $messageBody = $headers . "\r\n" . $htmlBody . "\r\n.";
+        $write($socket, $messageBody);
+
+        $sendResp = $read($socket);
+        $write($socket, "QUIT");
+        fclose($socket);
+
+        if (substr($sendResp, 0, 3) === '250') {
+            return [
+                'success' => true,
+                'engine' => 'Direct Socket SMTP',
+                'message' => 'Email sent directly through cPanel SSL SMTP socket.'
+            ];
+        } else {
+            return ['success' => false, 'message' => "SMTP delivery error: $sendResp"];
+        }
+    }
     }
 
     /**
