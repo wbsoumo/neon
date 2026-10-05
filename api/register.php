@@ -4,11 +4,13 @@
  * Receives form POST, decodes and saves base64 captures, hashes the password, and saves database record
  */
 
+ob_start();
 header('Content-Type: application/json');
 require_once 'db_helper.php';
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    ob_clean();
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method Not Allowed.']);
     exit;
@@ -22,6 +24,7 @@ if (empty($data)) {
 }
 
 if (!$data) {
+    ob_clean();
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid Request Body.']);
     exit;
@@ -31,6 +34,7 @@ if (!$data) {
 $requiredCommon = ['account_type', 'full_name', 'email', 'phone', 'password'];
 foreach ($requiredCommon as $field) {
     if (empty($data[$field])) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Field ' . str_replace('_', ' ', $field) . ' is required.']);
         exit;
@@ -42,6 +46,7 @@ $pdo = get_db_connection();
 $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM applications WHERE phone = :phone");
 $stmt->execute([':phone' => $data['phone']]);
 if ($stmt->fetch()['count'] > 0) {
+    ob_clean();
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'An account is already registered with this mobile number.']);
     exit;
@@ -101,6 +106,7 @@ try {
         error_log("Failed to send application review email: " . $mailEx->getMessage());
     }
 
+    ob_clean();
     http_response_code(200);
     echo json_encode([
         'success' => true,
@@ -108,6 +114,7 @@ try {
         'message' => 'Your account has been registered and is currently in review. Please save your application ID.'
     ]);
 } catch (Exception $e) {
+    ob_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,

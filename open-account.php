@@ -1414,7 +1414,14 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                     method: 'POST',
                     body: formData
                 });
-                const res = await response.json();
+                const responseText = await response.text();
+                let res;
+                try {
+                    res = JSON.parse(responseText);
+                } catch (e) {
+                    console.error("Server response:", responseText);
+                    throw new Error("Server returned an invalid response format.");
+                }
 
                 if (res.success) {
                     document.getElementById("submittedAppId").innerText = res.app_id;
@@ -1426,7 +1433,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                     btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
                 }
             } catch (err) {
-                alert("An error occurred during submission: " + err.message);
+                alert(err.message || "An error occurred during submission.");
                 btnNext.disabled = false;
                 btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
             }
