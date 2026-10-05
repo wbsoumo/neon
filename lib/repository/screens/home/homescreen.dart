@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // 3. Reverse geocode to find real area name if no saved address
         final areaName = nearestSavedAddress == null ? await _reverseGeocodeArea(pos.latitude, pos.longitude) : null;
-        String finalAddressDisplay = (nearestSavedAddress ?? areaName ?? 'Select Location');
+        String finalAddressDisplay = (nearestSavedAddress ?? areaName ?? 'Getting location...');
 
         if (mounted) {
           setState(() {
@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _selectedStoreData = oldestStore;
           }
           if (_userSelectedAddress == null || _userSelectedAddress!.isEmpty || _userSelectedAddress!.contains('RATANR')) {
-            _userSelectedAddress = 'Select Location';
+            _userSelectedAddress = 'Getting location...';
           }
         });
 
