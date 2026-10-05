@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/screens/cart/couponsscreen.dart';
 import 'package:blinkit_series/repository/screens/cart/orderstatusscreen.dart';
+import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
+import 'package:share_plus/share_plus.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -97,6 +99,8 @@ class _CartScreenState extends State<CartScreen> {
   String _selectedDeliveryTag = "Location";
   bool _hasSavedAddressInArea = false;
 
+  Map<String, dynamic>? _selectedSpecialDealProduct;
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +108,118 @@ class _CartScreenState extends State<CartScreen> {
     _loadCategoryRecommendations();
     _autoSelectAvailablePickupSlot();
     _fetchUserAddresses();
+    _loadSpecialDealProduct();
+  }
+
+  Future<void> _loadSpecialDealProduct() async {
+    try {
+      final store = await ApiService.fetchSelectedStore();
+      final int storeId = store != null ? (store['id'] ?? 1) : 1;
+      final products = await ApiService.fetchProducts(storeId: storeId);
+
+      // Filter products marked as is_special_deal
+      List<Map<String, dynamic>> specialDeals = products.where((p) {
+        final val = p['is_special_deal'];
+        return val == true || val == 1 || val == '1' || val == 'true';
+      }).toList();
+
+      // If no explicit special deal products found, fallback to products with discount (mrp > price)
+      if (specialDeals.isEmpty) {
+        specialDeals = products.where((p) {
+          final double price = double.tryParse(p['effective_price']?.toString() ?? p['price']?.toString() ?? '0') ?? 0;
+          final double mrp = double.tryParse(p['effective_mrp']?.toString() ?? p['mrp']?.toString() ?? '0') ?? 0;
+          return mrp > price;
+        }).toList();
+      }
+
+      // Exclude items already in cart
+      specialDeals = specialDeals.where((p) => !_cart.items.containsKey(p['id'].toString())).toList();
+
+      if (specialDeals.isNotEmpty && mounted) {
+        specialDeals.shuffle();
+        setState(() {
+          _selectedSpecialDealProduct = specialDeals.first;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading special deal product: $e");
+    }
+  }
+
+  void _onSpecialDealAdded(Map<String, dynamic> dealProduct) {
+    final double price = double.tryParse(dealProduct['effective_price']?.toString() ?? dealProduct['price']?.toString() ?? '0') ?? 0;
+    final double mrp = double.tryParse(dealProduct['effective_mrp']?.toString() ?? dealProduct['mrp']?.toString() ?? '0') ?? price;
+    final double savings = (mrp > price) ? (mrp - price) : 0;
+
+    setState(() {
+      _selectedSpecialDealProduct = null;
+    });
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.all(24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: Color(0XFFE8F5E9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stars_rounded, color: Color(0XFF0C831F), size: 38),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Yay! You saved ₹${savings.toInt()}!",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0XFF0C831F),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "You saved ₹${savings.toInt()} (MRP ₹${mrp.toInt()} - Price ₹${price.toInt()}) on this special deal offer!",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0XFF0C831F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text(
+                    "Awesome!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _fetchUserAddresses() async {
@@ -404,28 +520,42 @@ class _CartScreenState extends State<CartScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black87),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SearchScreen(allProducts: _recommendations)),
+              );
+            },
           ),
-          Container(
-            margin: const EdgeInsets.only(right: 12, top: 10, bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0XFFE0E0E0)),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.share_outlined, size: 16, color: Colors.black87),
-                SizedBox(width: 4),
-                Text(
-                  "Share",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
+          GestureDetector(
+            onTap: () {
+              const String shareMsg =
+                  "🛒 Download SB Mart Quick App!\n\n"
+                  "Get all your daily groceries, fresh produce, and home essentials delivered to your doorstep or ready for store pickup in minutes — all in one place!\n\n"
+                  "Download the app now: https://admin.sbmartquick.com";
+              Share.share(shareMsg, subject: "SB Mart Quick App - Everything in one place!");
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 12, top: 10, bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0XFFE0E0E0)),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.share_outlined, size: 16, color: Colors.black87),
+                  SizedBox(width: 4),
+                  Text(
+                    "Share",
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -701,7 +831,7 @@ class _CartScreenState extends State<CartScreen> {
                                       Expanded(
                                         child: Text(
                                           subtotal >= _freeDeliveryThreshold
-                                              ? "Yay! You unlocked FREE Delivery 🥳 🎉"
+                                              ? "Yay! You unlocked FREE Delivery"
                                               : "Add ₹${amountNeededForFreeDelivery.toStringAsFixed(0)} more for FREE Delivery",
                                           style: TextStyle(
                                             fontSize: 14,
@@ -713,9 +843,10 @@ class _CartScreenState extends State<CartScreen> {
                                         ),
                                       ),
                                       if (subtotal >= _freeDeliveryThreshold)
-                                        const Text(
-                                          "🎉 🎊",
-                                          style: TextStyle(fontSize: 18),
+                                        const Icon(
+                                          Icons.celebration_rounded,
+                                          color: Color(0XFF0C831F),
+                                          size: 20,
                                         ),
                                     ],
                                   ),
@@ -756,136 +887,157 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 14),
 
                   // 2. SPECIAL DEAL FOR YOU SECTION
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.local_offer, color: Color(0XFF673AB7), size: 18),
-                            SizedBox(width: 6),
-                            Text(
-                              "Special deal for you!",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0XFFF8F5FF),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0XFFE8E0FF)),
+                  if (_selectedSpecialDealProduct != null && !_cart.items.containsKey(_selectedSpecialDealProduct!['id'].toString())) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          child: Column(
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(Icons.sanitizer_outlined, color: Color(0XFF5C6BC0), size: 36),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Head & Shoulders Anti Hairfall Offer",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                            height: 1.2,
-                                          ),
-                                        ),
-                                        SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              "₹45 ",
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                            Text(
-                                              "₹79",
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.black38,
-                                                decoration: TextDecoration.lineThrough,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  AnimatedCartButton(
-                                    id: "deal_1",
-                                    name: "Head & Shoulders Special Offer",
-                                    img: "image 35.png",
-                                    price: 45.0,
-                                    width: 64,
-                                    height: 32,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0XFFF0EBFF),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.lock_open, size: 16, color: Color(0XFF673AB7)),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        "Yay! Special deal unlocked. Add this item to your cart",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0XFF673AB7),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              Icon(Icons.local_offer_rounded, color: Color(0XFF673AB7), size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                "Special deal for you!",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.black,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0XFFF8F5FF),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0XFFE8E0FF)),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0XFFE0E0E0), width: 0.5),
+                                      ),
+                                      child: (_selectedSpecialDealProduct!['image'] != null &&
+                                              _selectedSpecialDealProduct!['image'].toString().startsWith('http'))
+                                          ? Image.network(
+                                              _selectedSpecialDealProduct!['image'].toString(),
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (ctx, err, stack) => const Icon(Icons.card_giftcard_rounded, color: Color(0XFF5C6BC0), size: 30),
+                                            )
+                                          : Image.asset(
+                                              "assets/images/${_selectedSpecialDealProduct!['image'] ?? 'image 41.png'}",
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (ctx, err, stack) => const Icon(Icons.card_giftcard_rounded, color: Color(0XFF5C6BC0), size: 30),
+                                            ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedSpecialDealProduct!['name'] ?? 'Special Product',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                "₹${(double.tryParse(_selectedSpecialDealProduct!['effective_price']?.toString() ?? _selectedSpecialDealProduct!['price']?.toString() ?? '0') ?? 0).toInt()} ",
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                              if ((double.tryParse(_selectedSpecialDealProduct!['effective_mrp']?.toString() ?? _selectedSpecialDealProduct!['mrp']?.toString() ?? '0') ?? 0) > (double.tryParse(_selectedSpecialDealProduct!['effective_price']?.toString() ?? _selectedSpecialDealProduct!['price']?.toString() ?? '0') ?? 0))
+                                                Text(
+                                                  "₹${(double.tryParse(_selectedSpecialDealProduct!['effective_mrp']?.toString() ?? _selectedSpecialDealProduct!['mrp']?.toString() ?? '0') ?? 0).toInt()}",
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.black38,
+                                                    decoration: TextDecoration.lineThrough,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    AnimatedCartButton(
+                                      id: _selectedSpecialDealProduct!['id'].toString(),
+                                      name: _selectedSpecialDealProduct!['name'] ?? 'Special Product',
+                                      img: _selectedSpecialDealProduct!['image'] ?? 'image 41.png',
+                                      price: double.tryParse(_selectedSpecialDealProduct!['effective_price']?.toString() ?? _selectedSpecialDealProduct!['price']?.toString() ?? '0') ?? 0,
+                                      unit: _selectedSpecialDealProduct!['unit'] ?? '1 unit',
+                                      width: 64,
+                                      height: 32,
+                                      onAdd: () => _onSpecialDealAdded(_selectedSpecialDealProduct!),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0XFFF0EBFF),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.lock_open_rounded, size: 16, color: Color(0XFF673AB7)),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Yay! Special deal unlocked. Add this item to your cart",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0XFF673AB7),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                  ],
 
                   const SizedBox(height: 14),
 
@@ -918,9 +1070,9 @@ class _CartScreenState extends State<CartScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "Delivery in 11 minutes",
-                                  style: TextStyle(
+                                Text(
+                                  _isPickupSelected ? "Express Store Pickup" : "Express Home Delivery",
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
                                     color: Colors.black,

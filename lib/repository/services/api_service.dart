@@ -423,7 +423,8 @@ class ApiService {
   }
 
   // 7. Fetch Real-time User Orders & Status Tracking History
-  static Future<List<Map<String, dynamic>>> getUserOrders({String phone = "8016222991"}) async {
+  static Future<List<Map<String, dynamic>>> getUserOrders({String phone = ""}) async {
+    if (phone.isEmpty) return [];
     try {
       final Uri uri = Uri.parse("${ApiConstants.baseUrl}/user/orders").replace(queryParameters: {'phone': phone});
       final response = await http.get(uri).timeout(const Duration(seconds: 6));
@@ -701,8 +702,9 @@ class ApiService {
       String targetPhone = phone ?? '';
       if (targetPhone.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        targetPhone = prefs.getString('user_phone') ?? '8016222991';
+        targetPhone = prefs.getString('user_phone') ?? '';
       }
+      if (targetPhone.isEmpty) return {'data': [], 'product_ids': []};
 
       final Uri uri = Uri.parse(ApiConstants.userWishlist).replace(
         queryParameters: {
@@ -732,8 +734,9 @@ class ApiService {
       String targetPhone = phone ?? '';
       if (targetPhone.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        targetPhone = prefs.getString('user_phone') ?? '8016222991';
+        targetPhone = prefs.getString('user_phone') ?? '';
       }
+      if (targetPhone.isEmpty) return false;
 
       final response = await http.post(
         Uri.parse(ApiConstants.toggleWishlist),

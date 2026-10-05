@@ -17,29 +17,26 @@ class OrderHistoryScreen extends StatefulWidget {
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
-  String _userPhone = "8016222991";
+  String _userPhone = "";
   Future<List<Map<String, dynamic>>>? _ordersFuture;
 
   @override
   void initState() {
     super.initState();
-    _ordersFuture = _fetchOrders();
     _loadUserPhone();
   }
 
   Future<List<Map<String, dynamic>>> _fetchOrders() async {
+    if (_userPhone.isEmpty) return [];
     final list = await ApiService.getUserOrders(phone: _userPhone);
-    if (list.isEmpty && _userPhone != "8016222991") {
-      return await ApiService.getUserOrders(phone: "8016222991");
-    }
     return list;
   }
 
   Future<void> _loadUserPhone() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final phone = prefs.getString('user_phone');
-      if (mounted && phone != null && phone.isNotEmpty && phone != _userPhone) {
+      final phone = prefs.getString('user_phone') ?? "";
+      if (mounted) {
         setState(() {
           _userPhone = phone;
           _ordersFuture = _fetchOrders();

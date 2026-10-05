@@ -12,6 +12,7 @@ class AnimatedCartButton extends StatefulWidget {
   final double width;
   final double height;
   final Color? themeColor;
+  final VoidCallback? onAdd;
 
   const AnimatedCartButton({
     super.key,
@@ -25,6 +26,7 @@ class AnimatedCartButton extends StatefulWidget {
     this.width = 72,
     this.height = 32,
     this.themeColor,
+    this.onAdd,
   });
 
   @override
@@ -61,7 +63,9 @@ class _AnimatedCartButtonState extends State<AnimatedCartButton> {
       maxStock: widget.maxStock,
     );
 
-    if (!success && mounted) {
+    if (success) {
+      widget.onAdd?.call();
+    } else if (mounted) {
       final String msg = (widget.maxStock != null && widget.maxStock! <= 0)
           ? "Item is currently out of stock"
           : "Cannot add more than ${widget.maxStock ?? 10} item(s) in stock";

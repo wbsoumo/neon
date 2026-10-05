@@ -164,7 +164,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       await prefs.setDouble('user_selected_lng', _currentPosition.longitude);
 
       final userName = prefs.getString('user_name') ?? 'Customer';
-      final userPhone = prefs.getString('user_phone') ?? '8016222991';
+      final userPhone = prefs.getString('user_phone') ?? '';
 
       // Call API to save address
       await ApiService.saveUserAddress(

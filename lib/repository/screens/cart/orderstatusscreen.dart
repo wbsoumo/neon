@@ -59,24 +59,14 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> with SingleTicker
 
   Future<void> _fetchLiveOrderStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final phone = prefs.getString('user_phone') ?? "8016222991";
-    List<Map<String, dynamic>> userOrders = await ApiService.getUserOrders(phone: phone);
+    final phone = prefs.getString('user_phone') ?? "";
+    List<Map<String, dynamic>> userOrders = phone.isNotEmpty ? await ApiService.getUserOrders(phone: phone) : [];
     
     Map<String, dynamic>? match;
     for (var o in userOrders) {
       if (o['order_number'] == widget.orderNumber) {
         match = o;
         break;
-      }
-    }
-
-    if (match == null && phone != "8016222991") {
-      final fallbackOrders = await ApiService.getUserOrders(phone: "8016222991");
-      for (var o in fallbackOrders) {
-        if (o['order_number'] == widget.orderNumber) {
-          match = o;
-          break;
-        }
       }
     }
 

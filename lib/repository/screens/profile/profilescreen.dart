@@ -21,7 +21,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isDarkMode = false;
-  String _userPhone = "8016222991";
+  String _userPhone = "";
   String _userName = "Your account";
   double _walletBalance = 0.0;
 
@@ -34,16 +34,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final phone = prefs.getString('user_phone');
-      final name = prefs.getString('user_name');
-      final targetPhone = phone ?? _userPhone;
-      
-      final wallet = await ApiService.fetchUserWallet(phone: targetPhone);
+      final phone = prefs.getString('user_phone') ?? "";
+      final name = prefs.getString('user_name') ?? "";
+      final wallet = phone.isNotEmpty ? await ApiService.fetchUserWallet(phone: phone) : 0.0;
 
       if (mounted) {
         setState(() {
-          if (phone != null && phone.isNotEmpty) _userPhone = phone;
-          if (name != null && name.isNotEmpty) _userName = name;
+          _userPhone = phone;
+          if (name.isNotEmpty) _userName = name;
           _walletBalance = wallet;
         });
       }
@@ -480,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildOrdersContent() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: ApiService.getUserOrders(),
+      future: _userPhone.isNotEmpty ? ApiService.getUserOrders(phone: _userPhone) : Future.value([]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(

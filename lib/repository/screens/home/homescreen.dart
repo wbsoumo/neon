@@ -13,6 +13,7 @@ import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet
 import 'package:blinkit_series/repository/widgets/voice_search_sheet.dart';
 import 'package:blinkit_series/repository/screens/category/category_products_screen.dart';
 import 'package:blinkit_series/repository/screens/search/searchscreen.dart';
+import 'package:blinkit_series/repository/screens/custom_order/request_order_screen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -965,43 +966,100 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    if (_selectedStoreData != null && _selectedStoreData!['is_serviceable'] == false) ...[
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                    const SizedBox(height: 12),
+
+                    // Premium Request Order / Bulk Order Card/Banner
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const RequestOrderScreen(),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0XFFE53935), width: 1.5),
+                            borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.location_off, color: Color(0XFFE53935), size: 22),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE8F5E9),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.assignment_outlined,
+                                  color: Color(0xFF16A34A),
+                                  size: 22,
+                                ),
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(
-                                  _selectedStoreData!['closure_reason'] ?? "We currently do not deliver to this location.",
-                                  style: const TextStyle(
-                                    color: Color(0XFFD32F2F),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      "Request a Custom / Bulk Order",
+                                      style: TextStyle(
+                                        color: Color(0xFF0F172A),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      "Upload your handwritten list or order requirement and we’ll arrange it for you.",
+                                      style: TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 11,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF16A34A),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "Request Order",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(width: 2),
+                                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 13),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ],
+                    ),
 
                     const SizedBox(height: 14),
 
