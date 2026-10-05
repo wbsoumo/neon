@@ -206,12 +206,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const Divider(height: 1, indent: 48),
                     _buildOptionTile(
-                      icon: Icons.soup_kitchen_outlined,
-                      title: "Bookmarked recipes",
-                      onTap: () => _navigateToDetail(context, "Bookmarked recipes", _buildBookmarkedRecipesContent()),
-                    ),
-                    const Divider(height: 1, indent: 48),
-                    _buildOptionTile(
                       icon: Icons.favorite_border_rounded,
                       title: "Your wishlist",
                       onTap: () => _navigateToDetail(context, "Your wishlist", _buildWishlistContent()),
@@ -221,12 +215,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.receipt_long_outlined,
                       title: "GST details",
                       onTap: () => _navigateToDetail(context, "GST details", _buildGstContent()),
-                    ),
-                    const Divider(height: 1, indent: 48),
-                    _buildOptionTile(
-                      icon: Icons.card_giftcard_outlined,
-                      title: "E-gift cards",
-                      onTap: () => _navigateToDetail(context, "E-gift cards", _buildEGiftCardsContent()),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -262,6 +250,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.account_balance_wallet_outlined,
                       title: "SB Mart Money",
                       onTap: () => _navigateToDetail(context, "SB Mart Money", _buildBlinkitMoneyContent()),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.card_giftcard_outlined,
+                      title: "E-gift cards",
+                      onTap: () => _navigateToDetail(context, "E-gift cards", _buildEGiftCardsContent()),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -836,23 +830,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildBookmarkedRecipesContent() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 40),
-        child: Column(
-          children: const [
-            Icon(Icons.soup_kitchen_outlined, size: 60, color: Colors.black26),
-            SizedBox(height: 12),
-            Text("No Bookmarked Recipes Yet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            SizedBox(height: 6),
-            Text("Save your favorite recipes while browsing items!", style: TextStyle(fontSize: 12, color: Colors.black45)),
-          ],
-        ),
-      ),
     );
   }
 
