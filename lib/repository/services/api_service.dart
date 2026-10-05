@@ -677,6 +677,101 @@ class ApiService {
       debugPrint("Failed to register FCM token: $e");
     }
   }
+
+  // 14. Fetch User Wishlist Products
+  static Future<Map<String, dynamic>> fetchUserWishlist({String? phone, int storeId = 1}) async {
+    try {
+      String targetPhone = phone ?? '';
+      if (targetPhone.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        targetPhone = prefs.getString('user_phone') ?? '8016222991';
+      }
+
+      final Uri uri = Uri.parse(ApiConstants.userWishlist).replace(
+        queryParameters: {
+          'user_phone': targetPhone,
+          'store_id': storeId.toString(),
+        },
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return {
+            'data': List<Map<String, dynamic>>.from(data['data'] ?? []),
+            'product_ids': List<String>.from(data['product_ids'] ?? []),
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint("API Error fetching wishlist: $e");
+    }
+    return {'data': [], 'product_ids': []};
+  }
+
+  // 15. Toggle Product in Wishlist
+  static Future<bool> toggleWishlistProduct({required String productId, String? phone}) async {
+    try {
+      String targetPhone = phone ?? '';
+      if (targetPhone.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        targetPhone = prefs.getString('user_phone') ?? '8016222991';
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.toggleWishlist),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "user_phone": targetPhone,
+          "product_id": productId,
+        }),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['is_wishlisted'] == true;
+      }
+    } catch (e) {
+      debugPrint("API Error toggling wishlist: $e");
+    }
+    return false;
+  }
+
+  // 16. Delete Account API Call
+  static Future<Map<String, dynamic>> deleteAccount({required String password, String? phone}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String userPhone = phone ?? prefs.getString('user_phone') ?? '';
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.deleteAccount),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "phone": userPhone,
+          "password": password,
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Account deleted successfully.',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to delete account. Incorrect password.',
+        };
+      }
+    } catch (e) {
+      debugPrint("API Error deleting account: $e");
+      return {
+        'success': false,
+        'message': 'Network error while deleting account. Please check your connection.',
+      };
+    }
+  }
 }
 
 

@@ -56,18 +56,18 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _sliders = [
     {
       "id": 1,
-      "title": "Lights, Diyas & Candles",
-      "subtitle": "Upto 50% Off on Festive Decor",
+      "title": "Big Savings Every Day",
+      "subtitle": "Fresh products, great quality at lowest prices.",
       "offer_text": "UP TO 50% OFF",
-      "image": "assets/images/image 50.png",
+      "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
       "category_id": 1,
     },
     {
       "id": 2,
-      "title": "Diwali Gifts & Hampers",
-      "subtitle": "Express 10-Minute Delivery",
-      "offer_text": "FESTIVE SPECIAL",
-      "image": "assets/images/image 51.png",
+      "title": "Fresh Farm Vegetables",
+      "subtitle": "Organically grown, handpicked fresh daily.",
+      "offer_text": "MIN 30% OFF",
+      "image": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1200&q=80",
       "category_id": 1,
     },
   ];

@@ -14,6 +14,9 @@ class ApiConstants {
   static const String coupons = "$baseUrl/coupons";
   static const String validateCoupon = "$baseUrl/coupons/validate";
   static const String userWallet = "$baseUrl/user/wallet";
+  static const String userWishlist = "$baseUrl/user/wishlist";
+  static const String toggleWishlist = "$baseUrl/user/wishlist/toggle";
+  static const String deleteAccount = "$baseUrl/user/delete-account";
   static const String registerFcmToken = "$baseUrl/user/fcm-token";
   static const String sliders = "$baseUrl/sliders";
 

@@ -47,6 +47,19 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     super.initState();
     _mainScrollController.addListener(_onMainScrollListener);
     _loadAllCategoriesAndProducts();
+    _loadUserWishlistIds();
+  }
+
+  Future<void> _loadUserWishlistIds() async {
+    try {
+      final res = await ApiService.fetchUserWishlist();
+      if (mounted && res['product_ids'] != null) {
+        setState(() {
+          _favoriteIds.clear();
+          _favoriteIds.addAll(List<String>.from(res['product_ids']));
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -861,7 +874,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                                              top: 6,
                                                              right: 6,
                                                              child: InkWell(
-                                                               onTap: () {
+                                                               onTap: () async {
                                                                  setState(() {
                                                                    if (isFav) {
                                                                      _favoriteIds.remove(id);
@@ -869,6 +882,20 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                                                      _favoriteIds.add(id);
                                                                    }
                                                                  });
+                                                                 final isAdded = await ApiService.toggleWishlistProduct(productId: id);
+                                                                 if (mounted) {
+                                                                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                                   ScaffoldMessenger.of(context).showSnackBar(
+                                                                     SnackBar(
+                                                                       content: Text(
+                                                                         isAdded ? "❤️ Added to your wishlist!" : "Removed from wishlist",
+                                                                         style: const TextStyle(fontWeight: FontWeight.bold),
+                                                                       ),
+                                                                       duration: const Duration(seconds: 2),
+                                                                       behavior: SnackBarBehavior.floating,
+                                                                     ),
+                                                                   );
+                                                                 }
                                                                },
                                                                child: CircleAvatar(
                                                                  radius: 12,

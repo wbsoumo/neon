@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/screens/profile/profile_detail_screen.dart';
 import 'package:blinkit_series/repository/screens/profile/order_history_screen.dart';
+import 'package:blinkit_series/repository/screens/login/loginscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
+import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
+import 'package:blinkit_series/repository/widgets/product_detail_dialog.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
@@ -318,6 +322,143 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.account_balance_wallet_outlined,
                       title: "SB Mart Money",
                       onTap: () => _navigateToDetail(context, "SB Mart Money", _buildBlinkitMoneyContent()),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 6. "Other Information" Section Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+                      child: Text(
+                        "Other Information",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    _buildOptionTile(
+                      icon: Icons.info_outline_rounded,
+                      title: "About Us",
+                      onTap: () => _navigateToDetail(
+                        context,
+                        "About Us",
+                        _buildLegalPageContent(
+                          title: "About Us",
+                          url: "https://sbmartquick.com/about-us",
+                          paragraphs: [
+                            "Welcome to SonarbanglaMart – your premier quick-commerce grocery delivery service bringing fresh groceries, daily essentials, fruits, vegetables, dairy, and household items straight to your doorstep in 10 to 16 minutes.",
+                            "Our mission is to redefine grocery shopping for Bengal and India by operating hyper-local micro-fulfillment dark stores situated right in your neighborhood.",
+                            "With SonarbanglaMart, you get 100% genuine products, verified local fresh produce, instant order tracking, and zero minimum order friction.",
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.gavel_outlined,
+                      title: "Terms and Conditions",
+                      onTap: () => _navigateToDetail(
+                        context,
+                        "Terms and Conditions",
+                        _buildLegalPageContent(
+                          title: "Terms and Conditions",
+                          url: "https://sbmartquick.com/terms-and-conditions",
+                          paragraphs: [
+                            "Please read these Terms and Conditions carefully before using the SonarbanglaMart application or services.",
+                            "1. Account Requirements: Users must provide accurate phone numbers and delivery locations. Orders placed via Cash on Delivery (COD) must be accepted at doorstep.",
+                            "2. Delivery Timelines: Estimated delivery times of 10-16 minutes are subject to local traffic, weather, and store serviceability zones.",
+                            "3. Pricing & Billing: All prices listed include applicable GST taxes. Promotional coupon discounts are subject to valid usage criteria.",
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: "Privacy policy",
+                      onTap: () => _navigateToDetail(
+                        context,
+                        "Privacy policy",
+                        _buildLegalPageContent(
+                          title: "Privacy Policy",
+                          url: "https://sbmartquick.com/privacy-policy",
+                          paragraphs: [
+                            "SonarbanglaMart Quick Commerce Private Limited (\"SonarbanglaMart\") is committed to protecting your privacy and personal data in accordance with Indian data privacy laws and Google Play Developer Policies.",
+                            "1. Information We Collect: Name, mobile phone number, delivery address, precise GPS location coordinates (latitude/longitude), cart items, wishlist, order history, device identifiers, and FCM push notification tokens.",
+                            "2. App Permissions & Justification:",
+                            "• GPS Location (ACCESS_FINE_LOCATION): Required while using the app to calculate nearest dark store eligibility within a 15km delivery radius, store serviceability, and delivery distance.",
+                            "• Push Notifications (POST_NOTIFICATIONS): Used for real-time order status updates (Packing, Out for Delivery, Delivered) and promotional alerts.",
+                            "• Network Access (INTERNET / ACCESS_NETWORK_STATE): Used for SSL-encrypted API communication and catalog sync.",
+                            "3. Data Sharing & Security: We DO NOT sell or trade your data. Information is shared only with assigned delivery riders and secure cloud infrastructure (Google Firebase / HTTPS servers). All network data is encrypted using 256-bit SSL/TLS.",
+                            "4. Account Deletion: You can delete your account anytime in the app under Profile → Account Privacy → Delete your account, or request web deletion via support@sbmartquick.com.",
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.shopping_bag_outlined,
+                      title: "Shopping policy",
+                      onTap: () => _navigateToDetail(
+                        context,
+                        "Shopping policy",
+                        _buildLegalPageContent(
+                          title: "Shopping Policy",
+                          url: "https://sbmartquick.com/shopping-policy",
+                          paragraphs: [
+                            "Our Shopping Policy outlines how items are reserved, picked, packed, and delivered.",
+                            "1. Stock Availability: Real-time inventory ensures items added to cart are reserved during checkout.",
+                            "2. Quality Guarantee: Perishable items like milk, dairy, fruits, and vegetables undergo temperature-controlled quality checks before dispatch.",
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.assignment_return_outlined,
+                      title: "Refund Policy",
+                      onTap: () => _navigateToDetail(
+                        context,
+                        "Refund Policy",
+                        _buildLegalPageContent(
+                          title: "Refund Policy",
+                          url: "https://sbmartquick.com/refund-policy",
+                          paragraphs: [
+                            "At SonarbanglaMart, customer satisfaction is our top priority.",
+                            "1. Damaged or Missing Items: If an item is missing or damaged, report it immediately to our support team for an instant wallet credit or cash refund.",
+                            "2. Order Cancellation: Orders can be canceled free of charge before rider dispatch.",
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.notifications_none_rounded,
+                      title: "Notification Preferences",
+                      onTap: () => _navigateToDetail(context, "Notification Preferences", _buildNotificationPreferencesContent()),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.security_rounded,
+                      title: "Account Privacy",
+                      onTap: () => _navigateToDetail(context, "Account Privacy", _buildAccountPrivacyContent()),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -774,19 +915,181 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildWishlistContent() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 40),
-        child: Column(
-          children: const [
-            Icon(Icons.favorite_border_rounded, size: 60, color: Colors.black26),
-            SizedBox(height: 12),
-            Text("Your Wishlist is Empty", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            SizedBox(height: 6),
-            Text("Explore products and tap the heart icon to save for later.", style: TextStyle(fontSize: 12, color: Colors.black45)),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ApiService.fetchUserWishlist(phone: _userPhone),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(30),
+              child: CircularProgressIndicator(color: Color(0XFF0C831F)),
+            ),
+          );
+        }
+
+        final wishlistRes = snapshot.data ?? {};
+        final List<Map<String, dynamic>> items = List<Map<String, dynamic>>.from(wishlistRes['data'] ?? []);
+
+        if (items.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: const [
+                Icon(Icons.favorite_border_rounded, size: 54, color: Colors.black26),
+                SizedBox(height: 12),
+                Text("Your Wishlist is Empty", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                SizedBox(height: 6),
+                Text("Explore products and tap the heart icon to save for later.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                "${items.length} saved item${items.length > 1 ? 's' : ''}",
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black54),
+              ),
+            ),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.65,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final String id = item['id']?.toString() ?? 'prod_$index';
+                final String name = item['name']?.toString() ?? 'Product';
+                final String unit = item['unit']?.toString() ?? '1 unit';
+                final double price = double.tryParse(item['effective_price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
+                final double mrp = double.tryParse(item['effective_mrp']?.toString() ?? item['mrp']?.toString() ?? '0') ?? (price > 0 ? price * 1.2 : price);
+                final String img = item['image']?.toString() ?? item['img']?.toString() ?? '';
+                final int rawStock = int.tryParse(item['available_stock']?.toString() ?? item['stock']?.toString() ?? '10') ?? 10;
+
+                final mapItem = {
+                  "id": id,
+                  "name": name,
+                  "text": name,
+                  "unit": unit,
+                  "price": price,
+                  "mrp": mrp,
+                  "img": img,
+                  "available_stock": rawStock,
+                };
+
+                return InkWell(
+                  onTap: () => ProductDetailDialog.show(context, mapItem),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image Stack with Heart Remove Button
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                              child: Container(
+                                height: 105,
+                                width: double.infinity,
+                                color: const Color(0XFFF9F9F9),
+                                child: UiHelper.CustomImage(
+                                  img: img,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: InkWell(
+                                onTap: () async {
+                                  await ApiService.toggleWishlistProduct(productId: id, phone: _userPhone);
+                                  if (mounted) setState(() {});
+                                },
+                                child: CircleAvatar(
+                                  radius: 13,
+                                  backgroundColor: Colors.white.withOpacity(0.9),
+                                  child: const Icon(Icons.favorite, size: 15, color: Colors.red),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87, height: 1.15),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(unit, style: const TextStyle(fontSize: 10, color: Colors.black45)),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("₹${price.toStringAsFixed(0)}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.black)),
+                                      if (mrp > price)
+                                        Text("₹${mrp.toStringAsFixed(0)}", style: const TextStyle(fontSize: 9, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+                                    ],
+                                  ),
+                                  AnimatedCartButton(
+                                    id: id,
+                                    name: name,
+                                    img: img,
+                                    price: price,
+                                    unit: unit,
+                                    maxStock: rawStock,
+                                    width: 62,
+                                    height: 28,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -851,6 +1154,328 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text("Upload and view prescriptions for express medicine delivery.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
         ],
       ),
+    );
+  }
+
+  // Helper builder for Legal & Info Pages with Open in Browser Action
+  Widget _buildLegalPageContent({
+    required String title,
+    required String url,
+    required List<String> paragraphs,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0XFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.article_outlined, color: Color(0XFF0C831F), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                    const Text(
+                      "SonarbanglaMart Official Policy",
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+          ...paragraphs.map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Text(
+                  p,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+                ),
+              )),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0XFF0C831F),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: () async {
+              final Uri uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            icon: const Icon(Icons.open_in_browser_rounded, size: 20),
+            label: const Text("Open on Browser", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationPreferencesContent() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Notification Preferences", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 6),
+          const Text("Manage order updates, promotional offers, and delivery alerts.", style: TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 16),
+          SwitchListTile(
+            title: const Text("Order Tracking Alerts", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: const Text("Receive live updates for order dispatch & delivery", style: TextStyle(fontSize: 12)),
+            value: true,
+            activeColor: const Color(0XFF0C831F),
+            onChanged: (val) {},
+          ),
+          const Divider(),
+          SwitchListTile(
+            title: const Text("Offers & Promotions", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: const Text("Get updates on discounts & daily fresh sales", style: TextStyle(fontSize: 12)),
+            value: true,
+            activeColor: const Color(0XFF0C831F),
+            onChanged: (val) {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountPrivacyContent() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Account Privacy & Safety", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 6),
+          const Text("Manage your data security and account settings.", style: TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.security, color: Color(0XFF0C831F)),
+            title: const Text("Data Encryption", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: const Text("Your phone number and address data are encrypted in transit.", style: TextStyle(fontSize: 12)),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+            title: const Text("Delete your account", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.redAccent)),
+            subtitle: const Text("Deactivate account and permanently remove personal data", style: TextStyle(fontSize: 12)),
+            onTap: () => _showDeleteAccountWarningDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountWarningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            SizedBox(width: 8),
+            Text("Delete Account?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          "Warning: Deleting your account will deactivate your account and permanently remove your saved addresses, cart items, wishlist products, and order history.\n\nThis action cannot be undone.",
+          style: TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showPasswordConfirmationModal(context);
+            },
+            child: const Text("Proceed", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPasswordConfirmationModal(BuildContext parentContext) {
+    final TextEditingController passwordController = TextEditingController();
+    bool isLoading = false;
+    String errorMessage = '';
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Confirm Account Deletion",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black54),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Please enter your current account password to authorize deletion.",
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: "Current Account Password",
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0XFF0C831F)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  if (errorMessage.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final String password = passwordController.text.trim();
+                            if (password.isEmpty) {
+                              setModalState(() {
+                                errorMessage = "Please enter your password to proceed.";
+                              });
+                              return;
+                            }
+
+                            setModalState(() {
+                              isLoading = true;
+                              errorMessage = '';
+                            });
+
+                            final result = await ApiService.deleteAccount(password: password);
+
+                            if (result['success'] == true) {
+                              Navigator.pop(context); // Close bottom sheet
+
+                              // Purge local storage & user data
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.clear();
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(parentContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(result['message'] ?? "Account deleted successfully."),
+                                    backgroundColor: Colors.black87,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+
+                                // Navigate to LoginScreen & remove all previous routes
+                                Navigator.pushAndRemoveUntil(
+                                  parentContext,
+                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                  (route) => false,
+                                );
+                              }
+                            } else {
+                              setModalState(() {
+                                isLoading = false;
+                                errorMessage = result['message'] ?? "Incorrect password. Account was not deleted.";
+                              });
+                            }
+                          },
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            "Confirm & Delete Account",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

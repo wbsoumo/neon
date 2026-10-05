@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:blinkit_series/repository/widgets/uihelper.dart';
 import 'package:blinkit_series/repository/widgets/animated_cart_button.dart';
 
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:blinkit_series/repository/services/api_service.dart';
+import 'package:share_plus/share_plus.dart';
+
 class ProductDetailDialog extends StatefulWidget {
   final Map<String, dynamic> product;
 
@@ -48,12 +54,110 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
   int _currentPage = 0;
   Timer? _autoSlideTimer;
 
+  bool _isWishlisted = false;
+  bool _isWishlistLoading = false;
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _startAutoSlide();
+    _checkInitialWishlistStatus();
   }
+
+  Future<void> _checkInitialWishlistStatus() async {
+    final String productId = (widget.product['id'] ?? '').toString();
+    if (productId.isEmpty) return;
+    try {
+      final res = await ApiService.fetchUserWishlist();
+      final List<String> ids = List<String>.from(res['product_ids'] ?? []);
+      if (mounted) {
+        setState(() {
+          _isWishlisted = ids.contains(productId);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleWishlist() async {
+    final String productId = (widget.product['id'] ?? '').toString();
+    if (productId.isEmpty || _isWishlistLoading) return;
+
+    setState(() {
+      _isWishlistLoading = true;
+    });
+
+    final bool newStatus = await ApiService.toggleWishlistProduct(productId: productId);
+
+    if (mounted) {
+      setState(() {
+        _isWishlisted = newStatus;
+        _isWishlistLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus ? 'Added to your wishlist' : 'Removed from wishlist',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: newStatus ? const Color(0XFF0C831F) : Colors.black87,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareProduct() async {
+    final String title = (widget.product['name'] ?? widget.product['text'] ?? 'Product Details').toString();
+    final double price = (widget.product['price'] is num)
+        ? (widget.product['price'] as num).toDouble()
+        : double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0.0;
+    final String mainImg = (widget.product['img'] ?? widget.product['image'] ?? '').toString();
+
+    // Process image URL if present
+    String fullImgUrl = mainImg;
+    if (fullImgUrl.startsWith('http://sbmartquick.com/uploads/')) {
+      fullImgUrl = fullImgUrl.replaceFirst('http://sbmartquick.com/uploads/', 'https://admin.sbmartquick.com/uploads/');
+    } else if (fullImgUrl.startsWith('https://sbmartquick.com/uploads/')) {
+      fullImgUrl = fullImgUrl.replaceFirst('https://sbmartquick.com/uploads/', 'https://admin.sbmartquick.com/uploads/');
+    } else if (fullImgUrl.isNotEmpty && !fullImgUrl.startsWith('http')) {
+      fullImgUrl = 'https://admin.sbmartquick.com/uploads/products/$fullImgUrl';
+    }
+
+    final String shareText = "$title\nPrice: ₹${price.toStringAsFixed(0)}\n\nDownload SonarbanglaMart App now:\nhttps://sbmartquick.com/";
+
+    try {
+      if (fullImgUrl.isNotEmpty && fullImgUrl.startsWith('http')) {
+        final response = await http.get(Uri.parse(fullImgUrl)).timeout(const Duration(seconds: 6));
+        if (response.statusCode == 200) {
+          final tempDir = await getTemporaryDirectory();
+          final String extension = fullImgUrl.contains('.png') ? 'png' : 'jpg';
+          final file = File('${tempDir.path}/shared_product_$epochMs.$extension');
+          await file.writeAsBytes(response.bodyBytes);
+
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: shareText,
+            subject: "Check out $title on SonarbanglaMart",
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error sharing product photo media file: $e");
+    }
+
+    // Fallback to text share if image download fails
+    await Share.share(
+      shareText,
+      subject: "Check out $title on SonarbanglaMart",
+    );
+  }
+
+  int get epochMs => DateTime.now().millisecondsSinceEpoch;
 
   void _startAutoSlide() {
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -155,16 +259,39 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                   ),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: const Icon(Icons.bookmark_outline, color: Colors.black87, size: 20),
+                      // Wishlist Heart Button directly on left of Share button
+                      InkWell(
+                        onTap: _toggleWishlist,
+                        borderRadius: BorderRadius.circular(20),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _isWishlisted ? const Color(0XFFFFEBEE) : Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _isWishlisted ? Icons.favorite : Icons.favorite_border,
+                            color: _isWishlisted ? const Color(0XFFE53935) : Colors.black87,
+                            size: 20,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: const Icon(Icons.ios_share, color: Colors.black87, size: 20),
+                      InkWell(
+                        onTap: _shareProduct,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: const Icon(Icons.ios_share, color: Colors.black87, size: 20),
+                        ),
                       ),
                     ],
                   ),
