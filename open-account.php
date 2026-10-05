@@ -623,9 +623,9 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                 <div class="type-badge"><?= htmlspecialchars($accountTitle) ?></div>
             </div>
 
-            <!-- Desktop Horizontal Stepper Bar (10 Steps) -->
+            <!-- Desktop Horizontal Stepper Bar (13 Steps) -->
             <div class="stepper-container">
-                <div class="stepper-bar">
+                <div class="stepper-bar" style="min-width: 880px;">
                     <div class="step-node active" data-step="0">
                         <div class="step-circle">1</div>
                         <div class="step-title">Welcome</div>
@@ -656,14 +656,26 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                     </div>
                     <div class="step-node" data-step="7">
                         <div class="step-circle">8</div>
-                        <div class="step-title">Documents</div>
+                        <div class="step-title">PAN Card</div>
                     </div>
                     <div class="step-node" data-step="8">
                         <div class="step-circle">9</div>
-                        <div class="step-title">Nominee</div>
+                        <div class="step-title">Aadhaar</div>
                     </div>
                     <div class="step-node" data-step="9">
                         <div class="step-circle">10</div>
+                        <div class="step-title">Selfie</div>
+                    </div>
+                    <div class="step-node" data-step="10">
+                        <div class="step-circle">11</div>
+                        <div class="step-title">Signature</div>
+                    </div>
+                    <div class="step-node" data-step="11">
+                        <div class="step-circle">12</div>
+                        <div class="step-title">Nominee</div>
+                    </div>
+                    <div class="step-node" data-step="12">
+                        <div class="step-circle">13</div>
                         <div class="step-title">Review</div>
                     </div>
                 </div>
@@ -671,7 +683,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
 
             <!-- Mobile Compact Step Indicator -->
             <div class="mobile-step-indicator" id="mobileStepLabel">
-                Step 1 of 10 • Welcome to Neon Bank
+                Step 1 of 13 • Welcome to Neon Bank
             </div>
 
             <!-- Form Body -->
@@ -976,61 +988,87 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                         </div>
                     </div>
 
-                    <!-- STEP 7: SECURE DOCUMENT COLLECTION -->
+                    <!-- STEP 7: PAN CARD / IDENTITY FRONT DOCUMENT -->
                     <div class="form-section" data-section="7">
                         <div class="section-heading">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Document Collection & Verification
+                            <i class="fa-solid fa-id-card"></i> PAN Card / Identity Document Front
                         </div>
-                        <p class="section-subheading" id="docSubheading">Upload clear photo copies of your identity document and proof of address.</p>
+                        <p class="section-subheading" id="docSubheading">Upload a clear front image copy of your PAN Card or primary Identity Document.</p>
 
                         <div class="form-grid">
-                            <!-- Document 1: Front / Identity -->
-                            <div class="form-group">
-                                <label id="labelDocPan">Identity Document (Passport / Front Copy) *</label>
-                                <div class="upload-card" onclick="document.getElementById('filePan').click()">
-                                    <div class="upload-icon"><i class="fa-solid fa-file-image"></i></div>
-                                    <div class="upload-title">Click to Upload Document</div>
-                                    <div class="upload-sub">JPG, PNG or PDF (Max 5MB)</div>
-                                    <img id="previewPan" class="upload-preview" alt="Preview">
+                            <div class="form-group full-width">
+                                <label id="labelDocPan">PAN Card Image Copy *</label>
+                                <div class="upload-card" onclick="document.getElementById('filePan').click()" style="padding: 40px 20px;">
+                                    <div class="upload-icon"><i class="fa-solid fa-file-image" style="font-size: 3rem;"></i></div>
+                                    <div class="upload-title" style="font-size: 1.1rem; margin-top: 10px;">Click to Upload Document</div>
+                                    <div class="upload-sub">JPG, PNG or PDF format (Max 5MB)</div>
+                                    <img id="previewPan" class="upload-preview" alt="Preview" style="max-height: 200px; margin-top: 20px;">
                                 </div>
                                 <input type="file" id="filePan" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this, 'previewPan', 'doc_pan_data')">
                                 <input type="hidden" name="doc_pan_data" id="doc_pan_data">
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Document 2: Back / Address -->
-                            <div class="form-group">
-                                <label id="labelDocAadhaar">Address Proof / Second Identity Copy *</label>
-                                <div class="upload-card" onclick="document.getElementById('fileAadhaar').click()">
-                                    <div class="upload-icon"><i class="fa-solid fa-file-invoice"></i></div>
-                                    <div class="upload-title">Click to Upload Document</div>
-                                    <div class="upload-sub">Utility bill, bank statement or ID back</div>
-                                    <img id="previewAadhaar" class="upload-preview" alt="Preview">
+                    <!-- STEP 8: AADHAAR CARD / ADDRESS PROOF DOCUMENT -->
+                    <div class="form-section" data-section="8">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-file-invoice"></i> Aadhaar Card / Address Proof Copy
+                        </div>
+                        <p class="section-subheading">Upload a clear image copy of your Aadhaar Card or Address Proof document.</p>
+
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label id="labelDocAadhaar">Aadhaar Card Image Copy *</label>
+                                <div class="upload-card" onclick="document.getElementById('fileAadhaar').click()" style="padding: 40px 20px;">
+                                    <div class="upload-icon"><i class="fa-solid fa-file-invoice" style="font-size: 3rem;"></i></div>
+                                    <div class="upload-title" style="font-size: 1.1rem; margin-top: 10px;">Click to Upload Document</div>
+                                    <div class="upload-sub">Utility bill, bank statement or Aadhaar back copy</div>
+                                    <img id="previewAadhaar" class="upload-preview" alt="Preview" style="max-height: 200px; margin-top: 20px;">
                                 </div>
                                 <input type="file" id="fileAadhaar" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this, 'previewAadhaar', 'doc_aadhaar_data')">
                                 <input type="hidden" name="doc_aadhaar_data" id="doc_aadhaar_data">
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Portrait / Selfie Capture -->
-                            <div class="form-group">
+                    <!-- STEP 9: LIVE SELFIE / PORTRAIT PHOTO -->
+                    <div class="form-section" data-section="9">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-camera"></i> Live Portrait / Selfie Photo
+                        </div>
+                        <p class="section-subheading">Take or upload a clear, well-lit portrait photo of your face.</p>
+
+                        <div class="form-grid">
+                            <div class="form-group full-width">
                                 <label>Live Portrait / Selfie Photo *</label>
-                                <div class="upload-card" onclick="document.getElementById('filePortrait').click()">
-                                    <div class="upload-icon"><i class="fa-solid fa-camera"></i></div>
-                                    <div class="upload-title">Take / Upload Face Photo</div>
-                                    <div class="upload-sub">Ensure good lighting</div>
-                                    <img id="previewPortrait" class="upload-preview" alt="Preview">
+                                <div class="upload-card" onclick="document.getElementById('filePortrait').click()" style="padding: 40px 20px;">
+                                    <div class="upload-icon"><i class="fa-solid fa-camera" style="font-size: 3rem;"></i></div>
+                                    <div class="upload-title" style="font-size: 1.1rem; margin-top: 10px;">Take / Upload Face Photo</div>
+                                    <div class="upload-sub">Ensure good lighting and face clearly visible</div>
+                                    <img id="previewPortrait" class="upload-preview" alt="Preview" style="max-height: 200px; margin-top: 20px;">
                                 </div>
                                 <input type="file" id="filePortrait" accept="image/*" style="display:none;" onchange="handleFileUpload(this, 'previewPortrait', 'portrait_data')">
                                 <input type="hidden" name="portrait_data" id="portrait_data">
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Authorized Digital Signature File Upload -->
-                            <div class="form-group">
-                                <label>Upload Authorized Signature *</label>
-                                <div class="upload-card" onclick="document.getElementById('fileSignature').click()">
-                                    <div class="upload-icon"><i class="fa-solid fa-signature"></i></div>
-                                    <div class="upload-title">Click to Upload Signature</div>
-                                    <div class="upload-sub">Clean photo or scan on white paper (JPG/PNG)</div>
-                                    <img id="previewSignature" class="upload-preview" alt="Preview">
+                    <!-- STEP 10: AUTHORIZED SIGNATURE -->
+                    <div class="form-section" data-section="10">
+                        <div class="section-heading">
+                            <i class="fa-solid fa-signature"></i> Upload Authorized Signature
+                        </div>
+                        <p class="section-subheading">Upload a photo or scan of your signature on clean white paper.</p>
+
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Authorized Signature *</label>
+                                <div class="upload-card" onclick="document.getElementById('fileSignature').click()" style="padding: 40px 20px;">
+                                    <div class="upload-icon"><i class="fa-solid fa-signature" style="font-size: 3rem;"></i></div>
+                                    <div class="upload-title" style="font-size: 1.1rem; margin-top: 10px;">Click to Upload Signature Image</div>
+                                    <div class="upload-sub">Clean photo or scan on plain white paper (JPG/PNG)</div>
+                                    <img id="previewSignature" class="upload-preview" alt="Preview" style="max-height: 200px; margin-top: 20px;">
                                 </div>
                                 <input type="file" id="fileSignature" accept="image/*" style="display:none;" onchange="handleFileUpload(this, 'previewSignature', 'signature_data')">
                                 <input type="hidden" name="signature_data" id="signature_data">
@@ -1038,8 +1076,8 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                         </div>
                     </div>
 
-                    <!-- STEP 8: OPTIONAL NOMINEE -->
-                    <div class="form-section" data-section="8">
+                    <!-- STEP 11: OPTIONAL NOMINEE -->
+                    <div class="form-section" data-section="11">
                         <div class="section-heading">
                             <i class="fa-solid fa-users"></i> Nominee / Beneficiary Details
                         </div>
@@ -1072,8 +1110,8 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                         </div>
                     </div>
 
-                    <!-- STEP 9: REVIEW & SUBMIT APPLICATION -->
-                    <div class="form-section" data-section="9">
+                    <!-- STEP 12: REVIEW & SUBMIT APPLICATION -->
+                    <div class="form-section" data-section="12">
                         <div class="section-heading">
                             <i class="fa-solid fa-clipboard-check"></i> Review & Submit Application
                         </div>
@@ -1105,7 +1143,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                                 <span class="edit-link" onclick="goToStep(7)">Edit</span>
                             </div>
                             <p style="font-size: 0.9rem;"><strong>Identity ID Number:</strong> <span id="revTaxId">-</span></p>
-                            <p style="font-size: 0.9rem;"><strong>Documents Attached:</strong> <span style="color: var(--neon-cyan); font-weight: 700;">Identity Copy, Proof of Address, Portrait & Signature ✓</span></p>
+                            <p style="font-size: 0.9rem;"><strong>Documents Attached:</strong> <span style="color: var(--neon-cyan); font-weight: 700;">PAN Card, Aadhaar Card, Selfie & Signature ✓</span></p>
                         </div>
 
                         <div style="background: rgba(255, 0, 84, 0.04); border: 1.5px solid var(--neon-pink); border-radius: var(--radius-md); padding: 20px; margin-top: 24px;">
@@ -1116,8 +1154,8 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                         </div>
                     </div>
 
-                    <!-- SUCCESS STATE SCREEN (STEP 10) -->
-                    <div class="form-section" data-section="10">
+                    <!-- SUCCESS STATE SCREEN (STEP 13) -->
+                    <div class="form-section" data-section="13">
                         <div style="text-align: center; padding: 40px 20px;">
                             <div style="width: 80px; height: 80px; background: rgba(31, 169, 178, 0.12); color: var(--neon-cyan); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px;">
                                 <i class="fa-solid fa-check"></i>
@@ -1200,7 +1238,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
 
             activeStep += direction;
             if (activeStep < 0) activeStep = 0;
-            if (activeStep > 9) activeStep = 9;
+            if (activeStep > 12) activeStep = 12;
 
             updateStepUI();
         }
@@ -1229,7 +1267,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
             const btnNext = document.getElementById("btnNext");
             const footer = document.getElementById("cardFooter");
 
-            if (activeStep === 10) {
+            if (activeStep === 13) {
                 footer.style.display = "none";
                 return;
             } else {
@@ -1240,17 +1278,17 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
 
             if (activeStep === 0) {
                 btnNext.innerHTML = 'Start Application <i class="fa-solid fa-arrow-right"></i>';
-            } else if (activeStep === 9) {
+            } else if (activeStep === 12) {
                 btnNext.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Application';
             } else {
                 btnNext.innerHTML = 'Continue <i class="fa-solid fa-arrow-right"></i>';
             }
 
             // Update mobile header
-            const stepTitles = ["Welcome", "Nationality", "Terms", "Personal", "Contact", "Financial", "Tax & ID", "Documents", "Nominee", "Review"];
-            document.getElementById("mobileStepLabel").innerText = `Step ${activeStep + 1} of 10 • ${stepTitles[activeStep] || ''}`;
+            const stepTitles = ["Welcome", "Nationality", "Terms", "Personal", "Contact", "Financial", "Tax & ID", "PAN Card", "Aadhaar Card", "Live Selfie", "Signature", "Nominee", "Review"];
+            document.getElementById("mobileStepLabel").innerText = `Step ${activeStep + 1} of 13 • ${stepTitles[activeStep] || ''}`;
 
-            if (activeStep === 9) {
+            if (activeStep === 12) {
                 updateReviewData();
             }
         }
@@ -1264,7 +1302,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                 }
             }
 
-            if (activeStep === 9) {
+            if (activeStep === 12) {
                 const finalDec = document.getElementById("finalDeclarationCheckbox").checked;
                 if (!finalDec) {
                     alert("Please check the final declaration box before submitting.");
@@ -1357,49 +1395,6 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
             }
         }
 
-        // Signature Canvas
-        function initSignaturePad() {
-            sigCanvas = document.getElementById("sigCanvas");
-            if (!sigCanvas) return;
-            sigCanvas.width = sigCanvas.offsetWidth;
-            sigCanvas.height = sigCanvas.offsetHeight;
-            sigCtx = sigCanvas.getContext("2d");
-            sigCtx.strokeStyle = "#0f172a";
-            sigCtx.lineWidth = 2.5;
-            sigCtx.lineCap = "round";
-
-            const startDraw = (e) => { isDrawing = true; sigCtx.beginPath(); draw(e); };
-            const stopDraw = () => { isDrawing = false; saveSignature(); };
-            const draw = (e) => {
-                if (!isDrawing) return;
-                const rect = sigCanvas.getBoundingClientRect();
-                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-                sigCtx.lineTo(x, y);
-                sigCtx.stroke();
-            };
-
-            sigCanvas.addEventListener("mousedown", startDraw);
-            sigCanvas.addEventListener("mouseup", stopDraw);
-            sigCanvas.addEventListener("mousemove", draw);
-            sigCanvas.addEventListener("touchstart", startDraw);
-            sigCanvas.addEventListener("touchend", stopDraw);
-            sigCanvas.addEventListener("touchmove", draw);
-        }
-
-        function clearSignature() {
-            if (sigCtx && sigCanvas) {
-                sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-                document.getElementById("signature_data").value = "";
-            }
-        }
-
-        function saveSignature() {
-            if (sigCanvas) {
-                document.getElementById("signature_data").value = sigCanvas.toDataURL("image/png");
-            }
-        }
-
         // Submit Form via AJAX
         async function submitForm() {
             const btnNext = document.getElementById("btnNext");
@@ -1423,7 +1418,7 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
 
                 if (res.success) {
                     document.getElementById("submittedAppId").innerText = res.app_id;
-                    activeStep = 10;
+                    activeStep = 13;
                     updateStepUI();
                 } else {
                     alert(res.message || "Failed to submit application. Please try again.");
