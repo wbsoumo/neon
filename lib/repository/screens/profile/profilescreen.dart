@@ -145,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Expanded(
                     child: _buildTopQuickCard(
-                      icon: Icons.shopping_basket_outlined,
+                      icon: Icons.receipt_long_outlined,
                       label: "Your orders",
                       onTap: () {
                         Navigator.push(
@@ -172,60 +172,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // 3. Appearance Card (Theme Toggle)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.wb_sunny_outlined, size: 20, color: Colors.black87),
-                        SizedBox(width: 10),
-                        Text(
-                          "Appearance",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _isDarkMode = !_isDarkMode;
-                        });
-                      },
-                      child: Row(
-                        children: [
-                          Text(
-                            _isDarkMode ? "DARK" : "LIGHT",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0XFF5C6BC0),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0XFF5C6BC0)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 
