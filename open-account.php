@@ -967,10 +967,10 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                             </div>
 
                             <div class="form-group">
-                                <label id="labelPassport">Passport Number (Optional)</label>
+                                <label id="labelPassport">Passport Number</label>
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-passport"></i>
-                                    <input type="text" name="passport_number" id="inputPassportNo" class="form-control" placeholder="e.g. Z1234567 (Optional)">
+                                    <input type="text" name="passport_number" id="inputPassportNo" class="form-control" placeholder="e.g. Z1234567">
                                 </div>
                             </div>
                         </div>
