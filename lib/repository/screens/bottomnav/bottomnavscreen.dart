@@ -4,6 +4,7 @@ import 'package:blinkit_series/repository/screens/cart/cartscreen.dart';
 import 'package:blinkit_series/repository/screens/category/categoryscreen.dart';
 import 'package:blinkit_series/repository/screens/home/homescreen.dart';
 import 'package:blinkit_series/repository/screens/profile/profilescreen.dart';
+import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/blinkit_nav_bar.dart';
 import 'package:blinkit_series/repository/widgets/floating_cart_pill.dart';
 
@@ -16,6 +17,12 @@ class BottomNavScreen extends StatefulWidget {
 
 class _BottomNavScreenState extends State<BottomNavScreen> {
   int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    ApiService.registerFcmToken();
+  }
 
   void _navigateToHome() {
     if (currentIndex != 0) {

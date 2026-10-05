@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -612,6 +613,8 @@ class ApiService {
         if (data['token'] != null) {
           await prefs.setString('auth_token', data['token']);
         }
+        // Immediately sync FCM token for push notifications
+        registerFcmToken();
       }
       return data;
     } catch (e) {
@@ -646,6 +649,8 @@ class ApiService {
         if (data['token'] != null) {
           await prefs.setString('auth_token', data['token']);
         }
+        // Immediately sync FCM token for push notifications
+        registerFcmToken();
       }
       return data;
     } catch (e) {
@@ -654,7 +659,7 @@ class ApiService {
   }
 
   // 13. Register Device FCM Token for Push Notifications
-  static Future<void> registerFcmToken(String fcmToken) async {
+  static Future<void> registerFcmToken([String? fcmToken]) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final phone = prefs.getString('user_phone') ?? '';
@@ -664,15 +669,27 @@ class ApiService {
         return;
       }
 
-      await http.post(
+      String? token = fcmToken;
+      if (token == null || token.isEmpty) {
+        token = await FirebaseMessaging.instance.getToken();
+      }
+
+      if (token == null || token.isEmpty) {
+        debugPrint("No FCM token available to register.");
+        return;
+      }
+
+      final res = await http.post(
         Uri.parse(ApiConstants.registerFcmToken),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "phone": phone,
-          "fcm_token": fcmToken,
+          "fcm_token": token,
           "device_type": defaultTargetPlatform.name,
         }),
       ).timeout(const Duration(seconds: 5));
+
+      debugPrint("FCM Token synced to backend for $phone: status ${res.statusCode}");
     } catch (e) {
       debugPrint("Failed to register FCM token: $e");
     }
