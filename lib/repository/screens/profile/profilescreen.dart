@@ -1297,6 +1297,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined, color: Color(0XFF0C831F)),
+            title: const Text("Privacy Policy", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: const Text("Read our full data collection and app permissions policy", style: TextStyle(fontSize: 12)),
+            onTap: () {
+              final Uri uri = Uri.parse("https://sbmartquick.com/privacy-policy");
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
             title: const Text("Delete your account", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.redAccent)),
             subtitle: const Text("Deactivate account and permanently remove personal data", style: TextStyle(fontSize: 12)),

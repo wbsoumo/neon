@@ -216,7 +216,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     children: [
                       TileLayer(
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.sbmart.taskbazi',
+                        userAgentPackageName: 'com.sbmart.quickapp',
                       ),
 
                       MarkerLayer(
