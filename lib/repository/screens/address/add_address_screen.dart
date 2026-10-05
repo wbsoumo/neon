@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/screens/bottomnav/bottomnavscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
@@ -21,10 +23,10 @@ class AddAddressScreen extends StatefulWidget {
 class _AddAddressScreenState extends State<AddAddressScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _houseNoController = TextEditingController();
-  final TextEditingController _areaController = TextEditingController(text: "Krishnanagar, Nadia, West Bengal - 741101");
+  final TextEditingController _areaController = TextEditingController(text: "Getting location...");
   final TextEditingController _landmarkController = TextEditingController();
 
-  LatLng _currentPosition = const LatLng(23.4013, 88.5010); // Default Krishnanagar
+  LatLng _currentPosition = const LatLng(23.4013, 88.5010);
   bool _isFetchingLocation = true;
   String _selectedTag = "Home";
   bool _isLoading = false;
@@ -67,15 +69,65 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       );
 
       if (mounted) {
+        final newPos = LatLng(position.latitude, position.longitude);
         setState(() {
-          _currentPosition = LatLng(position.latitude, position.longitude);
+          _currentPosition = newPos;
           _isFetchingLocation = false;
         });
-        _mapController.move(_currentPosition, 16.0);
+        _mapController.move(newPos, 16.0);
+        _reverseGeocode(newPos);
       }
     } catch (e) {
       debugPrint("Error fetching location: $e");
       _useDefaultLocation();
+    }
+  }
+
+  Future<void> _reverseGeocode(LatLng latLng) async {
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latLng.latitude}&lon=${latLng.longitude}',
+      );
+      final response = await http.get(uri, headers: {
+        'User-Agent': 'SonarbanglaMartApp/1.0',
+      }).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null) {
+          final place = address['suburb'] ??
+              address['neighbourhood'] ??
+              address['village'] ??
+              address['town'] ??
+              address['city'] ??
+              address['county'] ??
+              data['name'] ??
+              "Current Location";
+          final district = address['state_district'] ?? address['state'] ?? "";
+          final pincode = address['postcode'] ?? "";
+          final fullName = [
+            place,
+            if (district.isNotEmpty && !place.toString().contains(district.toString())) district,
+            if (pincode.isNotEmpty) "PIN - $pincode"
+          ].join(", ");
+
+          if (mounted) {
+            setState(() {
+              _areaController.text = fullName;
+            });
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("Reverse geocode error: $e");
+    }
+
+    if (mounted && _areaController.text == "Getting location...") {
+      setState(() {
+        _areaController.text = "${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}";
+      });
     }
   }
 
@@ -84,6 +136,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       setState(() {
         _isFetchingLocation = false;
       });
+      _reverseGeocode(_currentPosition);
     }
   }
 
@@ -405,7 +458,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   _buildInputField(
                     controller: _areaController,
                     label: "Apartment / Road / Area *",
-                    hint: "e.g. Court Road, Krishnanagar",
+                    hint: "e.g. Main Street, Sector 2",
                     icon: Icons.map,
                   ),
                   const SizedBox(height: 14),

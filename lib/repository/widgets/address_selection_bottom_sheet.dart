@@ -661,7 +661,7 @@ class _AddAddressBottomSheetState extends State<AddAddressBottomSheet> {
   bool _isOrderingForSomeoneElse = false;
 
   LatLng _currentCenter = const LatLng(23.412600, 88.429200);
-  String _locationName = "Krishnanagar, Nadia";
+  String _locationName = "Getting location...";
   bool _isGeocoding = false;
   Timer? _geocodeTimer;
 
