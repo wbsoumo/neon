@@ -27,6 +27,10 @@ class _RequestOrderScreenState extends State<RequestOrderScreen> {
   String _userName = "";
   bool _isSubmitting = false;
 
+  int? _selectedStoreId;
+  String? _selectedStoreName;
+  bool _isLoadingStore = false;
+
   final List<String> _orderTypes = [
     "Normal Custom Order",
     "Bulk Order",
@@ -55,8 +59,50 @@ class _RequestOrderScreenState extends State<RequestOrderScreen> {
         _userPhone = phone;
         _userName = name;
       });
+
+      _resolveStoreInfo(savedLat, savedLng);
     } catch (e) {
       debugPrint("Error loading profile/address: $e");
+    }
+  }
+
+  Future<void> _resolveStoreInfo(double? lat, double? lng) async {
+    setState(() {
+      _isLoadingStore = true;
+    });
+
+    try {
+      final storeData = await ApiService.fetchSelectedStore(
+        lat: lat,
+        lng: lng,
+        forceRefresh: true,
+      );
+
+      if (mounted && storeData != null) {
+        final storeObj = storeData['store'];
+        if (storeObj != null) {
+          setState(() {
+            _selectedStoreId = storeObj['id'] != null ? int.tryParse(storeObj['id'].toString()) : null;
+            _selectedStoreName = storeObj['name']?.toString();
+            _isLoadingStore = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingStore = false;
+          });
+        }
+      } else if (mounted) {
+        setState(() {
+          _isLoadingStore = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error resolving store for custom order: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingStore = false;
+        });
+      }
     }
   }
 
@@ -114,6 +160,7 @@ class _RequestOrderScreenState extends State<RequestOrderScreen> {
       request.fields['address'] = _currentAddress;
       if (_currentLat != null) request.fields['latitude'] = _currentLat.toString();
       if (_currentLng != null) request.fields['longitude'] = _currentLng.toString();
+      if (_selectedStoreId != null) request.fields['store_id'] = _selectedStoreId.toString();
       request.fields['remarks'] = _remarksController.text.trim();
 
       if (_selectedImage != null) {
@@ -498,63 +545,112 @@ class _RequestOrderScreenState extends State<RequestOrderScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on, color: Color(0xFF16A34A), size: 24),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Delivery Address",
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Color(0xFF16A34A), size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Delivery Address",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _currentAddress,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1E293B),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            AddressSelectionBottomSheet.show(
+                              context,
+                              currentAddress: _currentAddress,
+                              onAddressSelected: (selectedAddress) {
+                                setState(() {
+                                  _currentAddress = selectedAddress;
+                                });
+                              },
+                            );
+                          },
+                          child: const Text(
+                            "Change",
                             style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF64748B),
-                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2563EB),
                             ),
                           ),
-                          const SizedBox(height: 2),
+                        ),
+                      ],
+                    ),
+                    if (_isLoadingStore) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: const [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                          ),
+                          SizedBox(width: 8),
                           Text(
-                            _currentAddress,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E293B),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            "Identifying nearest branch...",
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {
-                        AddressSelectionBottomSheet.show(
-                          context,
-                          currentAddress: _currentAddress,
-                          onAddressSelected: (selectedAddress) {
-                            setState(() {
-                              _currentAddress = selectedAddress;
-                            });
-                          },
-                        );
-                      },
-                      child: const Text(
-                        "Change",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2563EB),
+                    ] else if (_selectedStoreName != null && _selectedStoreName!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.storefront_rounded, color: Color(0xFF16A34A), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Delivery will be done from - $_selectedStoreName",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
