@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:blinkit_series/repository/screens/profile/profile_detail_screen.dart';
 import 'package:blinkit_series/repository/screens/profile/order_history_screen.dart';
+import 'package:blinkit_series/repository/screens/custom_order/request_order_screen.dart';
 import 'package:blinkit_series/repository/screens/login/loginscreen.dart';
 import 'package:blinkit_series/repository/services/api_service.dart';
 import 'package:blinkit_series/repository/widgets/address_selection_bottom_sheet.dart';
@@ -201,6 +202,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.menu_book_outlined,
                       title: "Address book",
                       onTap: () => _navigateToDetail(context, "Address book", _buildAddressBookContent()),
+                    ),
+                    const Divider(height: 1, indent: 48),
+                    _buildOptionTile(
+                      icon: Icons.assignment_outlined,
+                      title: "Request Custom / Bulk Order",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const RequestOrderScreen()),
+                        );
+                      },
                     ),
                     const Divider(height: 1, indent: 48),
                     _buildOptionTile(
@@ -1178,34 +1190,113 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Account Privacy & Safety", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 6),
-          const Text("Manage your data security and account settings.", style: TextStyle(fontSize: 12, color: Colors.black54)),
+          // Banner Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.shield_outlined, color: Color(0xFF4ADE80), size: 28),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        "Privacy & Data Safety",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        "Protected with SSL 256-bit encryption",
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           ListTile(
-            leading: const Icon(Icons.security, color: Color(0XFF0C831F)),
-            title: const Text("Data Encryption", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: const Text("Your phone number and address data are encrypted in transit.", style: TextStyle(fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F5E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_outline_rounded, color: Color(0XFF0C831F), size: 20),
+            ),
+            title: const Text("Data Encryption & Privacy", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+            subtitle: const Text("Your personal account details, phone number, and orders are transmitted securely.", style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           ),
-          const Divider(),
+          const Divider(height: 20),
           ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined, color: Color(0XFF0C831F)),
-            title: const Text("Privacy Policy", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: const Text("Read our full data collection and app permissions policy", style: TextStyle(fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE0F2FE),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF0284C7), size: 20),
+            ),
+            title: const Text("Full Privacy Policy", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+            subtitle: const Text("Read our complete policy on data collection & permissions", style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+            trailing: const Icon(Icons.open_in_new_rounded, size: 18, color: Color(0xFF0284C7)),
             onTap: () {
               final Uri uri = Uri.parse("https://sbmartquick.com/privacy-policy");
               launchUrl(uri, mode: LaunchMode.externalApplication);
             },
           ),
-          const Divider(),
+          const Divider(height: 20),
           ListTile(
-            leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
-            title: const Text("Delete your account", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.redAccent)),
-            subtitle: const Text("Deactivate account and permanently remove personal data", style: TextStyle(fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFE4E6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent, size: 20),
+            ),
+            title: const Text("Delete your account", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+            subtitle: const Text("Deactivate account and permanently remove saved personal data", style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+            trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.black38),
             onTap: () => _showDeleteAccountWarningDialog(context),
           ),
         ],

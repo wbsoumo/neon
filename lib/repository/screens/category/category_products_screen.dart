@@ -869,43 +869,61 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                                                              ),
                                                            ),
 
-                                                           // Heart Favorite Icon
+                                                           // Heart Favorite & Share Icons
                                                            Positioned(
                                                              top: 6,
                                                              right: 6,
-                                                             child: InkWell(
-                                                               onTap: () async {
-                                                                 setState(() {
-                                                                   if (isFav) {
-                                                                     _favoriteIds.remove(id);
-                                                                   } else {
-                                                                     _favoriteIds.add(id);
-                                                                   }
-                                                                 });
-                                                                 final isAdded = await ApiService.toggleWishlistProduct(productId: id);
-                                                                 if (mounted) {
-                                                                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                     SnackBar(
-                                                                       content: Text(
-                                                                         isAdded ? "❤️ Added to your wishlist!" : "Removed from wishlist",
-                                                                         style: const TextStyle(fontWeight: FontWeight.bold),
-                                                                       ),
-                                                                       duration: const Duration(seconds: 2),
-                                                                       behavior: SnackBarBehavior.floating,
+                                                             child: Row(
+                                                               mainAxisSize: MainAxisSize.min,
+                                                               children: [
+                                                                 InkWell(
+                                                                   onTap: () => ProductDetailDialog.show(context, item),
+                                                                   child: CircleAvatar(
+                                                                     radius: 12,
+                                                                     backgroundColor: Colors.white.withValues(alpha: 0.85),
+                                                                     child: const Icon(
+                                                                       Icons.share_outlined,
+                                                                       size: 13,
+                                                                       color: Colors.black87,
                                                                      ),
-                                                                   );
-                                                                 }
-                                                               },
-                                                               child: CircleAvatar(
-                                                                 radius: 12,
-                                                                 backgroundColor: Colors.white.withValues(alpha: 0.85),
-                                                                 child: Icon(
-                                                                   isFav ? Icons.favorite : Icons.favorite_border,
-                                                                   size: 14,
-                                                                   color: isFav ? Colors.red : Colors.grey,
+                                                                   ),
                                                                  ),
-                                                               ),
+                                                                 const SizedBox(width: 4),
+                                                                 InkWell(
+                                                                   onTap: () async {
+                                                                     setState(() {
+                                                                       if (isFav) {
+                                                                         _favoriteIds.remove(id);
+                                                                       } else {
+                                                                         _favoriteIds.add(id);
+                                                                       }
+                                                                     });
+                                                                     final isAdded = await ApiService.toggleWishlistProduct(productId: id);
+                                                                     if (mounted) {
+                                                                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                                       ScaffoldMessenger.of(context).showSnackBar(
+                                                                         SnackBar(
+                                                                           content: Text(
+                                                                             isAdded ? "❤️ Added to your wishlist!" : "Removed from wishlist",
+                                                                             style: const TextStyle(fontWeight: FontWeight.bold),
+                                                                           ),
+                                                                           duration: const Duration(seconds: 2),
+                                                                           behavior: SnackBarBehavior.floating,
+                                                                         ),
+                                                                       );
+                                                                     }
+                                                                   },
+                                                                   child: CircleAvatar(
+                                                                     radius: 12,
+                                                                     backgroundColor: Colors.white.withValues(alpha: 0.85),
+                                                                     child: Icon(
+                                                                       isFav ? Icons.favorite : Icons.favorite_border,
+                                                                       size: 14,
+                                                                       color: isFav ? Colors.red : Colors.grey,
+                                                                     ),
+                                                                   ),
+                                                                 ),
+                                                               ],
                                                              ),
                                                            ),
 

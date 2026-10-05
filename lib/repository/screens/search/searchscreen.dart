@@ -123,20 +123,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     _performSearch('');
                                   },
                                 )
-                              : IconButton(
-                                  icon: const Icon(Icons.mic, color: Colors.black54, size: 20),
-                                  onPressed: () {
-                                    VoiceSearchSheet.show(
-                                      context,
-                                      onResult: (spokenQuery) {
-                                        if (spokenQuery.isNotEmpty) {
-                                          _searchController.text = spokenQuery;
-                                          _performSearch(spokenQuery);
-                                        }
-                                      },
-                                    );
-                                  },
-                                ),
+                              : null,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
                         ),

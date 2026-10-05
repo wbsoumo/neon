@@ -532,7 +532,7 @@ class _CartScreenState extends State<CartScreen> {
               const String shareMsg =
                   "🛒 Download SB Mart Quick App!\n\n"
                   "Get all your daily groceries, fresh produce, and home essentials delivered to your doorstep or ready for store pickup in minutes — all in one place!\n\n"
-                  "Download the app now: https://admin.sbmartquick.com";
+                  "Download the app now: https://sbmartquick.com/";
               Share.share(shareMsg, subject: "SB Mart Quick App - Everything in one place!");
             },
             child: Container(

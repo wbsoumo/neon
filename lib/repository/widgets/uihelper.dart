@@ -120,7 +120,6 @@ class UiHelper {
         decoration: InputDecoration(
           hintText: "Search 'ice-cream'",
           prefixIcon: const Icon(Icons.search, color: Color(0XFF9C9C9C)),
-          suffixIcon: const Icon(Icons.mic, color: Color(0XFF9C9C9C)),
           border: InputBorder.none
         ),
       ),

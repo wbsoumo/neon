@@ -919,149 +919,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                               ),
-                              IntrinsicHeight(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const VerticalDivider(
-                                      width: 1,
-                                      thickness: 1,
-                                      indent: 10,
-                                      endIndent: 10,
-                                      color: Color(0XFFE0E0E0),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: () {
-                                        VoiceSearchSheet.show(
-                                          context,
-                                          onResult: (spokenQuery) {
-                                            if (spokenQuery.isNotEmpty) {
-                                              final hexStr = _selectedStoreData?['banner_color']?.toString().replaceAll('#', '');
-                                              final Color activeTheme = (hexStr != null && hexStr.length == 6)
-                                                  ? Color(int.parse("0xFF$hexStr"))
-                                                  : const Color(0XFF0C831F);
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) => SearchScreen(
-                                                    allProducts: _liveProducts.isNotEmpty ? _liveProducts : groceryKitchenItems,
-                                                    initialQuery: spokenQuery,
-                                                    themeColor: _activeThemeColor,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                        );
-                                      },
-                                      child: const Icon(Icons.mic, color: Colors.black87, size: 22),
-                                    ),
-                                    const SizedBox(width: 12),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                     const SizedBox(width: 8),
+                                   ],
+                                 ),
+                               ),
+                             ],
+                           ),
                           ),
                         ),
                       ),
                     ),
 
                     const SizedBox(height: 12),
-
-                    // Premium Request Order / Bulk Order Card/Banner
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const RequestOrderScreen(),
-                            ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE8F5E9),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.assignment_outlined,
-                                  color: Color(0xFF16A34A),
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      "Request a Custom / Bulk Order",
-                                      style: TextStyle(
-                                        color: Color(0xFF0F172A),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 2),
-                                    Text(
-                                      "Upload your handwritten list or order requirement and we’ll arrange it for you.",
-                                      style: TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 11,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF16A34A),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      "Request Order",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(width: 2),
-                                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 13),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
 
                     // Scrollable Header Categories Row
                     SizedBox(

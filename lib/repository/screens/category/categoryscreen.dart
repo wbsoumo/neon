@@ -232,19 +232,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                   ),
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  VoiceSearchSheet.show(
-                                    context,
-                                    onResult: (spokenQuery) {
-                                      if (spokenQuery.isNotEmpty) {
-                                        _openSearchScreen(spokenQuery);
-                                      }
-                                    },
-                                  );
-                                },
-                                child: const Icon(Icons.mic, color: Color(0XFF9C9C9C), size: 20),
-                              ),
                             ],
                           ),
                         ),
