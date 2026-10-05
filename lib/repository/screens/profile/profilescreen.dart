@@ -282,12 +282,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: "E-gift cards",
                       onTap: () => _navigateToDetail(context, "E-gift cards", _buildEGiftCardsContent()),
                     ),
-                    const Divider(height: 1, indent: 48),
-                    _buildOptionTile(
-                      icon: Icons.description_outlined,
-                      title: "Your prescriptions",
-                      onTap: () => _navigateToDetail(context, "Your prescriptions", _buildPrescriptionsContent()),
-                    ),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -1135,25 +1129,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text("SB Mart E-Gift Cards", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           SizedBox(height: 6),
           Text("Gift instant groceries & electronics to your loved ones.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrescriptionsContent() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: const [
-          Icon(Icons.description_outlined, size: 50, color: Color(0XFF0C831F)),
-          SizedBox(height: 12),
-          Text("Saved Medical Prescriptions", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(height: 6),
-          Text("Upload and view prescriptions for express medicine delivery.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.black54)),
         ],
       ),
     );
