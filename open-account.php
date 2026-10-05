@@ -958,11 +958,19 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                                 </div>
                             </div>
 
-                            <div class="form-group full-width">
-                                <label id="labelNationalId">Primary Identity / Passport Number *</label>
+                            <div class="form-group">
+                                <label id="labelNationalId">Primary Identity / Aadhaar Number *</label>
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-id-card"></i>
-                                    <input type="text" name="national_id" id="inputNationalId" class="form-control" placeholder="e.g. Passport number or National ID" required>
+                                    <input type="text" name="national_id" id="inputNationalId" class="form-control" placeholder="e.g. National ID or Aadhaar number" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label id="labelPassport">Passport Number (Optional)</label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-passport"></i>
+                                    <input type="text" name="passport_number" id="inputPassportNo" class="form-control" placeholder="e.g. Z1234567 (Optional)">
                                 </div>
                             </div>
                         </div>
@@ -1015,15 +1023,16 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
                                 <input type="hidden" name="portrait_data" id="portrait_data">
                             </div>
 
-                            <!-- Authorized Digital Signature -->
+                            <!-- Authorized Digital Signature File Upload -->
                             <div class="form-group">
-                                <label>Authorized Signature *</label>
-                                <div class="sig-pad-wrapper">
-                                    <canvas id="sigCanvas"></canvas>
-                                    <div class="sig-actions">
-                                        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="clearSignature()">Clear</button>
-                                    </div>
+                                <label>Upload Authorized Signature *</label>
+                                <div class="upload-card" onclick="document.getElementById('fileSignature').click()">
+                                    <div class="upload-icon"><i class="fa-solid fa-signature"></i></div>
+                                    <div class="upload-title">Click to Upload Signature</div>
+                                    <div class="upload-sub">Clean photo or scan on white paper (JPG/PNG)</div>
+                                    <img id="previewSignature" class="upload-preview" alt="Preview">
                                 </div>
+                                <input type="file" id="fileSignature" accept="image/*" style="display:none;" onchange="handleFileUpload(this, 'previewSignature', 'signature_data')">
                                 <input type="hidden" name="signature_data" id="signature_data">
                             </div>
                         </div>
@@ -1181,7 +1190,6 @@ $accountTitle = isset($accountTitles[$type]) ? $accountTitles[$type] : "Neon Ban
         let sigCanvas, sigCtx, isDrawing = false;
 
         document.addEventListener("DOMContentLoaded", () => {
-            initSignaturePad();
             populateCountries();
         });
 
