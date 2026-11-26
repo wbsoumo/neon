@@ -73,13 +73,10 @@ try {
         
         try {
             $txProvider = !empty($txn['provider']) ? strtolower(trim($txn['provider'])) : 'bharat4u';
-            if ($txProvider === 'jiopay') {
-                $res = check_jiopay_payout_status($orderId);
-            } else {
-                $res = check_bharat4u_payout_status_v4($orderId);
-            }
+            $res = dispatch_payout_status_check($txProvider, $orderId, true);
             
-            if (isset($res['status']) && $res['status'] === true) {
+            $isApiOk = (isset($res['status']) && $res['status'] === true) || (isset($res['success']) && $res['success'] === true);
+            if ($isApiOk) {
                 $resData = isset($res['data']) ? $res['data'] : [];
                 
                 $apiStatus = '';
@@ -125,7 +122,7 @@ try {
                         ]);
                     } else {
                         // Update to FAILED_HELD (quarantine)
-                        $msg = isset($res['msg']) ? $res['msg'] : 'Payout failed at provider';
+                        $msg = isset($res['msg']) ? $res['msg'] : (isset($res['message']) ? $res['message'] : 'Payout failed at provider');
                         $stmtUpdate = $pdo->prepare("UPDATE transactions SET status = 'FAILED_HELD', status_details = :details WHERE transaction_id = :order_id");
                         $stmtUpdate->execute([':details' => $msg, ':order_id' => $orderId]);
                         
@@ -144,7 +141,7 @@ try {
                 }
             } else {
                 // If API returned status false or error, keep failed_held as is, or quarantine pending/processing ones
-                $msg = isset($res['msg']) ? $res['msg'] : 'Status check request returned error status';
+                $msg = isset($res['msg']) ? $res['msg'] : (isset($res['message']) ? $res['message'] : 'Status check request returned error status');
                 
                 if ($currentStatus === 'FAILED_HELD') {
                     $results[] = array_merge($baseResult, [

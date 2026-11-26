@@ -199,12 +199,9 @@ try {
     $orderId = $txnRecord['transaction_id'];
     
     // 5. Call Payout API based on active provider
+    $transferMode = !empty($data['mode']) ? strtoupper(trim($data['mode'])) : 'IMPS';
     try {
-        if ($activeProvider === 'jiopay') {
-            $payoutRes = initiate_jiopay_payout($orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName);
-        } else {
-            $payoutRes = initiate_bharat4u_payout($orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName);
-        }
+        $payoutRes = dispatch_payout_initiation($activeProvider, $orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName, $transferMode);
         
         // Retrieve new balance
         $updatedSenderUser = get_application_by_id($senderAppId);

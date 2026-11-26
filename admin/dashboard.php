@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         $success = update_application_balance($appId, $newBalance);
         if ($success) {
-            $logDesc = ($type === 'DEPOSIT') ? "Deposited $amount INR (New balance: $newBalance INR) for application: $appId" : "Withdrew $amount INR (New balance: $newBalance INR) for application: $appId";
+            $logDesc = ($type === 'DEPOSIT') ? "Deposited CHF $amount (≈ ₹" . number_format($amount * 115, 2) . " INR) (New balance: CHF $newBalance) for application: $appId" : "Withdrew CHF $amount (≈ ₹" . number_format($amount * 115, 2) . " INR) (New balance: CHF $newBalance) for application: $appId";
             log_admin_activity($username, 'ADJUST_BALANCE', $logDesc);
 
             // Trigger email notification
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Trigger push notification
             try {
                 $notifTitle = ($type === 'DEPOSIT') ? "Account Credited" : "Account Debited";
-                $notifBody = ($type === 'DEPOSIT') ? "Your account has been credited by " . number_format($amount, 2) . " INR. New Balance: " . number_format($newBalance, 2) . " INR." : "Your account has been debited by " . number_format($amount, 2) . " INR. New Balance: " . number_format($newBalance, 2) . " INR.";
+                $notifBody = ($type === 'DEPOSIT') ? "Your account has been credited by CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR). New Balance: CHF " . number_format($newBalance, 2) . "." : "Your account has been debited by CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR). New Balance: CHF " . number_format($newBalance, 2) . ".";
                 send_notification_to_user($appId, $notifTitle, $notifBody, [], null, 'Transactions');
             } catch (Exception $notifEx) {
                 error_log("Failed to send push notification: " . $notifEx->getMessage());
@@ -205,12 +205,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // Send "Payment Received" notification to recipient (User B)
             $notifyTitle = "Payment Received";
-            $notifyBody = "You have received " . number_format($amount, 2) . " INR from " . $senderUser['full_name'] . ". UTR: " . $txnRecord['utr_id'];
+            $notifyBody = "You have received CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR) from " . $senderUser['full_name'] . ". UTR: " . $txnRecord['utr_id'];
             send_notification_to_user($recipientAppId, $notifyTitle, $notifyBody, [], null, 'Transactions');
 
             // Send "Payment Sent" notification to sender (debit alert)
             $senderNotifyTitle = "Account Debited";
-            $senderNotifyBody = "Your account has been debited by " . number_format($amount, 2) . " INR for transfer to " . $recipientAcc . ". UTR: " . $txnRecord['utr_id'];
+            $senderNotifyBody = "Your account has been debited by CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR) for transfer to " . $recipientAcc . ". UTR: " . $txnRecord['utr_id'];
             send_notification_to_user($senderAppId, $senderNotifyTitle, $senderNotifyBody, [], null, 'Transactions');
 
             $updatedSender = get_application_by_id($senderAppId);
@@ -225,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 error_log("Failed to send P2P test emails: " . $mailEx->getMessage());
             }
 
-            log_admin_activity($username, 'EXECUTE_P2P_TEST', "Executed P2P test transfer of $amount INR from $senderAppId to account $recipientAcc");
+            log_admin_activity($username, 'EXECUTE_P2P_TEST', "Executed P2P test transfer of CHF $amount (≈ ₹" . number_format($amount * 115, 2) . " INR) from $senderAppId to account $recipientAcc");
 
             echo json_encode([
                 'success' => true,
@@ -300,11 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $orderId = $txnRecord['transaction_id'];
 
             try {
-                if ($activeProvider === 'jiopay') {
-                    $providerRes = initiate_jiopay_payout($orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName);
-                } else {
-                    $providerRes = initiate_bharat4u_payout($orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName);
-                }
+                $providerRes = dispatch_payout_initiation($activeProvider, $orderId, $beneficiaryAcc, $ifsc, $amount, $beneficiaryName);
                 
                 $updatedSender = get_application_by_id($senderAppId);
                 $newBalance = (float)$updatedSender['balance'];
@@ -312,13 +308,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Send push notification to user (debit alert)
                 try {
                     $notifyTitle = "Account Debited";
-                    $notifyBody = "Your account has been debited by " . number_format($amount, 2) . " INR for payout transfer to " . $beneficiaryName . ". Ref: " . $orderId;
+                    $notifyBody = "Your account has been debited by CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR) for payout transfer to " . $beneficiaryName . ". Ref: " . $orderId;
                     send_notification_to_user($senderAppId, $notifyTitle, $notifyBody, [], null, 'Transactions');
                 } catch (Exception $notifEx) {
                     error_log("Failed to send test payout push notification: " . $notifEx->getMessage());
                 }
 
-                log_admin_activity($username, 'EXECUTE_PAYOUT_TEST', "Executed test payout of $amount INR for sender $senderAppId. Transaction: $orderId. Status: PENDING.");
+                log_admin_activity($username, 'EXECUTE_PAYOUT_TEST', "Executed test payout of CHF $amount (≈ ₹" . number_format($amount * 115, 2) . " INR) for sender $senderAppId. Transaction: $orderId. Status: PENDING.");
 
                 echo json_encode([
                     'success' => true,
@@ -342,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Send push notification to user (debit alert - quarantined)
                 try {
                     $notifyTitle = "Account Debited";
-                    $notifyBody = "Your account has been debited by " . number_format($amount, 2) . " INR for payout transfer to " . $beneficiaryName . " (held). Ref: " . $orderId;
+                    $notifyBody = "Your account has been debited by CHF " . number_format($amount, 2) . " (≈ ₹" . number_format($amount * 115, 2) . " INR) for payout transfer to " . $beneficiaryName . " (held). Ref: " . $orderId;
                     send_notification_to_user($senderAppId, $notifyTitle, $notifyBody, [], null, 'Transactions');
                 } catch (Exception $notifEx) {
                     error_log("Failed to send test payout push notification (quarantined): " . $notifEx->getMessage());
@@ -387,15 +383,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $providerRes = null;
             $txProvider = !empty($txn['provider']) ? strtolower(trim($txn['provider'])) : 'bharat4u';
             try {
-                if ($txProvider === 'jiopay') {
-                    $providerRes = check_jiopay_payout_status($txnId);
-                } else {
-                    $providerRes = check_bharat4u_payout_status($txnId);
-                }
+                $providerRes = dispatch_payout_status_check($txProvider, $txnId, false);
                 
                 // Sync status to database if txn is PENDING
                 if ($txn['status'] === 'PENDING') {
-                    if (isset($providerRes['status']) && $providerRes['status'] === true) {
+                    $isProviderOk = (isset($providerRes['status']) && $providerRes['status'] === true) || (isset($providerRes['success']) && $providerRes['success'] === true);
+                    if ($isProviderOk) {
                         $data = isset($providerRes['data']) ? $providerRes['data'] : [];
                         $txnStatus = isset($data['status']) ? strtoupper($data['status']) : (isset($data['txn_status']) ? strtoupper($data['txn_status']) : '');
                         $utr = isset($data['utr']) ? $data['utr'] : null;
@@ -404,12 +397,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $stmtUpdate = $pdo->prepare("UPDATE transactions SET status = 'SUCCESS', utr_id = :utr, status_details = 'Payout completed via status check test' WHERE transaction_id = :order_id");
                             $stmtUpdate->execute([':utr' => $utr, ':order_id' => $txnId]);
                         } elseif ($txnStatus === 'FAILED' || $txnStatus === 'REJECTED') {
-                            $msg = isset($providerRes['msg']) ? $providerRes['msg'] : 'Payout failed at provider';
+                            $msg = isset($providerRes['msg']) ? $providerRes['msg'] : (isset($providerRes['message']) ? $providerRes['message'] : 'Payout failed at provider');
                             $stmtUpdate = $pdo->prepare("UPDATE transactions SET status = 'FAILED_HELD', status_details = :details WHERE transaction_id = :order_id");
                             $stmtUpdate->execute([':details' => $msg, ':order_id' => $txnId]);
                         }
                     } else {
-                        $msg = isset($providerRes['msg']) ? $providerRes['msg'] : 'Status check returned failure';
+                        $msg = isset($providerRes['msg']) ? $providerRes['msg'] : (isset($providerRes['message']) ? $providerRes['message'] : 'Status check returned failure');
                         $stmtUpdate = $pdo->prepare("UPDATE transactions SET status = 'FAILED_HELD', status_details = :details WHERE transaction_id = :order_id");
                         $stmtUpdate->execute([':details' => $msg, ':order_id' => $txnId]);
                     }
@@ -645,11 +638,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             
             try {
                 $txProvider = !empty($txn['provider']) ? strtolower(trim($txn['provider'])) : 'bharat4u';
-                if ($txProvider === 'jiopay') {
-                    initiate_jiopay_payout($txnId, $txn['recipient_account'], $txn['ifsc_code'], $txn['amount'], $txn['recipient_name']);
-                } else {
-                    initiate_bharat4u_payout($txnId, $txn['recipient_account'], $txn['ifsc_code'], $txn['amount'], $txn['recipient_name']);
-                }
+                dispatch_payout_initiation($txProvider, $txnId, $txn['recipient_account'], $txn['ifsc_code'], $txn['amount'], $txn['recipient_name']);
                 log_admin_activity($username, 'RETRY_PAYOUT', "Retried payout for transaction: $txnId. Status is PENDING.");
                 echo json_encode(['success' => true, 'message' => 'Payout retry initiated successfully. Status is now PENDING.']);
             } catch (Exception $ex) {
@@ -703,10 +692,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             
             // Send push notification to the user about the refund without using the word admin or administrator
             $notifyTitle = "Payment Refunded";
-            $notifyBody = "Your payout transaction of " . number_format($txn['amount'], 2) . " INR has failed, and the amount has been refunded to your account balance.";
+            $notifyBody = "Your payout transaction of CHF " . number_format($txn['amount'], 2) . " (≈ ₹" . number_format($txn['amount'] * 115, 2) . " INR) has failed, and the amount has been refunded to your account balance.";
             send_notification_to_user($txn['sender_app_id'], $notifyTitle, $notifyBody, [], null, 'Transactions');
             
-            log_admin_activity($username, 'REFUND_PAYOUT', "Marked payout transaction $txnId as FAILED and refunded {$txn['amount']} INR to sender {$txn['sender_app_id']}");
+            log_admin_activity($username, 'REFUND_PAYOUT', "Marked payout transaction $txnId as FAILED and refunded CHF {$txn['amount']} (≈ ₹" . number_format($txn['amount'] * 115, 2) . " INR) to sender {$txn['sender_app_id']}");
             echo json_encode(['success' => true, 'message' => 'Transaction marked as FAILED and balance refunded successfully.']);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {
@@ -846,7 +835,12 @@ if ($filter === 'SAVINGS') {
         </ul>
 
         <!-- Right navbar links -->
-        <ul class="navbar-nav ml-auto">
+        <ul class="navbar-nav ml-auto align-items-center">
+            <li class="nav-item mr-3">
+                <span class="badge badge-light border border-info px-2 py-1 text-info font-weight-bold" style="font-size: 12px;">
+                    <i class="fas fa-coins mr-1"></i> 1 CHF ≈ <span class="rate-indicator text-success font-weight-bold">₹115.00</span> INR <small class="text-muted">(Live)</small>
+                </span>
+            </li>
             <li class="nav-item d-none d-sm-inline-block">
                 <a href="logout.php" class="nav-link text-warning font-weight-bold"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
             </li>
@@ -1149,7 +1143,7 @@ if ($filter === 'SAVINGS') {
                                                         <th>Beneficiary Name</th>
                                                         <th>Account Number</th>
                                                         <th>IFSC Code</th>
-                                                        <th>Amount</th>
+                                                        <th>Amount (CHF)</th>
                                                         <th>Failure Reason</th>
                                                         <th>Date</th>
                                                         <th>Actions</th>
@@ -1163,7 +1157,7 @@ if ($filter === 'SAVINGS') {
                                                             <td><?= htmlspecialchars($payout['recipient_name']) ?></td>
                                                             <td><code><?= htmlspecialchars($payout['recipient_account']) ?></code></td>
                                                             <td><code><?= htmlspecialchars($payout['ifsc_code']) ?></code></td>
-                                                            <td><strong><?= number_format($payout['amount'], 2) ?> INR</strong></td>
+                                                            <td><strong class="text-primary">CHF <?= number_format($payout['amount'], 2) ?></strong><br><small class="text-muted font-weight-normal live-inr-calc" data-chf="<?= (float)$payout['amount'] ?>">≈ ₹<?= number_format($payout['amount'] * 115, 2) ?> INR</small></td>
                                                             <td><span class="text-danger font-weight-bold small"><?= htmlspecialchars($payout['status_details'] ?: 'Unknown Error') ?></span></td>
                                                             <td><?= date('M d, Y H:i', strtotime($payout['created_at'])) ?></td>
                                                             <td>
@@ -1223,7 +1217,7 @@ if ($filter === 'SAVINGS') {
                                                         <td><?= htmlspecialchars($ben['beneficiary_name']) ?></td>
                                                         <td><code><?= htmlspecialchars($ben['beneficiary_account_number']) ?></code></td>
                                                         <td><code><?= htmlspecialchars($ben['ifsc_code']) ?></code></td>
-                                                        <td><?= number_format($ben['daily_limit'], 2) ?> INR</td>
+                                                        <td><strong>CHF <?= number_format($ben['daily_limit'], 2) ?></strong> <small class="text-muted font-weight-normal">(≈ ₹<?= number_format($ben['daily_limit'] * 115, 2) ?> INR)</small></td>
                                                         <td><span class="badge badge-secondary"><?= htmlspecialchars($ben['nickname']) ?></span></td>
                                                         <td><?= date('M d, Y H:i', strtotime($ben['created_at'])) ?></td>
                                                         <td>
@@ -1264,7 +1258,7 @@ if ($filter === 'SAVINGS') {
                                                     <option value="<?= htmlspecialchars($sender['app_id']) ?>" 
                                                             data-balance="<?= htmlspecialchars($sender['balance']) ?>"
                                                             data-number="<?= htmlspecialchars($sender['account_number']) ?>">
-                                                        <?= htmlspecialchars($sender['full_name']) ?> (Acc: <?= htmlspecialchars($sender['account_number']) ?>) - Balance: <?= number_format($sender['balance'], 2) ?> INR <?= $sender['has_mpin'] ? '[MPIN Set]' : '[NO MPIN SET]' ?>
+                                                        <?= htmlspecialchars($sender['full_name']) ?> (Acc: <?= htmlspecialchars($sender['account_number']) ?>) - Balance: CHF <?= number_format($sender['balance'], 2) ?> (≈ ₹<?= number_format($sender['balance'] * 115, 2) ?> INR) <?= $sender['has_mpin'] ? '[MPIN Set]' : '[NO MPIN SET]' ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1287,8 +1281,16 @@ if ($filter === 'SAVINGS') {
 
                                         <!-- Transfer amount -->
                                         <div class="form-group">
-                                            <label for="amount" class="font-weight-bold text-navy">Transfer Amount (INR)</label>
-                                            <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount" placeholder="0.00" required>
+                                            <label for="amount" class="font-weight-bold text-navy">Transfer Amount (CHF)</label>
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text font-weight-bold text-primary">CHF</span>
+                                                </div>
+                                                <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount" placeholder="0.00" required>
+                                            </div>
+                                            <div id="transfer-live-calc" class="small text-muted font-weight-bold mt-1" style="font-size: 11px;">
+                                                <i class="fas fa-calculator mr-1 text-primary"></i> Live Calculation: <span class="text-dark">CHF 0.00</span> ≈ <span class="text-success font-weight-bold" id="transferCalcInr">₹ 0.00 INR</span> <span class="text-muted font-weight-normal">(1 CHF = <span class="rate-indicator">₹115.00</span>)</span>
+                                            </div>
                                         </div>
 
                                         <!-- Sender's 6-digit MPIN -->
@@ -1326,11 +1328,11 @@ if ($filter === 'SAVINGS') {
                                                         </tr>
                                                         <tr>
                                                             <td class="font-weight-bold">Amount Transferred</td>
-                                                            <td id="receipt-amount">0.00 INR</td>
+                                                            <td id="receipt-amount">CHF 0.00</td>
                                                         </tr>
                                                         <tr>
                                                             <td class="font-weight-bold">New Sender Balance</td>
-                                                            <td id="receipt-sender-balance">0.00 INR</td>
+                                                            <td id="receipt-sender-balance">CHF 0.00</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1362,7 +1364,7 @@ if ($filter === 'SAVINGS') {
                                                 <?php foreach ($senderOptions as $sender): ?>
                                                     <option value="<?= htmlspecialchars($sender['app_id']) ?>" 
                                                             data-balance="<?= htmlspecialchars($sender['balance']) ?>">
-                                                        <?= htmlspecialchars($sender['full_name']) ?> (Acc: <?= htmlspecialchars($sender['account_number']) ?>) - Balance: <?= number_format($sender['balance'], 2) ?> INR <?= $sender['has_mpin'] ? '[MPIN Set]' : '[NO MPIN SET]' ?>
+                                                        <?= htmlspecialchars($sender['full_name']) ?> (Acc: <?= htmlspecialchars($sender['account_number']) ?>) - Balance: CHF <?= number_format($sender['balance'], 2) ?> (≈ ₹<?= number_format($sender['balance'] * 115, 2) ?> INR) <?= $sender['has_mpin'] ? '[MPIN Set]' : '[NO MPIN SET]' ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1391,8 +1393,16 @@ if ($filter === 'SAVINGS') {
 
                                         <!-- Payout Amount -->
                                         <div class="form-group">
-                                            <label for="payout_amount" class="font-weight-bold text-navy">Payout Amount (INR)</label>
-                                            <input type="number" step="0.01" min="0.01" class="form-control" id="payout_amount" name="amount" placeholder="0.00" required>
+                                            <label for="payout_amount" class="font-weight-bold text-navy">Payout Amount (CHF)</label>
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text font-weight-bold text-primary">CHF</span>
+                                                </div>
+                                                <input type="number" step="0.01" min="0.01" class="form-control" id="payout_amount" name="amount" placeholder="0.00" required>
+                                            </div>
+                                            <div id="payout-live-calc" class="small text-muted font-weight-bold mt-1" style="font-size: 11px;">
+                                                <i class="fas fa-calculator mr-1 text-primary"></i> Live Calculation: <span class="text-dark">CHF 0.00</span> ≈ <span class="text-success font-weight-bold" id="payoutCalcInr">₹ 0.00 INR</span> <span class="text-muted font-weight-normal">(1 CHF = <span class="rate-indicator">₹115.00</span>)</span>
+                                            </div>
                                         </div>
 
                                         <!-- Sender's 6-digit MPIN -->
@@ -1425,7 +1435,7 @@ if ($filter === 'SAVINGS') {
                                                         </tr>
                                                         <tr>
                                                             <td class="font-weight-bold">Balance Remaining</td>
-                                                            <td id="payout-result-balance">0.00 INR</td>
+                                                            <td id="payout-result-balance">CHF 0.00</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1457,7 +1467,7 @@ if ($filter === 'SAVINGS') {
                                                 <option value="">-- Choose Payout Transaction --</option>
                                                 <?php foreach ($recentPayouts as $p): ?>
                                                     <option value="<?= htmlspecialchars($p['transaction_id']) ?>">
-                                                        <?= htmlspecialchars($p['transaction_id']) ?> - <?= htmlspecialchars($p['recipient_name']) ?> (<?= number_format($p['amount'], 2) ?> INR) [<?= htmlspecialchars($p['status']) ?>]
+                                                        <?= htmlspecialchars($p['transaction_id']) ?> - <?= htmlspecialchars($p['recipient_name']) ?> (CHF <?= number_format($p['amount'], 2) ?> ≈ ₹<?= number_format($p['amount'] * 115, 2) ?> INR) [<?= htmlspecialchars($p['status']) ?>]
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1531,7 +1541,7 @@ if ($filter === 'SAVINGS') {
                                                         </tr>
                                                         <tr>
                                                             <td class="font-weight-bold">Amount Details</td>
-                                                            <td id="status-display-amount">0.00 INR</td>
+                                                            <td id="status-display-amount">CHF 0.00</td>
                                                         </tr>
                                                         <tr>
                                                             <td class="font-weight-bold">System Log Reason</td>
@@ -2029,7 +2039,7 @@ if ($filter === 'SAVINGS') {
                             <input type="text" class="form-control form-control-sm" id="edit-business-reg-no" name="business_reg_no">
                         </div>
                         <div class="form-group">
-                            <label for="edit-expected-turnover" class="small font-weight-bold text-navy">Expected Turnover (INR)</label>
+                            <label for="edit-expected-turnover" class="small font-weight-bold text-navy">Expected Turnover (CHF)</label>
                             <input type="number" step="0.01" class="form-control form-control-sm" id="edit-expected-turnover" name="expected_turnover">
                         </div>
                     </div>
@@ -2159,7 +2169,7 @@ if ($filter === 'SAVINGS') {
                                     </tr>
                                     <tr>
                                         <td class="font-weight-bold pl-3">Initial Deposit</td>
-                                        <td>${app.initial_deposit ? parseFloat(app.initial_deposit).toLocaleString() + ' INR' : '0.00 INR'}</td>
+                                        <td>CHF ${app.initial_deposit ? parseFloat(app.initial_deposit).toLocaleString() : '0.00'} <small class="text-muted font-weight-normal">(≈ ₹${((parseFloat(app.initial_deposit) || 0) * window.CHF_TO_INR_RATE).toLocaleString()} INR)</small></td>
                                     </tr>
             `;
         } else {
@@ -2174,7 +2184,7 @@ if ($filter === 'SAVINGS') {
                                     </tr>
                                     <tr>
                                         <td class="font-weight-bold pl-3">Turnover Volume</td>
-                                        <td>${app.expected_turnover ? parseFloat(app.expected_turnover).toLocaleString() + ' INR' : 'N/A'}</td>
+                                        <td>CHF ${app.expected_turnover ? parseFloat(app.expected_turnover).toLocaleString() : 'N/A'} <small class="text-muted font-weight-normal">(≈ ₹${((parseFloat(app.expected_turnover) || 0) * window.CHF_TO_INR_RATE).toLocaleString()} INR)</small></td>
                                     </tr>
             `;
         }
@@ -2235,15 +2245,22 @@ if ($filter === 'SAVINGS') {
                             <div class="row align-items-center">
                                 <div class="col-sm-5 mb-2 mb-sm-0">
                                     <span class="text-muted d-block small">CURRENT BALANCE</span>
-                                    <span class="h4 font-weight-bold text-navy mb-0" id="current-balance-display">${parseFloat(app.balance || 0).toLocaleString()} INR</span>
+                                    <span class="h4 font-weight-bold text-navy mb-0" id="current-balance-display">CHF ${parseFloat(app.balance || 0).toLocaleString()}</span>
+                                    <div class="small text-muted font-weight-normal mt-1" id="current-balance-inr-display">≈ ₹${((parseFloat(app.balance || 0)) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</div>
                                 </div>
                                 <div class="col-sm-7">
                                     <div class="form-inline justify-content-sm-end">
                                         <div class="input-group input-group-sm mr-2 mb-2 mb-sm-0">
-                                            <input type="number" step="0.01" min="0.01" class="form-control" id="adjust-amount" placeholder="Amount (INR)" required style="height: 31px; border-radius: 4px;">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text font-weight-bold text-primary">CHF</span>
+                                            </div>
+                                            <input type="number" step="0.01" min="0.01" class="form-control" id="adjust-amount" placeholder="Amount (CHF)" required style="height: 31px; border-radius: 4px;">
                                         </div>
                                         <button type="button" class="btn btn-sm btn-success font-weight-bold mr-1" id="btn-balance-add"><i class="fas fa-plus mr-1"></i> Add</button>
                                         <button type="button" class="btn btn-sm btn-danger font-weight-bold" id="btn-balance-deduct"><i class="fas fa-minus mr-1"></i> Deduct</button>
+                                    </div>
+                                    <div id="adjust-live-calc" class="text-right small text-muted font-weight-bold mt-1 pr-1" style="font-size: 11px;">
+                                        Live Calculation: <span class="text-dark">CHF 0.00</span> ≈ <span class="text-success font-weight-bold" id="adjustLiveInr">₹ 0.00 INR</span>
                                     </div>
                                 </div>
                             </div>
@@ -2281,13 +2298,17 @@ if ($filter === 'SAVINGS') {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        alert(`Successfully processed: ${type === 'DEPOSIT' ? 'Added' : 'Deducted'} ${amount} INR`);
+                        alert(`Successfully processed: ${type === 'DEPOSIT' ? 'Added' : 'Deducted'} CHF ${amount} (≈ ₹${(amount * window.CHF_TO_INR_RATE).toFixed(2)} INR)`);
                         // Update display in modal
-                        document.getElementById('current-balance-display').textContent = parseFloat(data.new_balance).toLocaleString() + ' INR';
+                        document.getElementById('current-balance-display').textContent = 'CHF ' + parseFloat(data.new_balance).toLocaleString();
+                        const inrBalEl = document.getElementById('current-balance-inr-display');
+                        if (inrBalEl) inrBalEl.textContent = '≈ ₹' + (parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
                         // Update balance in local object representation
                         activeApp.balance = data.new_balance;
                         // Clear input field
                         amountInput.value = '';
+                        const liveCalc = document.getElementById('adjustLiveInr');
+                        if (liveCalc) liveCalc.textContent = '₹ 0.00 INR';
                     } else {
                         alert('Transaction failed: ' + (data.message || 'Unknown error'));
                     }
@@ -2612,14 +2633,14 @@ if ($filter === 'SAVINGS') {
                     // Show receipt details
                     document.getElementById('receipt-txn-id').textContent = data.transaction_id;
                     document.getElementById('receipt-utr-id').textContent = data.utr_id;
-                    document.getElementById('receipt-amount').textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
-                    document.getElementById('receipt-sender-balance').textContent = parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
+                    document.getElementById('receipt-amount').textContent = 'CHF ' + amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (≈ ₹' + (amount * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR)';
+                    document.getElementById('receipt-sender-balance').textContent = 'CHF ' + parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (≈ ₹' + (parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR)';
                     
                     receiptDiv.style.display = 'block';
 
                     // Update option balance in dropdown list to keep UI synchronized
                     selectedOption.setAttribute('data-balance', data.new_balance);
-                    selectedOption.text = `${selectedOption.text.split(' - Balance:')[0]} - Balance: ${parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR ${selectedOption.text.includes('[MPIN Set]') ? '[MPIN Set]' : '[NO MPIN SET]'}`;
+                    selectedOption.text = `${selectedOption.text.split(' - Balance:')[0]} - Balance: CHF ${parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (≈ ₹${(parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR) ${selectedOption.text.includes('[MPIN Set]') ? '[MPIN Set]' : '[NO MPIN SET]'}`;
 
                     // Reset amount and mpin inputs
                     document.getElementById('amount').value = '';
@@ -2697,11 +2718,11 @@ if ($filter === 'SAVINGS') {
                     payoutResultBadge.className = 'badge badge-success px-2 py-1';
                     payoutResultBadge.textContent = data.status || 'PENDING';
                     payoutResultTxnId.textContent = data.transaction_id;
-                    payoutResultBalance.textContent = parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
+                    payoutResultBalance.textContent = 'CHF ' + parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (≈ ₹' + (parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR)';
                     
                     // Update balance in dropdown
                     selectedOption.setAttribute('data-balance', data.new_balance);
-                    selectedOption.text = `${selectedOption.text.split(' - Balance:')[0]} - Balance: ${parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR ${selectedOption.text.includes('[MPIN Set]') ? '[MPIN Set]' : '[NO MPIN SET]'}`;
+                    selectedOption.text = `${selectedOption.text.split(' - Balance:')[0]} - Balance: CHF ${parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (≈ ₹${(parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR) ${selectedOption.text.includes('[MPIN Set]') ? '[MPIN Set]' : '[NO MPIN SET]'}`;
 
                     // Reset values
                     document.getElementById('payout_amount').value = '';
@@ -2712,7 +2733,7 @@ if ($filter === 'SAVINGS') {
                     payoutResultBadge.className = 'badge badge-danger px-2 py-1';
                     payoutResultBadge.textContent = data.status || 'FAILED';
                     payoutResultTxnId.textContent = data.transaction_id || 'FAILED';
-                    payoutResultBalance.textContent = parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
+                    payoutResultBalance.textContent = 'CHF ' + parseFloat(data.new_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (≈ ₹' + (parseFloat(data.new_balance) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR)';
                     alert('Payout Failed: ' + data.message);
                 }
             })
@@ -2803,7 +2824,7 @@ if ($filter === 'SAVINGS') {
                 textUtr.textContent = txn.utr_id || '-';
                 textRecipient.textContent = txn.recipient_name || '-';
                 textAccountIfsc.textContent = `${txn.recipient_account || '-'} / ${txn.ifsc_code || '-'}`;
-                textAmount.textContent = parseFloat(txn.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
+                textAmount.textContent = 'CHF ' + parseFloat(txn.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (≈ ₹' + (parseFloat(txn.amount || 0) * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR)';
                 textReason.textContent = txn.status_details || '-';
 
                 // Adjust Visual Timeline Progress
@@ -3084,7 +3105,7 @@ if ($filter === 'SAVINGS') {
                                 <tr>
                                     <td><strong>${escapeHtml(item.order_id)}</strong></td>
                                     <td>${escapeHtml(item.sender_name)} (${escapeHtml(item.sender_app_id)})</td>
-                                    <td><strong>${parseFloat(item.amount).toFixed(2)} INR</strong></td>
+                                    <td><strong>CHF ${parseFloat(item.amount).toFixed(2)}</strong><br><small class="text-muted font-weight-normal">≈ ₹${(parseFloat(item.amount) * window.CHF_TO_INR_RATE).toFixed(2)} INR</small></td>
                                     <td>${oldStatusBadge}</td>
                                     <td>${newStatusBadge}</td>
                                     <td><span class="small font-weight-bold">${remarks}</span></td>
@@ -3137,6 +3158,57 @@ if ($filter === 'SAVINGS') {
         updateTimerDisplay();
         startTimer();
     }
+
+    // Global Live Currency Rate Management
+    window.CHF_TO_INR_RATE = 115.00;
+    fetch('https://api.frankfurter.app/latest?from=CHF&to=INR')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.rates && data.rates.INR) {
+                window.CHF_TO_INR_RATE = parseFloat(data.rates.INR);
+                document.querySelectorAll('.rate-indicator').forEach(function(el) {
+                    el.textContent = '₹' + window.CHF_TO_INR_RATE.toFixed(2);
+                });
+                document.querySelectorAll('.live-inr-calc').forEach(function(el) {
+                    var chf = parseFloat(el.getAttribute('data-chf'));
+                    if (!isNaN(chf)) {
+                        el.textContent = '≈ ₹' + (chf * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' INR';
+                    }
+                });
+            }
+        })
+        .catch(function() {
+            console.log('Using default rate 1 CHF = ₹ 115.00');
+        });
+
+    // P2P transfer amount live calculator
+    const transferAmtEl = document.getElementById('amount');
+    if (transferAmtEl) {
+        transferAmtEl.addEventListener('input', function() {
+            const val = parseFloat(this.value) || 0;
+            const inr = (val * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const calcEl = document.getElementById('transferCalcInr');
+            if (calcEl) calcEl.textContent = '₹ ' + inr + ' INR';
+        });
+    }
+
+    // Payout amount live calculator
+    const payoutAmtEl = document.getElementById('payout_amount');
+    if (payoutAmtEl) {
+        payoutAmtEl.addEventListener('input', function() {
+            const val = parseFloat(this.value) || 0;
+            const inr = (val * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const calcEl = document.getElementById('payoutCalcInr');
+            if (calcEl) calcEl.textContent = '₹ ' + inr + ' INR';
+        });
+    }
+
+    // Balance adjust input listener in user detail modal
+    $(document).on('input', '#adjust-amount', function() {
+        const val = parseFloat(this.value) || 0;
+        const inr = (val * window.CHF_TO_INR_RATE).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        $('#adjustLiveInr').text('₹ ' + inr + ' INR (1 CHF = ₹' + window.CHF_TO_INR_RATE.toFixed(2) + ')');
+    });
 </script>
 </body>
 </html>

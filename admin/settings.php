@@ -95,15 +95,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     } elseif ($action === 'UPDATE_ACTIVE_PAYOUT_PROVIDER') {
         $provider = isset($_POST['active_provider']) ? trim($_POST['active_provider']) : 'bharat4u';
-        if ($provider !== 'bharat4u' && $provider !== 'jiopay') {
+        $providerLabels = [
+            'bharat4u' => 'Bharat4u Payout (V4)',
+            'bharat4u_v2' => 'Bharat4u Payout (V2)',
+            'jiopay' => 'JioPay Payout'
+        ];
+        if (!array_key_exists($provider, $providerLabels)) {
             $error = 'Invalid payout provider selected.';
         } else {
             $res = save_active_payout_provider($provider);
             if ($res) {
                 log_admin_activity($username, 'UPDATE_ACTIVE_PAYOUT_PROVIDER', 'Updated active payout provider to: ' . $provider);
-                $success_msg = 'Active payout provider updated to ' . ($provider === 'jiopay' ? 'JioPay' : 'Bharat4u') . ' successfully.';
+                $success_msg = 'Active payout provider updated to ' . $providerLabels[$provider] . ' successfully.';
             } else {
                 $error = 'Failed to save active provider setting.';
+            }
+        }
+    } elseif ($action === 'UPDATE_PAYOUT_BASE_URL') {
+        $baseUrl = isset($_POST['payout_base_url']) ? rtrim(trim($_POST['payout_base_url']), '/') : '';
+        $scheme = $baseUrl !== '' ? strtolower((string)parse_url($baseUrl, PHP_URL_SCHEME)) : '';
+        if (empty($baseUrl) || !filter_var($baseUrl, FILTER_VALIDATE_URL) || !in_array($scheme, ['http', 'https'], true)) {
+            $error = 'Please enter a valid http:// or https:// Base URL (e.g. https://api.bharat4upe.com).';
+        } else {
+            $res = save_payout_base_url($baseUrl);
+            if ($res) {
+                log_admin_activity($username, 'UPDATE_PAYOUT_BASE_URL', 'Updated payout API base URL to: ' . $baseUrl);
+                $success_msg = 'Payout API Base URL updated to ' . htmlspecialchars($baseUrl) . ' successfully.';
+            } else {
+                $error = 'Failed to save Payout API Base URL.';
             }
         }
     } elseif ($action === 'UPDATE_MAINTENANCE_MODE') {
@@ -481,7 +500,7 @@ $myIp = get_client_ip();
                         <!-- Active Payout Method Selection Card -->
                         <div class="card card-default mt-4">
                             <div class="card-header">
-                                <h3 class="card-title font-weight-bold"><i class="fas fa-toggle-on mr-2"></i> Active Payout Method</h3>
+                                <h3 class="card-title font-weight-bold"><i class="fas fa-toggle-on mr-2"></i> Active Payout Method & Server</h3>
                                 <div class="card-tools">
                                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                         <i class="fas fa-minus"></i>
@@ -491,22 +510,47 @@ $myIp = get_client_ip();
                             <div class="card-body">
                                 <?php
                                 $activeProvider = get_active_payout_provider();
+                                $payoutBaseUrl = get_payout_base_url();
+                                $providerLabels = [
+                                    'bharat4u' => 'Bharat4u Payout (V4)',
+                                    'bharat4u_v2' => 'Bharat4u Payout (V2)',
+                                    'jiopay' => 'JioPay Payout'
+                                ];
+                                $activeProviderLabel = $providerLabels[$activeProvider] ?? 'Bharat4u Payout (V4)';
                                 ?>
                                 <div class="alert alert-info p-2 small mb-3">
-                                    Currently Routing Payouts via: <strong><?= $activeProvider === 'jiopay' ? 'JioPay Payout' : 'Bharat4u Payout' ?></strong>
+                                    Currently Routing Payouts via: <strong><?= htmlspecialchars($activeProviderLabel) ?></strong>
+                                    <br>Active Base URL: <code><?= htmlspecialchars($payoutBaseUrl) ?></code>
                                 </div>
 
-                                <form action="settings.php" method="post">
+                                <form action="settings.php" method="post" class="mb-4">
                                     <input type="hidden" name="action" value="UPDATE_ACTIVE_PAYOUT_PROVIDER">
                                     <div class="form-group">
                                         <label class="font-weight-bold">Select Active Payout Method</label>
                                         <select name="active_provider" class="form-control" required>
-                                            <option value="bharat4u" <?= $activeProvider === 'bharat4u' ? 'selected' : '' ?>>Bharat4u Payout</option>
+                                            <option value="bharat4u" <?= $activeProvider === 'bharat4u' ? 'selected' : '' ?>>Bharat4u Payout (V4)</option>
+                                            <option value="bharat4u_v2" <?= $activeProvider === 'bharat4u_v2' ? 'selected' : '' ?>>Bharat4u Payout (V2)</option>
                                             <option value="jiopay" <?= $activeProvider === 'jiopay' ? 'selected' : '' ?>>JioPay Payout</option>
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary font-weight-bold">
                                         <i class="fas fa-save mr-1"></i> Switch Payout Method
+                                    </button>
+                                </form>
+
+                                <hr>
+
+                                <form action="settings.php" method="post">
+                                    <input type="hidden" name="action" value="UPDATE_PAYOUT_BASE_URL">
+                                    <div class="form-group">
+                                        <label class="font-weight-bold">Payout Gateway Base URL</label>
+                                        <input type="url" name="payout_base_url" class="form-control" value="<?= htmlspecialchars($payoutBaseUrl) ?>" placeholder="https://api.bharat4upe.com" required>
+                                        <small class="form-text text-muted">
+                                            Used for Bharat4u V4 (<code>/api/payout/v4/...</code>), Bharat4u V2 (<code>/api/payout/v2/...</code>), and JioPay (<code>/api/payout/jiopay_route/...</code>).
+                                        </small>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary font-weight-bold">
+                                        <i class="fas fa-globe mr-1"></i> Save Base URL
                                     </button>
                                 </form>
                             </div>

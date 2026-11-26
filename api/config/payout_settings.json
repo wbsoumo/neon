@@ -1,3 +1,4 @@
 {
-    "active_provider": "bharat4u"
+    "active_provider": "bharat4u",
+    "base_url": "https://api.bharat4upe.com"
 }

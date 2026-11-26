@@ -1840,7 +1840,7 @@ function initiate_bharat4u_payout($orderId, $accountNumber, $ifsc, $amount, $ben
         'amount' => (string)$amount
     ];
     
-    $ch = curl_init('https://api.bharat4upe.com/api/payout/v4/transfer');
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v4/transfer');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -1892,7 +1892,7 @@ function check_bharat4u_payout_status($orderId) {
         'order_id' => $orderId
     ];
     
-    $ch = curl_init('https://api.bharat4upe.com/api/payout/v3/status');
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v3/status');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -1982,7 +1982,7 @@ function check_bharat4u_payout_status_v4($orderId) {
         'order_id' => $orderId
     ];
     
-    $ch = curl_init('https://api.bharat4upe.com/api/payout/v4/status');
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v4/status');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -2193,31 +2193,75 @@ function update_transaction_status($txnId, $newStatus, $utrId = null, $remarks =
 }
 
 /**
- * Read the active payout provider from payout_settings.json
+ * Read all payout settings from payout_settings.json with safe defaults
  */
-function get_active_payout_provider() {
+function get_payout_settings() {
+    $defaults = [
+        'active_provider' => 'bharat4u',
+        'base_url' => 'https://api.bharat4upe.com'
+    ];
     $filePath = __DIR__ . '/config/payout_settings.json';
     if (!file_exists($filePath)) {
-        return 'bharat4u';
+        return $defaults;
     }
     $content = file_get_contents($filePath);
     $data = json_decode($content, true);
-    return isset($data['active_provider']) ? trim($data['active_provider']) : 'bharat4u';
+    if (!is_array($data)) {
+        return $defaults;
+    }
+    $activeProvider = !empty($data['active_provider']) ? trim($data['active_provider']) : $defaults['active_provider'];
+    $baseUrl = !empty($data['base_url']) ? rtrim(trim($data['base_url']), '/') : $defaults['base_url'];
+    return [
+        'active_provider' => $activeProvider,
+        'base_url' => $baseUrl
+    ];
+}
+
+/**
+ * Persist payout_settings.json while preserving existing keys
+ */
+function save_payout_settings($updates) {
+    $dir = __DIR__ . '/config';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $current = get_payout_settings();
+    $merged = array_merge($current, $updates);
+    if (!empty($merged['base_url'])) {
+        $merged['base_url'] = rtrim(trim($merged['base_url']), '/');
+    }
+    $filePath = $dir . '/payout_settings.json';
+    return file_put_contents($filePath, json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false;
+}
+
+/**
+ * Read the active payout provider from payout_settings.json
+ */
+function get_active_payout_provider() {
+    $settings = get_payout_settings();
+    return $settings['active_provider'];
 }
 
 /**
  * Save the active payout provider to payout_settings.json
  */
 function save_active_payout_provider($provider) {
-    $dir = __DIR__ . '/config';
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    $filePath = $dir . '/payout_settings.json';
-    $data = [
-        'active_provider' => trim($provider)
-    ];
-    return file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT)) !== false;
+    return save_payout_settings(['active_provider' => trim($provider)]);
+}
+
+/**
+ * Read the configurable payout gateway base URL from payout_settings.json
+ */
+function get_payout_base_url() {
+    $settings = get_payout_settings();
+    return $settings['base_url'];
+}
+
+/**
+ * Save the configurable payout gateway base URL to payout_settings.json
+ */
+function save_payout_base_url($baseUrl) {
+    return save_payout_settings(['base_url' => rtrim(trim($baseUrl), '/')]);
 }
 
 /**
@@ -2298,7 +2342,7 @@ function initiate_jiopay_payout($orderId, $accountNumber, $ifsc, $amount, $benef
         'amount' => (string)$amount
     ];
     
-    $ch = curl_init('https://api.bharat4upe.com/api/payout/jiopay_route/transfer');
+    $ch = curl_init(get_payout_base_url() . '/api/payout/jiopay_route/transfer');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -2347,7 +2391,7 @@ function check_jiopay_payout_status($orderId) {
         'order_id' => $orderId
     ];
     
-    $ch = curl_init('https://api.bharat4upe.com/api/payout/v4/status');
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v4/status');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
@@ -2369,6 +2413,153 @@ function check_jiopay_payout_status($orderId) {
     }
     
     return $resData;
+}
+
+/**
+ * Initiates payout using Bharat4u Payout v2 API
+ */
+function initiate_bharat4u_v2_payout($orderId, $accountNumber, $ifsc, $amount, $beneficiaryName = '', $mode = 'IMPS') {
+    $creds = get_payout_credentials();
+
+    // Fallback to simulation mode if credentials are not configured
+    if (empty($creds['bharat_mid']) || empty($creds['bharat_key'])) {
+        return [
+            'success' => true,
+            'message' => 'Payout initiated in Simulation Mode (Bharat4u V2)',
+            'data' => [
+                'transaction_id' => $orderId,
+                'utr' => null,
+                'status' => 'PENDING',
+                'amount' => number_format((float)$amount, 2, '.', ''),
+                'mode' => !empty($mode) ? strtoupper(trim($mode)) : 'IMPS'
+            ]
+        ];
+    }
+
+    if (empty($beneficiaryName)) {
+        try {
+            $pdo = get_db_connection();
+            $stmt = $pdo->prepare("SELECT recipient_name FROM transactions WHERE transaction_id = :order_id LIMIT 1");
+            $stmt->execute([':order_id' => $orderId]);
+            $beneficiaryName = $stmt->fetchColumn() ?: 'Beneficiary';
+        } catch (Exception $e) {
+            $beneficiaryName = 'Beneficiary';
+        }
+    }
+
+    $payload = [
+        'bharat_mid' => $creds['bharat_mid'],
+        'bharat_key' => $creds['bharat_key'],
+        'order_id' => $orderId,
+        'beneficiary_name' => $beneficiaryName,
+        'account_number' => $accountNumber,
+        'ifsc' => $ifsc,
+        'amount' => (string)$amount,
+        'mode' => !empty($mode) ? strtoupper(trim($mode)) : 'IMPS'
+    ];
+
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v2/transfer');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200) {
+        throw new Exception("Bharat4u V2 API returned HTTP code $httpCode: $response");
+    }
+
+    $resData = json_decode($response, true);
+    if (!$resData || (isset($resData['status']) && $resData['status'] === false) || (isset($resData['success']) && $resData['success'] === false)) {
+        $msg = isset($resData['msg']) ? $resData['msg'] : (isset($resData['message']) ? $resData['message'] : 'Unknown error');
+        throw new Exception($msg);
+    }
+
+    return $resData;
+}
+
+/**
+ * Checks payout status from Bharat4u Payout v2 API
+ */
+function check_bharat4u_v2_payout_status($orderId) {
+    $creds = get_payout_credentials();
+    if (empty($creds['bharat_mid']) || empty($creds['bharat_key'])) {
+        return [
+            'success' => true,
+            'message' => 'Payout Successful',
+            'data' => [
+                'transaction_id' => $orderId,
+                'utr' => 'SIMUTR' . mt_rand(100000, 999999),
+                'status' => 'SUCCESS',
+                'amount' => '1.00',
+                'mode' => 'IMPS'
+            ]
+        ];
+    }
+
+    $payload = [
+        'bharat_mid' => $creds['bharat_mid'],
+        'bharat_key' => $creds['bharat_key'],
+        'order_id' => $orderId
+    ];
+
+    $ch = curl_init(get_payout_base_url() . '/api/payout/v2/status');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200) {
+        throw new Exception("Status check V2 failed. HTTP code $httpCode: $response");
+    }
+
+    $resData = json_decode($response, true);
+    if (!$resData) {
+        throw new Exception("Invalid JSON response from V2 provider: " . $response);
+    }
+
+    return $resData;
+}
+
+/**
+ * Dispatch payout initiation to the selected provider
+ */
+function dispatch_payout_initiation($provider, $orderId, $accountNumber, $ifsc, $amount, $beneficiaryName = '', $mode = 'IMPS') {
+    $normalized = strtolower(trim((string)$provider));
+    if ($normalized === 'jiopay') {
+        return initiate_jiopay_payout($orderId, $accountNumber, $ifsc, $amount, $beneficiaryName);
+    }
+    if ($normalized === 'bharat4u_v2') {
+        return initiate_bharat4u_v2_payout($orderId, $accountNumber, $ifsc, $amount, $beneficiaryName, $mode);
+    }
+    return initiate_bharat4u_payout($orderId, $accountNumber, $ifsc, $amount, $beneficiaryName);
+}
+
+/**
+ * Dispatch payout status check to the transaction's provider
+ */
+function dispatch_payout_status_check($provider, $orderId, $preferV4 = true) {
+    $normalized = strtolower(trim((string)$provider));
+    if ($normalized === 'jiopay') {
+        return check_jiopay_payout_status($orderId);
+    }
+    if ($normalized === 'bharat4u_v2') {
+        return check_bharat4u_v2_payout_status($orderId);
+    }
+    return $preferV4 ? check_bharat4u_payout_status_v4($orderId) : check_bharat4u_payout_status($orderId);
 }
 
 /**
